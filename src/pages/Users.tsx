@@ -76,24 +76,49 @@ export default function Users() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const { error } = await supabase.from("users").insert([
+      // Create user in Supabase Auth first
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            name: values.name,
+            role: values.role,
+          }
+        }
+      });
+
+      if (authError) throw authError;
+
+      if (!authData.user?.id) {
+        throw new Error("Failed to create user");
+      }
+
+      // Create user in your custom users table with the UUID
+      const { error: dbError } = await supabase.from("users").insert([
         {
           name: values.name,
           email: values.email,
           password: values.password, // This will be hashed by the trigger
           role: values.role,
+          uuid: authData.user.id // Link to the auth user
         },
       ]);
 
-      if (error) throw error;
+      if (dbError) {
+        console.error("Database error:", dbError);
+        // If database insert fails, we should ideally delete the auth user
+        // but this requires admin rights in Supabase
+        throw dbError;
+      }
 
       toast.success("User added successfully");
       setIsDialogOpen(false);
       form.reset();
       fetchUsers(); // Refresh the users list
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding user:", error);
-      toast.error("Failed to add user");
+      toast.error(error.message || "Failed to add user");
     }
   };
 
