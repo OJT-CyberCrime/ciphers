@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import React, { useState } from "react";
 import { supabase } from "@/utils/supa";
 import Cookies from 'js-cookie';
+import { toast } from "sonner";
 
 interface LoginProps {
   setIsLoggedIn: (value: boolean) => void;
@@ -16,7 +17,6 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    console.log("Logging in...");
 
     const email = (e.currentTarget[0] as HTMLInputElement).value;
     const password = (e.currentTarget[1] as HTMLInputElement).value;
@@ -39,17 +39,19 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
 
       if (userError) throw userError;
 
-      // Update latest_login timestamp
+      // Update only latest_login timestamp
       const now = new Date().toISOString();
       const { error: updateError } = await supabase
         .from('users')
         .update({ 
-          latest_login: now,
-          last_login: userData.latest_login // Store the previous latest_login as last_login
+          latest_login: now // Only update latest_login on login
         })
         .eq('email', email);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Error updating login timestamp:', updateError);
+        throw updateError;
+      }
 
       // Store user data in cookies
       Cookies.set('user_token', authData.session?.access_token || '', { expires: 7 }); // 7 days expiry
@@ -63,9 +65,9 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
 
       setIsLoggedIn(true);
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      // Handle error appropriately
+      toast.error(error.message || "Failed to login");
     } finally {
       setIsLoading(false);
     }
