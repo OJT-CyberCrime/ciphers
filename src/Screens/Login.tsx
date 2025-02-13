@@ -2,40 +2,73 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import React, { useState } from "react";
-import { supabase } from "@/utils/supa"; // Ensure this path is correct
+import { supabase } from "@/utils/supa";
+import Cookies from 'js-cookie';
 
 interface LoginProps {
-  setIsLoggedIn: (value: boolean) => void; // Accept setIsLoggedIn as a prop
+  setIsLoggedIn: (value: boolean) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
-  const [isLoading, setIsLoading] = useState(false); // New loading state
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true); // Set loading to true
+    setIsLoading(true);
     console.log("Logging in...");
 
-    // Get email and password from the input fields
-    const email = (e.currentTarget[0] as HTMLInputElement).value; // Cast to HTMLInputElement
-    const password = (e.currentTarget[1] as HTMLInputElement).value; // Cast to HTMLInputElement
+    const email = (e.currentTarget[0] as HTMLInputElement).value;
+    const password = (e.currentTarget[1] as HTMLInputElement).value;
 
-    // Use Supabase to sign in the user
-    const { error } = await supabase.auth.signInWithPassword({
+    try {
+      // Sign in with Supabase auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
-    });
+      });
 
-    if (error) {
-        console.error("Login error:", error.message);
-        setIsLoading(false); // Reset loading state
-        return; // Exit if there's an error
+      if (authError) throw authError;
+
+      // Get user data from your users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (userError) throw userError;
+
+      // Update latest_login timestamp
+      const now = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ 
+          latest_login: now,
+          last_login: userData.latest_login // Store the previous latest_login as last_login
+        })
+        .eq('email', email);
+
+      if (updateError) throw updateError;
+
+      // Store user data in cookies
+      Cookies.set('user_token', authData.session?.access_token || '', { expires: 7 }); // 7 days expiry
+      Cookies.set('user_data', JSON.stringify({
+        id: userData.user_id,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        uuid: userData.uuid
+      }), { expires: 7 });
+
+      setIsLoggedIn(true);
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Login error:", error);
+      // Handle error appropriately
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoggedIn(true); // Update login status
-    setIsLoading(false); // Reset loading state
-    navigate("/dashboard"); // Redirect to Dashboard on login
   };
 
   return (
@@ -70,6 +103,7 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
           <Button
             type="submit"
             className="w-full bg-blue-900 text-white p-4 text-lg h-12 rounded-md hover:bg-blue-800 transition-all duration-300 font-poppins"
+            disabled={isLoading}
           >
             {isLoading ? "Logging In..." : "Log In"}
           </Button>
