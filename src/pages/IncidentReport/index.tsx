@@ -38,6 +38,7 @@ import SearchBar from "@/Search";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/utils/supa";
 import FolderOperations from "./components/FolderOperations";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Category {
   category_id: number;
@@ -218,7 +219,12 @@ export default function IncidentReport() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {isLoading ? (
-          <div>Loading folders...</div>
+          <>
+            <Skeleton className="h-32 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+          </>
         ) : filteredFolders.length > 0 ? (
           filteredFolders.map((folder) => (
             <ContextMenu key={folder.folder_id}>
@@ -241,11 +247,11 @@ export default function IncidentReport() {
                     <span className="font-poppins font-medium text-lg text-gray-900 text-left">
                       {folder.title}
                     </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
                     <Badge variant="outline" className="bg-gray-200">
                       {folder.status}
                     </Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
                     {folder.categories.length > 0 ? (
                       folder.categories.slice(0, 3).map((category) => (
                         <Badge key={category.category_id} variant="outline" className="bg-blue-100 text-blue-800">
