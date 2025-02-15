@@ -12,14 +12,19 @@ import {
 import { logout } from "@/utils/auth";
 import { toast } from "sonner";
 
-export default function Sidebar() {
+interface SidebarProps {
+  setIsLoggedIn: (value: boolean) => void;
+}
+
+export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
       const result = await logout();
       if (result.success) {
-        navigate('/');
+        setIsLoggedIn(false); // Update the login state
+        navigate('/login');
       } else {
         console.error('Logout failed:', result.error);
         toast.error('Failed to logout');

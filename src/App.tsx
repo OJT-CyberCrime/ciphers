@@ -6,21 +6,31 @@ import Users from "./pages/Users";
 import IncidentReport from "./pages/IncidentReport/index";
 import Certifications from "./pages/Certifications";
 import Login from "./Screens/Login";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Eblotter from './pages/Eblotter';
 import Archives from './pages/Archives';
 import FolderPage from "./pages/FolderPage";
 import ProtectedRoute from "./utils/protectedRoute";
+import Cookies from 'js-cookie';
 
 const App: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check for existing login state when the app loads
+  useEffect(() => {
+    const userToken = Cookies.get('user_token');
+    const userData = Cookies.get('user_data');
+    if (userToken && userData) {
+      setIsLoggedIn(true);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100 overflow-hidden">
       <Router>
         <div className="flex">
           {/* Sidebar appears only if logged in */}
-          {isLoggedIn && <Sidebar />}
+          {isLoggedIn && <Sidebar setIsLoggedIn={setIsLoggedIn} />}
 
           {/* Main Content */}
           <main className="flex-1 p-6">
