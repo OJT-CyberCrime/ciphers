@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Sidebar from "./Sidebar";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
-import IncidentReport from "./pages/IncidentReport";
+import IncidentReport from "./pages/IncidentReport/index";
 import Certifications from "./pages/Certifications";
 import Login from "./Screens/Login";
 import { useState } from "react";

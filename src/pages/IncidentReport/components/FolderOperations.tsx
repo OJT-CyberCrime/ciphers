@@ -316,15 +316,14 @@ export default function FolderOperations({
       if (!userData2) throw new Error('User not found');
 
       // Update the folder to archive it
-      const { data: updateData, error: archiveError } = await supabase
+      const { error: archiveError } = await supabase
         .from('folders')
         .update({
           is_archived: true,
           updated_by: userData2.user_id,
           updated_at: new Date().toISOString()
         })
-        .eq('folder_id', selectedFolder.folder_id)
-        .select();
+        .eq('folder_id', selectedFolder.folder_id);
 
       if (archiveError) throw archiveError;
 
