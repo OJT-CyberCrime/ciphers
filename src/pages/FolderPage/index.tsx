@@ -435,10 +435,11 @@ export default function FolderPage() {
                     setShowPreview={setShowPreview}
                     showFileDialog={showFileDialog}
                     setShowFileDialog={setShowFileDialog}
+                    selectedFile={selectedFile}
                     onFileUpdate={() => {
                       // Remove the file from the UI if it was archived
                       if (showFileDialog === 'archive') {
-                        setFiles(files.filter(f => f.file_id !== file.file_id));
+                        setFiles(files.filter(f => f.file_id !== selectedFile?.file_id));
                       } else {
                         // Refresh the files list
                         window.location.reload();
