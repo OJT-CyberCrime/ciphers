@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { supabase } from "@/utils/supa";
 import Cookies from 'js-cookie';
 import { toast } from "sonner";
+import { Eye, EyeOff } from 'lucide-react';
 
 interface LoginProps {
   setIsLoggedIn: (value: boolean) => void;
@@ -12,6 +13,7 @@ interface LoginProps {
 
 const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -81,6 +83,9 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
           <img src="/assets/RACU.png" alt="RACU Logo" className="w-32 h-32" />
         </div>
 
+        <p className="text-sm font-medium text-center text-blue-900 font-poppins mb-8" >
+        Camarines Sur Provincial Cyber Response Team</p>
+
         {/* Title */}
         <h2 className="text-5xl font-bold text-center text-blue-900 font-poppins">
           CIPHERS
@@ -96,12 +101,23 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
             className="p-4 text-lg h-12 w-full border border-gray-300 rounded-md font-poppins focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
-          <Input
-            type="password"
-            placeholder="Enter Password"
-            className="p-4 text-lg h-12 w-full border border-gray-300 rounded-md font-poppins focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-          />
+          <div className="relative">
+            <Input
+              type={showPassword ? "text" : "password"}
+              placeholder="Enter Password"
+              className="p-4 text-lg h-12 w-full border border-gray-300 rounded-md font-poppins focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              onMouseEnter={() => setShowPassword(true)}
+              onMouseLeave={() => setShowPassword(false)}
+              className="absolute inset-y-0 right-0 flex items-center pr-3"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5 text-gray-500" /> : <Eye className="h-5 w-5 text-gray-500" />}
+            </button>
+          </div>
           <Button
             type="submit"
             className="w-full bg-blue-900 text-white p-4 text-lg h-12 rounded-md hover:bg-blue-800 transition-all duration-300 font-poppins"
