@@ -39,11 +39,8 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.2",
     "react-router-dom": "^6.29.0",
-<<<<<<< HEAD
     "react-to-print": "^3.0.5",
-=======
     "recharts": "^2.15.1",
->>>>>>> 1b9748882f6840c7ace31871c5f6af133137b207
     "sonner": "^1.7.4",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
