@@ -89,26 +89,20 @@ const stripHtml = (html: string) => {
   return doc.body.textContent || '';
 };
 
-// Add this helper function to determine the badge class based on status
+// Update the helper function to return an object with class and label
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
-    case 'active':
-      return 'bg-green-200 text-green-800'; // Lighter for active status
-    case 'inactive':
-      return 'bg-red-200 text-red-800'; // Lighter for inactive status
     case 'pending':
-      return 'bg-yellow-200 text-yellow-800'; // Lighter for pending status
+      return { class: 'bg-yellow-200 text-yellow-800', label: 'Pending' }; // Lighter for pending status
+    case 'resolved':
+      return { class: 'bg-green-200 text-green-800', label: 'Resolved' }; // Lighter for resolved status
+    case 'dismissed':
+      return { class: 'bg-red-200 text-red-800', label: 'Dismissed' }; // Lighter for dismissed status
+    case 'under investigation':
+      return { class: 'bg-blue-200 text-blue-800', label: 'Under Investigation' }; // Lighter for under investigation status
     default:
-      return 'bg-gray-200 text-black'; // Default case
+      return { class: 'bg-gray-200 text-black', label: 'N/A' }; // Default case
   }
-};
-
-// Add this helper function to capitalize the first letter of each word
-const capitalizeFirstLetter = (str: string) => {
-  return str
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
 };
 
 export default function FolderPage() {
@@ -386,9 +380,9 @@ export default function FolderPage() {
               </h1>
               <Badge 
                 variant="outline" 
-                className={getStatusBadgeClass(folderDetails?.status || 'unknown')}
+                className={getStatusBadgeClass(folderDetails?.status || 'unknown').class}
               >
-                {capitalizeFirstLetter(folderDetails?.status || 'Unknown')}
+                {getStatusBadgeClass(folderDetails?.status || 'unknown').label}
               </Badge>
             </>
           )}
@@ -403,12 +397,12 @@ export default function FolderPage() {
             <Skeleton className="h-32 w-full rounded-lg" />
           </div>
         ) : filteredFiles.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredFiles.map((file) => (
               <div key={file.file_id} className="relative">
                 <div
                   className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
-                  style={{ maxHeight: '420px', width: '325px', overflow: 'hidden' }}
+                  style={{ height: '420px', width: '100%', overflow: 'hidden' }}
                   onContextMenu={(e) => e.preventDefault()}
                 >
                   <div className="flex items-center justify-between mb-2">

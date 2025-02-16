@@ -515,12 +515,15 @@ export default function FileOperations({
   return (
     <>
       {/* Preview Dialog */}
-      <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-6xl w-4/5 h-[80vh] overflow-hidden bg-gray-100 font-poppins">
+      <Dialog
+        open={showPreview}
+        onOpenChange={setShowPreview}
+      >
+        <DialogContent className="max-w-6xl w-4/5 h-[80vh] overflow-y-auto bg-white shadow-lg rounded-lg font-poppins scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
           <DialogHeader>
             <div className="flex justify-between items-center">
               <div>
-                <DialogTitle className="text-xl">{file.title}</DialogTitle>
+                <DialogTitle className="text-2xl font-semibold">{file.title}</DialogTitle>
                 <p className="text-sm text-gray-500 mt-1">
                   {ext.toUpperCase()} Document • Added by {file.created_by}
                 </p>
@@ -532,22 +535,22 @@ export default function FileOperations({
           </DialogHeader>
 
           {/* Scrollable Incident Summary */}
-          <div className="flex-1 overflow-auto rounded-lg border max-h-[calc(80vh-150px)] p-4">
+          <div className="flex-1 overflow-auto rounded-lg border max-h-[calc(80vh-150px)] p-4 bg-gray-50">
             {renderPreviewContent()}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex justify-between items-center">
             <div className="flex items-center gap-2 text-sm text-gray-500">
               {file.viewed_at && (
                 <span>Last viewed: {new Date(file.viewed_at).toLocaleString()}</span>
               )}
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleFileDownload} className="flex items-center gap-2">
+              <Button onClick={handleFileDownload} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700">
                 <Download size={16} />
                 Download
               </Button>
-              <Button onClick={handleFilePrint} className="flex items-center gap-2">
+              <Button onClick={handleFilePrint} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700">
                 <Printer size={16} />
                 Print
               </Button>
@@ -559,11 +562,11 @@ export default function FileOperations({
       {/* File Operations Dialog */}
       <Dialog
         open={showFileDialog !== null}
-        onOpenChange={() => setShowFileDialog(null)}
+        onOpenChange={() => setShowFileDialog(null)}  
       >
-        <DialogContent className="p-6 w-[90%] max-w-2xl h-[90%] max-h-[80vh] overflow-hidden bg-gray-100 font-poppins">
+        <DialogContent className="p-6 w-[90%] max-w-2xl h-[90%] max-h-[80vh] overflow-y-auto bg-white shadow-lg rounded-lg font-poppins scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
               {showFileDialog === 'edit' ? 'Edit File' :
                showFileDialog === 'archive' ? 'Archive File' :
                showFileDialog === 'details' ? 'File Details' : ''}
@@ -571,7 +574,7 @@ export default function FileOperations({
           </DialogHeader>
 
           {/* Add a line after the dialog header */}
-          <hr className="my-1 border-gray-300" /> {/* Horizontal line with margin */}
+          <hr className="my-1 border-gray-300" />
 
           <div className="space-y-4">
             {showFileDialog === 'edit' && (
@@ -584,6 +587,7 @@ export default function FileOperations({
                       name="title"
                       defaultValue={file.title}
                       required
+                      className="border-gray-300 rounded-md"
                     />
                   </div>
                   <div>
@@ -593,6 +597,7 @@ export default function FileOperations({
                       name="investigator"
                       defaultValue={file.investigator}
                       required
+                      className="border-gray-300 rounded-md"
                     />
                   </div>
                   <div>
@@ -602,6 +607,7 @@ export default function FileOperations({
                       name="desk_officer"
                       defaultValue={file.desk_officer}
                       required
+                      className="border-gray-300 rounded-md"
                     />
                   </div>
                   <div>
@@ -611,7 +617,7 @@ export default function FileOperations({
                       name="summary"
                       defaultValue={file.incident_summary}
                       required
-                      className="h-32 resize-none"
+                      className="h-32 resize-none border-gray-300 rounded-md"
                     />
                   </div>
                   <div>
@@ -620,17 +626,18 @@ export default function FileOperations({
                       id="file"
                       name="file"
                       type="file"
+                      className="border-gray-300 rounded-md"
                     />
                     <p className="text-sm text-gray-500">
                       Leave empty to keep the current file
                     </p>
                   </div>
                 </div>
-                <DialogFooter className="mt-4">
-                  <Button type="button" variant="outline" onClick={() => setShowFileDialog(null)}>
+                <DialogFooter className="mt-4 flex justify-end">
+                  <Button type="button" variant="outline" onClick={() => setShowFileDialog(null)} className="mr-2">
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
+                  <Button type="submit" className="bg-blue-600 text-white hover:bg-blue-700">
                     Save Changes
                   </Button>
                 </DialogFooter>
@@ -639,17 +646,17 @@ export default function FileOperations({
 
             {showFileDialog === 'archive' && (
               <div className="space-y-4">
-                <DialogDescription>
+                <DialogDescription className="text-gray-600">
                   Are you sure you want to archive this file? 
                   This will remove it from the active files list.
                 </DialogDescription>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setShowFileDialog(null)}>
+                <DialogFooter className="flex justify-end">
+                  <Button type="button" variant="outline" onClick={() => setShowFileDialog(null)} className="mr-2">
                     Cancel
                   </Button>
                   <Button
                     type="button"
-                    className="bg-red-600 hover:bg-red-700 text-white"
+                    className="bg-red-600 text-white hover:bg-red-700"
                     onClick={async () => {
                       await handleArchiveFile();
                       setShowFileDialog(null);
@@ -681,8 +688,8 @@ export default function FileOperations({
                     id="summary"
                     name="summary"
                     defaultValue={file.incident_summary}
-                    readOnly // Make it read-only if you don't want to allow editing in details view
-                    className="h-32 resize-none"
+                    readOnly
+                    className="h-32 resize-none border-gray-300 rounded-md"
                   />
                 </div>
                 <div>
@@ -738,9 +745,9 @@ export default function FileOperations({
                     </div>
                   </div>
                 </div>
-                <DialogFooter>
+                <DialogFooter className="flex justify-end">
                   <Button
-                    className="bg-blue-900 hover:bg-blue-800"
+                    className="bg-blue-600 text-white hover:bg-blue-700"
                     onClick={() => setShowFileDialog(null)}
                   >
                     Close
