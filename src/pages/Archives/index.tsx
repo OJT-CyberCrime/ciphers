@@ -114,8 +114,7 @@ export default function Archives() {
       }
     } else {
       success = await handleRestoreFile(
-        restoreDialog.item as ArchivedFile,
-        restoreDialog.fromArchivedFolder
+        restoreDialog.item as ArchivedFile
       );
       if (success) {
         if (restoreDialog.fromArchivedFolder) {

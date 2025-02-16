@@ -144,7 +144,7 @@ export const handleRestoreFolder = async (folder: Folder) => {
   }
 };
 
-export const handleRestoreFile = async (file: ArchivedFile, fromArchivedFolder: boolean = false) => {
+export const handleRestoreFile = async (file: ArchivedFile) => {
   try {
     const { error } = await supabase
       .from('files')
