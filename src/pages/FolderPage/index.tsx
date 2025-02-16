@@ -7,7 +7,6 @@ import {
   Plus, 
   FileText, 
   Image as ImageIcon, 
-  FileArchive, 
   File,
   Pencil,
   Archive,
