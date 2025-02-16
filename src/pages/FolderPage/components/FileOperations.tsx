@@ -57,6 +57,7 @@ interface FileOperationsProps {
   showFileDialog: 'edit' | 'archive' | 'details' | null;
   setShowFileDialog: (dialog: 'edit' | 'archive' | 'details' | null) => void;
   onFileUpdate: () => void;
+  selectedFile?: FileRecord | null;
 }
 
 // Helper function to get file type icon
@@ -80,7 +81,8 @@ export default function FileOperations({
   setShowPreview,
   showFileDialog,
   setShowFileDialog,
-  onFileUpdate
+  onFileUpdate,
+  selectedFile
 }: FileOperationsProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const ext = file.file_path.split('.').pop()?.toLowerCase() || '';
@@ -297,10 +299,11 @@ export default function FileOperations({
   // Function to handle file archiving
   const handleArchiveFile = async () => {
     try {
+      const fileToArchive = selectedFile || file;
       const { error } = await supabase
         .from('files')
         .update({ is_archived: true })
-        .eq('file_id', file.file_id);
+        .eq('file_id', fileToArchive.file_id);
 
       if (error) throw error;
       toast.success('File archived successfully');

@@ -8,7 +8,7 @@ import Certifications from "./pages/Certifications";
 import Login from "./Screens/Login";
 import { useState, useEffect } from "react";
 import Eblotter from './pages/Eblotter';
-import Archives from './pages/Archives';
+import Archives from './pages/Archives/index';
 import FolderPage from "./pages/FolderPage/index";
 import ProtectedRoute from "./utils/protectedRoute";
 import Cookies from 'js-cookie';
