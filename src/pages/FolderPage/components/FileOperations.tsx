@@ -318,6 +318,7 @@ export default function FileOperations({
   const handleEditFile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
+      const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
       const title = formData.get('title') as string;
       const investigator = formData.get('investigator') as string;
@@ -337,19 +338,19 @@ export default function FileOperations({
       if (userError) throw userError;
       if (!userData2) throw new Error('User not found');
 
-      let filePath = file.file_path;
-      let publicUrl = file.public_url;
+      let filePath = fileToEdit.file_path;
+      let publicUrl = fileToEdit.public_url;
       
       // Only handle file upload if a new file was actually uploaded
       if (uploadedFile && uploadedFile instanceof globalThis.File && uploadedFile.size > 0) {
         const fileExt = uploadedFile.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
-        const newFilePath = `folder_${file.folder_id}/${fileName}`;
+        const newFilePath = `folder_${fileToEdit.folder_id}/${fileName}`;
 
         // Delete the old file first
         const { error: deleteError } = await supabase.storage
           .from('files')
-          .remove([file.file_path]);
+          .remove([fileToEdit.file_path]);
 
         if (deleteError) throw deleteError;
 
@@ -386,7 +387,7 @@ export default function FileOperations({
           updated_by: userData2.user_id,
           updated_at: new Date().toISOString()
         })
-        .eq('file_id', file.file_id);
+        .eq('file_id', fileToEdit.file_id);
 
       if (updateError) throw updateError;
 
@@ -585,7 +586,7 @@ export default function FileOperations({
                     <Input
                       id="title"
                       name="title"
-                      defaultValue={file.title}
+                      defaultValue={(selectedFile || file).title}
                       required
                       className="border-gray-300 rounded-md"
                     />
@@ -595,7 +596,7 @@ export default function FileOperations({
                     <Input
                       id="investigator"
                       name="investigator"
-                      defaultValue={file.investigator}
+                      defaultValue={(selectedFile || file).investigator}
                       required
                       className="border-gray-300 rounded-md"
                     />
@@ -605,7 +606,7 @@ export default function FileOperations({
                     <Input
                       id="desk_officer"
                       name="desk_officer"
-                      defaultValue={file.desk_officer}
+                      defaultValue={(selectedFile || file).desk_officer}
                       required
                       className="border-gray-300 rounded-md"
                     />
@@ -615,7 +616,7 @@ export default function FileOperations({
                     <Textarea
                       id="summary"
                       name="summary"
-                      defaultValue={file.incident_summary}
+                      defaultValue={(selectedFile || file).incident_summary}
                       required
                       className="h-32 resize-none border-gray-300 rounded-md"
                     />
