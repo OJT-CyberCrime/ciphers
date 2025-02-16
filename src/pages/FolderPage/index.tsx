@@ -9,8 +9,9 @@ import {
   Image as ImageIcon, 
   FileArchive, 
   File,
-  Download,
-  X
+  Pencil,
+  Archive,
+  Eye
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,12 +27,18 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import Cookies from "js-cookie";
 import RichTextEditor from "@/components/RichTextEditor";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import FileOperations from "./components/FileOperations";
 
-interface File {
+interface FileRecord {
   file_id: number;
   folder_id: number;
   title: string;
@@ -43,6 +50,19 @@ interface File {
   created_at: string;
   updated_at: string | null;
   is_archived: boolean;
+  investigator: string;
+  desk_officer: string;
+  viewed_by: string | null;
+  downloaded_by: string | null;
+  printed_by: string | null;
+  viewed_at: string | null;
+  downloaded_at: string | null;
+  printed_at: string | null;
+  creator?: { name: string };
+  updater?: { name: string };
+  viewer?: { name: string };
+  downloader?: { name: string };
+  printer?: { name: string };
 }
 
 interface Folder {
@@ -53,7 +73,7 @@ interface Folder {
   created_at: string;
 }
 
-// Add a helper function to get the file type icon
+// Helper function to get file type icon
 const getFileIcon = (filePath: string) => {
   const ext = filePath.split('.').pop()?.toLowerCase() || '';
   const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
@@ -68,309 +88,28 @@ const getFileIcon = (filePath: string) => {
   return <File size={24} className="text-gray-600" />;
 };
 
-// Add a helper function to render file preview
-const FilePreview = ({ file }: { file: File }) => {
-  const [showPreview, setShowPreview] = useState(false);
-  const [signedUrl, setSignedUrl] = useState<string | null>(null);
-  const ext = file.file_path.split('.').pop()?.toLowerCase() || '';
-  const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
-  const pdfType = ['pdf'];
-  const officeTypes = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
-
-  // Get signed URL when component mounts or when showing preview
-  useEffect(() => {
-    const getSignedUrl = async () => {
-      try {
-        // Check if file exists first
-        const { data: checkData, error: checkError } = await supabase.storage
-          .from('files')
-          .list(`folder_${file.folder_id}`);
-
-        if (checkError) throw checkError;
-
-        const fileExists = checkData.some(f => f.name === file.file_path.split('/').pop());
-        if (!fileExists) {
-          toast.error('File no longer exists in storage');
-          return;
-        }
-
-        const { data, error } = await supabase.storage
-          .from('files')
-          .createSignedUrl(file.file_path, 60 * 60 * 24); // 24 hour expiry
-
-        if (error) throw error;
-        setSignedUrl(data.signedUrl);
-      } catch (error) {
-        console.error('Error getting signed URL:', error);
-        toast.error('Error loading file preview. Please try refreshing the page.');
-      }
-    };
-
-    if (showPreview || !signedUrl) {
-      getSignedUrl();
-    }
-
-    // Refresh URL before expiry
-    const refreshInterval = setInterval(() => {
-      if (signedUrl) {
-        getSignedUrl();
-      }
-    }, 1000 * 60 * 60 * 23); // Refresh every 23 hours
-
-    return () => clearInterval(refreshInterval);
-  }, [file.file_path, showPreview, file.folder_id]);
-
-  // Function to get Google Docs Viewer URL
-  const getGoogleDocsViewerUrl = (url: string) => {
-    return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-  };
-
-  // Function to handle file download with error checking
-  const handleFileDownload = async () => {
-    try {
-      // Check if file exists first
-      const { data: checkData, error: checkError } = await supabase.storage
-        .from('files')
-        .list(`folder_${file.folder_id}`);
-
-      if (checkError) throw checkError;
-
-      const fileExists = checkData.some(f => f.name === file.file_path.split('/').pop());
-      if (!fileExists) {
-        toast.error('File no longer exists in storage');
-        return;
-      }
-
-      const { data, error } = await supabase.storage
-        .from('files')
-        .download(file.file_path);
-      
-      if (error) throw error;
-      
-      // Create download link
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.title + '.' + ext;
-      document.body.appendChild(a);
-      a.click();
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error('Error downloading file:', error);
-      toast.error('Error downloading file. Please try again.');
-    }
-  };
-
-  if (imageTypes.includes(ext)) {
-    return (
-      <>
-        <div 
-          className="mt-2 border rounded-lg overflow-hidden cursor-pointer"
-          onClick={() => setShowPreview(true)}
-        >
-          {signedUrl ? (
-            <img 
-              src={signedUrl} 
-              alt={file.title}
-              className="w-full h-48 object-cover hover:opacity-90 transition-opacity"
-            />
-          ) : (
-            <div className="w-full h-48 bg-gray-100 animate-pulse flex items-center justify-center">
-              <ImageIcon className="text-gray-400" size={24} />
-            </div>
-          )}
-        </div>
-
-        {/* Image Preview Dialog */}
-        <Dialog open={showPreview} onOpenChange={setShowPreview}>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <div className="flex justify-between items-center">
-                <DialogTitle>{file.title}</DialogTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowPreview(false)}
-                >
-                  <X size={20} />
-                </Button>
-              </div>
-            </DialogHeader>
-            {signedUrl && (
-              <div className="relative aspect-video">
-                <img 
-                  src={signedUrl} 
-                  alt={file.title}
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            )}
-            <DialogFooter>
-              <Button
-                onClick={handleFileDownload}
-                className="flex items-center gap-2"
-              >
-                <Download size={16} />
-                Download Image
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        {/* Add download button below preview */}
-        <div className="mt-2">
-          <Button
-            variant="ghost"
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 w-full justify-center"
-            onClick={handleFileDownload}
-          >
-            <Download size={16} />
-            Download
-          </Button>
-        </div>
-      </>
-    );
-  }
-
-  if (pdfType.includes(ext) || officeTypes.includes(ext)) {
-    return (
-      <>
-        <div 
-          className="mt-2 cursor-pointer"
-          onClick={() => setShowPreview(true)}
-        >
-          {signedUrl ? (
-            <iframe
-              src={officeTypes.includes(ext) ? getGoogleDocsViewerUrl(signedUrl) : signedUrl}
-              className="w-full h-48 rounded-lg border hover:border-blue-300 transition-colors"
-              title={file.title}
-            />
-          ) : (
-            <div className="w-full h-48 bg-gray-100 animate-pulse flex items-center justify-center rounded-lg border">
-              <FileText className="text-gray-400" size={24} />
-            </div>
-          )}
-        </div>
-
-        {/* Document Preview Dialog */}
-        <Dialog open={showPreview} onOpenChange={setShowPreview}>
-          <DialogContent className="max-w-4xl h-[80vh]">
-            <DialogHeader>
-              <div className="flex justify-between items-center">
-                <DialogTitle>{file.title}</DialogTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowPreview(false)}
-                >
-                  <X size={20} />
-                </Button>
-              </div>
-            </DialogHeader>
-            {signedUrl && (
-              <div className="flex-1 h-full">
-                <iframe
-                  src={officeTypes.includes(ext) ? getGoogleDocsViewerUrl(signedUrl) : signedUrl}
-                  className="w-full h-full rounded-lg border"
-                  title={file.title}
-                />
-              </div>
-            )}
-            <DialogFooter>
-              <Button
-                onClick={handleFileDownload}
-                className="flex items-center gap-2"
-              >
-                <Download size={16} />
-                Download
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        {/* Add download button below preview */}
-        <div className="mt-2">
-          <Button
-            variant="ghost"
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 w-full justify-center"
-            onClick={handleFileDownload}
-          >
-            <Download size={16} />
-            Download
-          </Button>
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <div className="mt-2">
-      <div className="flex justify-between items-center mb-2">
-        <Button
-          variant="ghost"
-          className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-          onClick={async () => {
-            try {
-              const { data: checkData, error: checkError } = await supabase.storage
-                .from('files')
-                .list(`folder_${file.folder_id}`);
-
-              if (checkError) throw checkError;
-
-              const fileExists = checkData.some(f => f.name === file.file_path.split('/').pop());
-              if (!fileExists) {
-                toast.error('File no longer exists in storage');
-                return;
-              }
-
-              const { data, error } = await supabase.storage
-                .from('files')
-                .download(file.file_path);
-              
-              if (error) throw error;
-              
-              // Open file in new tab
-              const url = URL.createObjectURL(data);
-              window.open(url, '_blank');
-              URL.revokeObjectURL(url);
-            } catch (error) {
-              console.error('Error viewing file:', error);
-              toast.error('Error viewing file. Please try again.');
-            }
-          }}
-        >
-          <FileArchive size={16} />
-          View File
-        </Button>
-        <Button
-          variant="ghost"
-          className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-          onClick={handleFileDownload}
-        >
-          <Download size={16} />
-          Download
-        </Button>
-      </div>
-    </div>
-  );
-};
-
 // Add this helper function to strip HTML tags
 const stripHtml = (html: string) => {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   return doc.body.textContent || '';
 };
 
-const FolderPage = () => {
+export default function FolderPage() {
   const { id } = useParams<{ id: string }>();
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<FileRecord[]>([]);
   const [folderDetails, setFolderDetails] = useState<Folder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingFile, setIsAddingFile] = useState(false);
   const [newFileTitle, setNewFileTitle] = useState("");
   const [newFileSummary, setNewFileSummary] = useState("");
   const [fileUpload, setFileUpload] = useState<FileList | null>(null);
+  const [newInvestigator, setNewInvestigator] = useState("");
+  const [newDeskOfficer, setNewDeskOfficer] = useState("");
+  const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null);
+  const [showFileDialog, setShowFileDialog] = useState<'edit' | 'archive' | 'details' | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Get the current location to determine the previous page
   const location = useLocation();
@@ -428,11 +167,19 @@ const FolderPage = () => {
           {
             folder_id: id,
             title: newFileTitle,
-            incident_summary: cleanSummary, // Use the cleaned text
+            incident_summary: cleanSummary,
             file_path: filePath,
             created_by: userData2.user_id,
             is_archived: false,
-            public_url: publicUrl
+            public_url: publicUrl,
+            investigator: newInvestigator,
+            desk_officer: newDeskOfficer,
+            viewed_by: null,
+            downloaded_by: null,
+            printed_by: null,
+            viewed_at: null,
+            downloaded_at: null,
+            printed_at: null
           }
         ])
         .select()
@@ -466,6 +213,8 @@ const FolderPage = () => {
       setIsAddingFile(false);
       setNewFileTitle("");
       setNewFileSummary("");
+      setNewInvestigator("");
+      setNewDeskOfficer("");
       setFileUpload(null);
     } catch (error: any) {
       console.error('Error uploading file:', error);
@@ -502,7 +251,10 @@ const FolderPage = () => {
           .select(`
             *,
             creator:created_by(name),
-            updater:updated_by(name)
+            updater:updated_by(name),
+            viewer:viewed_by(name),
+            downloader:downloaded_by(name),
+            printer:printed_by(name)
           `)
           .eq('folder_id', id)
           .eq('is_archived', false)
@@ -513,7 +265,10 @@ const FolderPage = () => {
         const formattedFiles = filesData.map(file => ({
           ...file,
           created_by: file.creator?.name || file.created_by,
-          updated_by: file.updater?.name || file.updated_by
+          updated_by: file.updater?.name || file.updated_by,
+          viewed_by: file.viewer?.name || file.viewed_by,
+          downloaded_by: file.downloader?.name || file.downloaded_by,
+          printed_by: file.printer?.name || file.printed_by
         }));
 
         setFiles(formattedFiles);
@@ -615,24 +370,62 @@ const FolderPage = () => {
         ) : filteredFiles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredFiles.map((file) => (
-              <div
-                key={file.file_id}
-                className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  {getFileIcon(file.file_path)}
-                  <h3 className="font-medium text-gray-900">{file.title}</h3>
-                </div>
-                <div 
-                  className="prose prose-sm max-w-none mb-2 text-gray-600 line-clamp-3 whitespace-pre-line"
-                >
-                  {file.incident_summary}
-                </div>
-                <FilePreview file={file} />
-                <div className="text-sm text-gray-500 mt-2">
-                  Added by {file.created_by} on {new Date(file.created_at).toLocaleDateString()}
-                </div>
-              </div>
+              <ContextMenu key={file.file_id}>
+                <ContextMenuTrigger>
+                  <div
+                    className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      {getFileIcon(file.file_path)}
+                      <h3 className="font-medium text-gray-900">{file.title}</h3>
+                    </div>
+                    <div 
+                      className="prose prose-sm max-w-none mb-2 text-gray-600 line-clamp-3 whitespace-pre-line"
+                    >
+                      {file.incident_summary}
+                    </div>
+                    <FileOperations
+                      file={file}
+                      showPreview={showPreview}
+                      setShowPreview={setShowPreview}
+                      showFileDialog={showFileDialog}
+                      setShowFileDialog={setShowFileDialog}
+                      onFileUpdate={() => {
+                        // Remove the file from the UI if it was archived
+                        if (showFileDialog === 'archive') {
+                          setFiles(files.filter(f => f.file_id !== file.file_id));
+                        } else {
+                          // Refresh the files list
+                          window.location.reload();
+                        }
+                      }}
+                    />
+                    <div className="text-sm text-gray-500 mt-2">
+                      Added by {file.created_by} on {new Date(file.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem onClick={() => {
+                    setSelectedFile(file);
+                    setShowFileDialog('edit');
+                  }}>
+                    <Pencil size={16} className="mr-2" /> Edit
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => {
+                    setSelectedFile(file);
+                    setShowFileDialog('archive');
+                  }}>
+                    <Archive size={16} className="mr-2" /> Archive
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => {
+                    setSelectedFile(file);
+                    setShowFileDialog('details');
+                  }}>
+                    <Eye size={16} className="mr-2" /> View Details
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             ))}
           </div>
         ) : (
@@ -664,6 +457,26 @@ const FolderPage = () => {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="investigator">Investigator</Label>
+                <Input
+                  id="investigator"
+                  placeholder="Enter investigator name"
+                  value={newInvestigator}
+                  onChange={(e) => setNewInvestigator(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="desk_officer">Desk Officer</Label>
+                <Input
+                  id="desk_officer"
+                  placeholder="Enter desk officer name"
+                  value={newDeskOfficer}
+                  onChange={(e) => setNewDeskOfficer(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="summary">Incident Summary</Label>
                 <RichTextEditor
                   content={newFileSummary}
@@ -688,6 +501,8 @@ const FolderPage = () => {
                   setIsAddingFile(false);
                   setNewFileTitle("");
                   setNewFileSummary("");
+                  setNewInvestigator("");
+                  setNewDeskOfficer("");
                   setFileUpload(null);
                 }}
               >
@@ -702,6 +517,4 @@ const FolderPage = () => {
       </Dialog>
     </div>
   );
-};
-
-export default FolderPage; 
+} 
