@@ -65,15 +65,15 @@ interface Folder {
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
     case 'pending':
-      return 'bg-yellow-200 text-yellow-800'; // Lighter for pending status
+      return { class: 'bg-yellow-200 text-yellow-800', label: 'P' }; // Lighter for pending status
     case 'resolved':
-      return 'bg-green-200 text-green-800'; // Lighter for resolved status
+      return { class: 'bg-green-200 text-green-800', label: 'R' }; // Lighter for resolved status
     case 'dismissed':
-      return 'bg-red-200 text-red-800'; // Lighter for dismissed status
+      return { class: 'bg-red-200 text-red-800', label: 'D' }; // Lighter for dismissed status
     case 'under investigation':
-      return 'bg-blue-200 text-blue-800'; // Lighter for under investigation status
+      return { class: 'bg-blue-200 text-blue-800', label: 'UI' }; // Lighter for under investigation status
     default:
-      return 'bg-gray-200 text-black'; // Default case
+      return { class: 'bg-gray-200 text-black', label: 'N/A' }; // Default case
   }
 };
 
@@ -237,12 +237,14 @@ export default function IncidentReport() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {isLoading ? (
-          <Skeleton className="h-32 w-full rounded-lg" />
+          Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-32 w-full rounded-lg" />
+          ))
         ) : filteredFolders.length > 0 ? (
           filteredFolders.map((folder) => (
             <div key={folder.folder_id} className="relative">
               <Button
-                className="flex flex-col items-start bg-white border border-gray-300 rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full min-h-[120px]"
+                className="flex flex-col items-start bg-white border border-gray-300 rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full min-h-[120px] relative"
                 onClick={() => navigate(`/folder/${folder.folder_id}`, { 
                   state: { 
                     from: '/incident-reports', 
@@ -256,11 +258,14 @@ export default function IncidentReport() {
                     className="text-gray-600"
                     fill="#4b5563"
                   />
-                  <span className="font-poppins font-medium text-lg text-gray-900 text-left">
+                  <span className="font-poppins font-medium text-lg text-gray-900 text-left overflow-hidden whitespace-nowrap text-ellipsis">
                     {folder.title}
                   </span>
-                  <Badge variant="outline" className={getStatusBadgeClass(folder.status)}>
-                    {folder.status}
+                  <Badge 
+                    variant="outline" 
+                    className={`absolute top-2 right-9 mt-1 rounded-full text-xs font-poppins ${getStatusBadgeClass(folder.status).class}`}
+                  >
+                    {getStatusBadgeClass(folder.status).label}
                   </Badge>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -271,7 +276,7 @@ export default function IncidentReport() {
                       </Badge>
                     ))
                   ) : (
-                    <Badge variant="outline" className="bg-gray-100">
+                    <Badge variant="outline" className="bg-gray-200 text-black">
                       No categories
                     </Badge>
                   )}
@@ -279,7 +284,7 @@ export default function IncidentReport() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger>
-                          <Badge variant="outline" className="bg-gray-300 cursor-pointer">
+                          <Badge variant="outline" className="bg-gray-200 cursor-pointer">
                             +{folder.categories.length - 3}
                           </Badge>
                         </TooltipTrigger>

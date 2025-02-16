@@ -11,7 +11,8 @@ import {
   File,
   Pencil,
   Archive,
-  Eye
+  Eye,
+  MoreVertical
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,13 +31,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import Cookies from "js-cookie";
 import RichTextEditor from "@/components/RichTextEditor";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import FileOperations from "./components/FileOperations";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface FileRecord {
   file_id: number;
@@ -94,6 +90,28 @@ const stripHtml = (html: string) => {
   return doc.body.textContent || '';
 };
 
+// Add this helper function to determine the badge class based on status
+const getStatusBadgeClass = (status: string) => {
+  switch (status) {
+    case 'active':
+      return 'bg-green-200 text-green-800'; // Lighter for active status
+    case 'inactive':
+      return 'bg-red-200 text-red-800'; // Lighter for inactive status
+    case 'pending':
+      return 'bg-yellow-200 text-yellow-800'; // Lighter for pending status
+    default:
+      return 'bg-gray-200 text-black'; // Default case
+  }
+};
+
+// Add this helper function to capitalize the first letter of each word
+const capitalizeFirstLetter = (str: string) => {
+  return str
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 export default function FolderPage() {
   const { id } = useParams<{ id: string }>();
   const [searchQuery, setSearchQuery] = useState("");
@@ -110,6 +128,7 @@ export default function FolderPage() {
   const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null);
   const [showFileDialog, setShowFileDialog] = useState<'edit' | 'archive' | 'details' | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showOptions, setShowOptions] = useState<{ [key: number]: boolean }>({});
 
   // Get the current location to determine the previous page
   const location = useLocation();
@@ -356,76 +375,116 @@ export default function FolderPage() {
       {/* Folder Content */}
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-medium font-poppins text-blue-900">
-            {folderDetails?.title || `Folder ${id}`}
-          </h1>
-          <Badge variant="outline" className="bg-gray-200">
-            {folderDetails?.status}
-          </Badge>
+          {isLoading ? (
+            <>
+              <Skeleton className="h-8 w-1/2 rounded-lg" /> {/* Skeleton for folder title */}
+              <Skeleton className="h-8 w-1/4 rounded-lg" /> {/* Skeleton for status badge */}
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-medium font-poppins text-blue-900">
+                {folderDetails?.title || `Folder ${id}`}
+              </h1>
+              <Badge 
+                variant="outline" 
+                className={getStatusBadgeClass(folderDetails?.status || 'unknown')}
+              >
+                {capitalizeFirstLetter(folderDetails?.status || 'Unknown')}
+              </Badge>
+            </>
+          )}
         </div>
 
-        {/* Files Grid */}
+        {/* Loading Skeleton or Files Grid */}
         {isLoading ? (
-          <div>Loading files...</div>
-        ) : filteredFiles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <Skeleton className="h-32 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+          </div>
+        ) : filteredFiles.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
             {filteredFiles.map((file) => (
-              <ContextMenu key={file.file_id}>
-                <ContextMenuTrigger>
-                  <div
-                    className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-center gap-3 mb-2">
+              <div key={file.file_id} className="relative">
+                <div
+                  className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                  style={{ maxHeight: '420px', width: '325px', overflow: 'hidden' }}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
                       {getFileIcon(file.file_path)}
                       <h3 className="font-medium text-gray-900">{file.title}</h3>
                     </div>
-                    <div 
-                      className="prose prose-sm max-w-none mb-2 text-gray-600 line-clamp-3 whitespace-pre-line"
+                    <button
+                      className="p-2 rounded-full hover:bg-gray-200"
+                      onClick={() => setShowOptions(prev => ({ ...prev, [file.file_id]: !prev[file.file_id] }))}
                     >
-                      {file.incident_summary}
-                    </div>
-                    <FileOperations
-                      file={file}
-                      showPreview={showPreview}
-                      setShowPreview={setShowPreview}
-                      showFileDialog={showFileDialog}
-                      setShowFileDialog={setShowFileDialog}
-                      onFileUpdate={() => {
-                        // Remove the file from the UI if it was archived
-                        if (showFileDialog === 'archive') {
-                          setFiles(files.filter(f => f.file_id !== file.file_id));
-                        } else {
-                          // Refresh the files list
-                          window.location.reload();
-                        }
-                      }}
-                    />
-                    <div className="text-sm text-gray-500 mt-2">
-                      Added by {file.created_by} on {new Date(file.created_at).toLocaleDateString()}
-                    </div>
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
                   </div>
-                </ContextMenuTrigger>
-                <ContextMenuContent>
-                  <ContextMenuItem onClick={() => {
-                    setSelectedFile(file);
-                    setShowFileDialog('edit');
-                  }}>
-                    <Pencil size={16} className="mr-2" /> Edit
-                  </ContextMenuItem>
-                  <ContextMenuItem onClick={() => {
-                    setSelectedFile(file);
-                    setShowFileDialog('archive');
-                  }}>
-                    <Archive size={16} className="mr-2" /> Archive
-                  </ContextMenuItem>
-                  <ContextMenuItem onClick={() => {
-                    setSelectedFile(file);
-                    setShowFileDialog('details');
-                  }}>
-                    <Eye size={16} className="mr-2" /> View Details
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
+                  <div 
+                    className="prose prose-sm max-w-none mb-2 text-gray-600 line-clamp-3 whitespace-pre-line overflow-hidden text-ellipsis"
+                  >
+                    {file.incident_summary}
+                  </div>
+                  <FileOperations
+                    file={file}
+                    showPreview={showPreview}
+                    setShowPreview={setShowPreview}
+                    showFileDialog={showFileDialog}
+                    setShowFileDialog={setShowFileDialog}
+                    onFileUpdate={() => {
+                      // Remove the file from the UI if it was archived
+                      if (showFileDialog === 'archive') {
+                        setFiles(files.filter(f => f.file_id !== file.file_id));
+                      } else {
+                        // Refresh the files list
+                        window.location.reload();
+                      }
+                    }}
+                  />
+                  <div className="text-sm text-gray-500 mt-2">
+                    Added by {file.created_by} on {new Date(file.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+
+                {showOptions[file.file_id] && (
+                  <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                    <button
+                      className="block w-full text-left p-2 hover:bg-gray-100"
+                      onClick={() => {
+                        setSelectedFile(file);
+                        setShowFileDialog('edit');
+                        setShowOptions(prev => ({ ...prev, [file.file_id]: false }));
+                      }}
+                    >
+                      <Pencil className="inline w-4 h-4 mr-2" /> Edit
+                    </button>
+                    <button
+                      className="block w-full text-left p-2 hover:bg-gray-100"
+                      onClick={() => {
+                        setSelectedFile(file);
+                        setShowFileDialog('archive');
+                        setShowOptions(prev => ({ ...prev, [file.file_id]: false }));
+                      }}
+                    >
+                      <Archive className="inline w-4 h-4 mr-2" /> Archive
+                    </button>
+                    <button
+                      className="block w-full text-left p-2 hover:bg-gray-100"
+                      onClick={() => {
+                        setSelectedFile(file);
+                        setShowFileDialog('details');
+                        setShowOptions(prev => ({ ...prev, [file.file_id]: false }));
+                      }}
+                    >
+                      <Eye className="inline w-4 h-4 mr-2" /> View Details
+                    </button>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         ) : (
@@ -478,10 +537,12 @@ export default function FolderPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="summary">Incident Summary</Label>
-                <RichTextEditor
-                  content={newFileSummary}
-                  onChange={setNewFileSummary}
-                />
+                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  <RichTextEditor
+                    content={newFileSummary}
+                    onChange={setNewFileSummary}
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="file">Upload File</Label>

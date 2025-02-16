@@ -13,11 +13,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/utils/supa";
 import Cookies from "js-cookie";
-import RichTextEditor from "@/components/RichTextEditor";
 import {
   Download,
   X,
-  Eye,
   Printer,
   File,
   FileText,
@@ -515,7 +513,7 @@ export default function FileOperations({
     <>
       {/* Preview Dialog */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-5xl h-[90vh]">
+        <DialogContent className="max-w-6xl w-4/5 h-[80vh] overflow-hidden bg-gray-100 font-poppins">
           <DialogHeader>
             <div className="flex justify-between items-center">
               <div>
@@ -524,17 +522,14 @@ export default function FileOperations({
                   {ext.toUpperCase()} Document • Added by {file.created_by}
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowPreview(false)}
-              >
+              <Button variant="ghost" size="icon" onClick={() => setShowPreview(false)}>
                 <X size={20} />
               </Button>
             </div>
           </DialogHeader>
-          
-          <div className="flex-1 overflow-hidden rounded-lg border">
+
+          {/* Scrollable Incident Summary */}
+          <div className="flex-1 overflow-auto rounded-lg border max-h-[calc(80vh-150px)] p-4">
             {renderPreviewContent()}
           </div>
 
@@ -545,17 +540,11 @@ export default function FileOperations({
               )}
             </div>
             <div className="flex gap-2">
-              <Button
-                onClick={handleFileDownload}
-                className="flex items-center gap-2"
-              >
+              <Button onClick={handleFileDownload} className="flex items-center gap-2">
                 <Download size={16} />
                 Download
               </Button>
-              <Button
-                onClick={handleFilePrint}
-                className="flex items-center gap-2"
-              >
+              <Button onClick={handleFilePrint} className="flex items-center gap-2">
                 <Printer size={16} />
                 Print
               </Button>
@@ -565,8 +554,11 @@ export default function FileOperations({
       </Dialog>
 
       {/* File Operations Dialog */}
-      <Dialog open={showFileDialog !== null} onOpenChange={() => setShowFileDialog(null)}>
-        <DialogContent>
+      <Dialog
+        open={showFileDialog !== null}
+        onOpenChange={() => setShowFileDialog(null)}
+      >
+        <DialogContent className="p-6 w-[90%] max-w-2xl h-[90%] max-h-[80vh] overflow-hidden bg-gray-100 font-poppins">
           <DialogHeader>
             <DialogTitle>
               {showFileDialog === 'edit' ? 'Edit File' :
@@ -575,173 +567,185 @@ export default function FileOperations({
             </DialogTitle>
           </DialogHeader>
 
-          {showFileDialog === 'edit' && (
-            <form onSubmit={handleEditFile}>
+          {/* Add a line after the dialog header */}
+          <hr className="my-1 border-gray-300" /> {/* Horizontal line with margin */}
+
+          <div className="space-y-4">
+            {showFileDialog === 'edit' && (
+              <form onSubmit={handleEditFile}>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="title">File Title</Label>
+                    <Input
+                      id="title"
+                      name="title"
+                      defaultValue={file.title}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="investigator">Investigator</Label>
+                    <Input
+                      id="investigator"
+                      name="investigator"
+                      defaultValue={file.investigator}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="desk_officer">Desk Officer</Label>
+                    <Input
+                      id="desk_officer"
+                      name="desk_officer"
+                      defaultValue={file.desk_officer}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="summary">Incident Summary</Label>
+                    <Textarea
+                      id="summary"
+                      name="summary"
+                      defaultValue={file.incident_summary}
+                      required
+                      className="h-32 resize-none"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="file">Update File (Optional)</Label>
+                    <Input
+                      id="file"
+                      name="file"
+                      type="file"
+                    />
+                    <p className="text-sm text-gray-500">
+                      Leave empty to keep the current file
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter className="mt-4">
+                  <Button type="button" variant="outline" onClick={() => setShowFileDialog(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
+                    Save Changes
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
+
+            {showFileDialog === 'archive' && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">File Title</Label>
-                  <Input
-                    id="title"
-                    name="title"
-                    defaultValue={file.title}
-                    required
-                  />
+                <DialogDescription>
+                  Are you sure you want to archive this file? 
+                  This will remove it from the active files list.
+                </DialogDescription>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setShowFileDialog(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    onClick={async () => {
+                      await handleArchiveFile();
+                      setShowFileDialog(null);
+                    }}
+                  >
+                    Yes, Archive
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+
+            {showFileDialog === 'details' && (
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">File Title</h4>
+                  <p className="text-gray-900 text-lg font-medium">{file.title}</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="investigator">Investigator</Label>
-                  <Input
-                    id="investigator"
-                    name="investigator"
-                    defaultValue={file.investigator}
-                    required
-                  />
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Investigator</h4>
+                  <p className="text-gray-900">{file.investigator}</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="desk_officer">Desk Officer</Label>
-                  <Input
-                    id="desk_officer"
-                    name="desk_officer"
-                    defaultValue={file.desk_officer}
-                    required
-                  />
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Desk Officer</h4>
+                  <p className="text-gray-900">{file.desk_officer}</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="summary">Incident Summary</Label>
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Incident Summary</h4>
                   <Textarea
                     id="summary"
                     name="summary"
                     defaultValue={file.incident_summary}
-                    required
+                    readOnly // Make it read-only if you don't want to allow editing in details view
+                    className="h-32 resize-none"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="file">Update File (Optional)</Label>
-                  <Input
-                    id="file"
-                    name="file"
-                    type="file"
-                  />
-                  <p className="text-sm text-gray-500">
-                    Leave empty to keep the current file
-                  </p>
-                </div>
-              </div>
-              <DialogFooter className="mt-4">
-                <Button type="button" variant="outline" onClick={() => setShowFileDialog(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                  Save Changes
-                </Button>
-              </DialogFooter>
-            </form>
-          )}
-
-          {showFileDialog === 'archive' && (
-            <div className="space-y-4">
-              <DialogDescription>
-                Are you sure you want to archive this file? 
-                This will remove it from the active files list.
-              </DialogDescription>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowFileDialog(null)}>
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                  onClick={async () => {
-                    await handleArchiveFile();
-                    setShowFileDialog(null);
-                  }}
-                >
-                  Yes, Archive
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-
-          {showFileDialog === 'details' && (
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium text-gray-500 mb-1">File Title</h4>
-                <p className="text-gray-900 text-lg font-medium">{file.title}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-500 mb-1">Investigator</h4>
-                <p className="text-gray-900">{file.investigator}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-500 mb-1">Desk Officer</h4>
-                <p className="text-gray-900">{file.desk_officer}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-500 mb-1">Incident Summary</h4>
-                <p className="text-gray-900 whitespace-pre-line">{file.incident_summary}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-500 mb-1">File Activity</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">
-                      Created: <span>
-                        {new Date(file.created_at).toLocaleString()} by{" "}
-                        <span className="text-blue-600">{file.created_by}</span>
-                      </span>
-                    </p>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">
-                      Last updated: {file.updated_at ? (
-                        <span>
-                          {new Date(file.updated_at).toLocaleString()} by{" "}
-                          <span className="text-blue-600">{file.updated_by}</span>
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">File Activity</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-600">
+                        Created: <span>
+                          {new Date(file.created_at).toLocaleString()} by{" "}
+                          <span className="text-blue-900">{file.created_by}</span>
                         </span>
-                      ) : 'Never'}
-                    </p>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">
-                      Last viewed: {file.viewed_at ? (
-                        <span>
-                          {new Date(file.viewed_at).toLocaleString()} by{" "}
-                          <span className="text-blue-600">{file.viewed_by}</span>
-                        </span>
-                      ) : 'Never'}
-                    </p>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">
-                      Last downloaded: {file.downloaded_at ? (
-                        <span>
-                          {new Date(file.downloaded_at).toLocaleString()} by{" "}
-                          <span className="text-blue-600">{file.downloaded_by}</span>
-                        </span>
-                      ) : 'Never'}
-                    </p>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">
-                      Last printed: {file.printed_at ? (
-                        <span>
-                          {new Date(file.printed_at).toLocaleString()} by{" "}
-                          <span className="text-blue-600">{file.printed_by}</span>
-                        </span>
-                      ) : 'Never'}
-                    </p>
+                      </p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-600">
+                        Last updated: {file.updated_at ? (
+                          <span>
+                            {new Date(file.updated_at).toLocaleString()} by{" "}
+                            <span className="text-blue-900">{file.updated_by}</span>
+                          </span>
+                        ) : 'Never'}
+                      </p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-600">
+                        Last viewed: {file.viewed_at ? (
+                          <span>
+                            {new Date(file.viewed_at).toLocaleString()} by{" "}
+                            <span className="text-blue-900">{file.viewed_by}</span>
+                          </span>
+                        ) : 'Never'}
+                      </p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-600">
+                        Last downloaded: {file.downloaded_at ? (
+                          <span>
+                            {new Date(file.downloaded_at).toLocaleString()} by{" "}
+                            <span className="text-blue-900">{file.downloaded_by}</span>
+                          </span>
+                        ) : 'Never'}
+                      </p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-600">
+                        Last printed: {file.printed_at ? (
+                          <span>
+                            {new Date(file.printed_at).toLocaleString()} by{" "}
+                            <span className="text-blue-900">{file.printed_by}</span>
+                          </span>
+                        ) : 'Never'}
+                      </p>
+                    </div>
                   </div>
                 </div>
+                <DialogFooter>
+                  <Button
+                    className="bg-blue-900 hover:bg-blue-800"
+                    onClick={() => setShowFileDialog(null)}
+                  >
+                    Close
+                  </Button>
+                </DialogFooter>
               </div>
-              <DialogFooter>
-                <Button
-                  className="bg-blue-900 hover:bg-blue-800"
-                  onClick={() => setShowFileDialog(null)}
-                >
-                  Close
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -773,4 +777,4 @@ export default function FileOperations({
       </div>
     </>
   );
-} 
+}
