@@ -7,14 +7,15 @@ import {
   Archive,
   Plus,
   ChevronRight,
+  MoreVertical,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
+// import {
+//   ContextMenu,
+//   ContextMenuContent,
+//   ContextMenuItem,
+//   ContextMenuTrigger,
+// } from "@/components/ui/context-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -60,6 +61,22 @@ interface Folder {
   categories: Category[];
 }
 
+// Function to determine badge color based on status
+const getStatusBadgeClass = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return 'bg-yellow-200 text-yellow-800'; // Lighter for pending status
+    case 'resolved':
+      return 'bg-green-200 text-green-800'; // Lighter for resolved status
+    case 'dismissed':
+      return 'bg-red-200 text-red-800'; // Lighter for dismissed status
+    case 'under investigation':
+      return 'bg-blue-200 text-blue-800'; // Lighter for under investigation status
+    default:
+      return 'bg-gray-200 text-black'; // Default case
+  }
+};
+
 export default function IncidentReport() {
   const [dialogContent, setDialogContent] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
@@ -72,6 +89,7 @@ export default function IncidentReport() {
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [isEditingFolder, setIsEditingFolder] = useState(false);
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
+  const [contextMenuVisible, setContextMenuVisible] = useState<{ [key: number]: boolean }>({});
 
   // Fetch folders with their categories from Supabase
   useEffect(() => {
@@ -209,7 +227,7 @@ export default function IncidentReport() {
           <ChevronRight size={16} />
         </BreadcrumbSeparator>
         <BreadcrumbItem>
-          <BreadcrumbLink href="/incident-report">Incident Reports</BreadcrumbLink>
+          <BreadcrumbLink href="#">Incident Reports</BreadcrumbLink>
         </BreadcrumbItem>
       </Breadcrumb>
 
@@ -219,91 +237,106 @@ export default function IncidentReport() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {isLoading ? (
-          <>
-            <Skeleton className="h-32 w-full rounded-lg" />
-            <Skeleton className="h-32 w-full rounded-lg" />
-            <Skeleton className="h-32 w-full rounded-lg" />
-            <Skeleton className="h-32 w-full rounded-lg" />
-          </>
+          <Skeleton className="h-32 w-full rounded-lg" />
         ) : filteredFolders.length > 0 ? (
           filteredFolders.map((folder) => (
-            <ContextMenu key={folder.folder_id}>
-              <ContextMenuTrigger>
-                <Button
-                  className="flex flex-col items-start bg-white border border-gray-300 rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full min-h-[120px]"
-                  onClick={() => navigate(`/folder/${folder.folder_id}`, { 
-                    state: { 
-                      from: '/incident-reports', 
-                      fromName: 'Incident Reports' 
-                    } 
-                  })}
-                >
-                  <div className="flex items-center gap-x-3 w-full">
-                    <FolderClosed
-                      style={{ width: "40px", height: "40px" }}
-                      className="text-gray-600"
-                      fill="#4b5563"
-                    />
-                    <span className="font-poppins font-medium text-lg text-gray-900 text-left">
-                      {folder.title}
-                    </span>
-                    <Badge variant="outline" className="bg-gray-200">
-                      {folder.status}
-                    </Badge>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {folder.categories.length > 0 ? (
-                      folder.categories.slice(0, 3).map((category) => (
-                        <Badge key={category.category_id} variant="outline" className="bg-blue-100 text-blue-800">
-                          {category.title}
-                        </Badge>
-                      ))
-                    ) : (
-                      <Badge variant="outline" className="bg-gray-100">
-                        No categories
+            <div key={folder.folder_id} className="relative">
+              <Button
+                className="flex flex-col items-start bg-white border border-gray-300 rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full min-h-[120px]"
+                onClick={() => navigate(`/folder/${folder.folder_id}`, { 
+                  state: { 
+                    from: '/incident-reports', 
+                    fromName: 'Incident Reports' 
+                  } 
+                })}
+              >
+                <div className="flex items-center gap-x-3 w-full">
+                  <FolderClosed
+                    style={{ width: "40px", height: "40px" }}
+                    className="text-gray-600"
+                    fill="#4b5563"
+                  />
+                  <span className="font-poppins font-medium text-lg text-gray-900 text-left">
+                    {folder.title}
+                  </span>
+                  <Badge variant="outline" className={getStatusBadgeClass(folder.status)}>
+                    {folder.status}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {folder.categories.length > 0 ? (
+                    folder.categories.slice(0, 3).map((category) => (
+                      <Badge key={category.category_id} variant="outline" className="bg-gray-200 text-black">
+                        {category.title}
                       </Badge>
-                    )}
-                    {folder.categories.length > 3 && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Badge variant="outline" className="bg-gray-300 cursor-pointer">
-                              +{folder.categories.length - 3}
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {folder.categories.slice(3).map(cat => cat.title).join(", ")}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                  </div>
-                </Button>
-              </ContextMenuTrigger>
-              <ContextMenuContent>
-                <ContextMenuItem
-                  onSelect={() => handleEditClick(folder)}
-                  inset
-                >
-                  <Pencil size={16} className="mr-2" /> Edit
-                </ContextMenuItem>
-                <ContextMenuItem
-                  onSelect={() => {
-                    setSelectedFolder(folder);
-                    setDialogContent("Are you sure you want to archive this folder?");
-                  }}
-                  inset
-                >
-                  <Archive size={16} className="mr-2" /> Archive
-                </ContextMenuItem>
-                <ContextMenuItem
-                  onSelect={() => handleViewDetails(folder)}
-                  inset
-                >
-                  <Eye size={16} className="mr-2" /> View Details
-                </ContextMenuItem>
-              </ContextMenuContent>
-            </ContextMenu>
+                    ))
+                  ) : (
+                    <Badge variant="outline" className="bg-gray-100">
+                      No categories
+                    </Badge>
+                  )}
+                  {folder.categories.length > 3 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Badge variant="outline" className="bg-gray-300 cursor-pointer">
+                            +{folder.categories.length - 3}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {folder.categories.slice(3).map(cat => cat.title).join(", ")}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              </Button>
+
+              {/* Kebab button with standing icon */}
+              <button
+                className="absolute top-2 right-2 p-2 rounded-full hover:bg-gray-200"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent click from triggering the folder button
+                  setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: !prev[folder.folder_id] }));
+                }}
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {/* Context menu for the kebab button */}
+              {contextMenuVisible[folder.folder_id] && (
+                <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                  <button
+                    className="block w-full text-left p-2 hover:bg-gray-100"
+                    onClick={() => {
+                      handleEditClick(folder);
+                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
+                    }}
+                  >
+                    <Pencil className="inline w-4 h-4 mr-2" /> Edit
+                  </button>
+                  <button
+                    className="block w-full text-left p-2 hover:bg-gray-100"
+                    onClick={() => {
+                      setSelectedFolder(folder);
+                      setDialogContent("Are you sure you want to archive this folder?");
+                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
+                    }}
+                  >
+                    <Archive className="inline w-4 h-4 mr-2" /> Archive
+                  </button>
+                  <button
+                    className="block w-full text-left p-2 hover:bg-gray-100"
+                    onClick={() => {
+                      handleViewDetails(folder);
+                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
+                    }}
+                  >
+                    <Eye className="inline w-4 h-4 mr-2" /> View Details
+                  </button>
+                </div>
+              )}
+            </div>
           ))
         ) : (
           <div>No folders found</div>

@@ -1,5 +1,5 @@
 import { ReactNode, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { supabase } from './supa';
 import Cookies from 'js-cookie';
 
@@ -9,6 +9,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const navigate = useNavigate();
+  const isLoggedIn = !!Cookies.get('user_token'); // Check if user token exists
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -36,7 +37,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     checkAuth();
   }, [navigate]);
 
-  return <>{children}</>;
+  return isLoggedIn ? <>{children}</> : <Navigate to="/login" />;
 };
 
 export default ProtectedRoute; 

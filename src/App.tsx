@@ -22,6 +22,8 @@ const App: React.FC = () => {
     const userData = Cookies.get('user_data');
     if (userToken && userData) {
       setIsLoggedIn(true);
+    } else {
+      setIsLoggedIn(false);
     }
   }, []);
 
