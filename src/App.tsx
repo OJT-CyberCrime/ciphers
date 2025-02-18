@@ -8,6 +8,7 @@ import Certifications from "./pages/Certifications";
 import Login from "./Screens/Login";
 import { useState, useEffect } from "react";
 import Eblotter from './pages/Eblotter';
+import EblotterFile from './pages/eblotter/index';
 import Archives from './pages/Archives/index';
 import FolderPage from "./pages/FolderPage/index";
 import ProtectedRoute from "./utils/protectedRoute";
@@ -63,6 +64,11 @@ const App: React.FC = () => {
               <Route path="/eblotter" element={
                 <ProtectedRoute>
                   <Eblotter />
+                </ProtectedRoute>
+              } />
+              <Route path="/eblotter/:id" element={
+                <ProtectedRoute>
+                  <EblotterFile />
                 </ProtectedRoute>
               } />
               <Route path="/archives" element={
