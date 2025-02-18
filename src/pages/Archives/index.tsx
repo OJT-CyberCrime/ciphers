@@ -189,103 +189,208 @@ export default function Archives() {
         </div>
       ) : (
         <>
-          {/* Archived Folders Section */}
-          {filteredFolders.length > 0 && (
+          {/* Archived Incident Report Folders Section */}
+          {filteredFolders.filter(folder => !folder.is_blotter).length > 0 && (
             <div className="mb-8">
-              <h2 className="text-xl font-medium mb-4">Archived Folders</h2>
+              <h2 className="text-xl font-medium mb-4">Archived Incident Reports</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredFolders.map((folder) => (
-                  <div key={folder.folder_id} className="space-y-4">
-                    <ContextMenu>
-                      <ContextMenuTrigger>
-                        <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
-                          <div 
-                            className="flex flex-col items-start p-5 cursor-pointer"
-                            onClick={(e) => toggleFolder(folder.folder_id, e)}
-                          >
-                            <div className="flex items-center gap-x-3 w-full">
-                              <FolderClosed
-                                style={{ width: "40px", height: "40px" }}
-                                className="text-gray-600"
-                                fill="#4b5563"
-                              />
-                              <span className="font-poppins font-medium text-lg text-gray-900 text-left">
-                                {folder.title}
-                              </span>
-                              <Badge variant="outline" className={getStatusBadgeClass(folder.status)}>
-                                {folder.status}
-                              </Badge>
-                            </div>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {folder.categories.length > 0 ? (
-                                folder.categories.slice(0, 3).map((category) => (
-                                  <Badge key={category.category_id} variant="outline" className="bg-gray-200 text-black">
-                                    {category.title}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <Badge variant="outline" className="bg-gray-100">
-                                  No categories
+                {filteredFolders
+                  .filter(folder => !folder.is_blotter)
+                  .map((folder) => (
+                    <div key={folder.folder_id} className="space-y-4">
+                      <ContextMenu>
+                        <ContextMenuTrigger>
+                          <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                            <div 
+                              className="flex flex-col items-start p-5 cursor-pointer"
+                              onClick={(e) => toggleFolder(folder.folder_id, e)}
+                            >
+                              <div className="flex items-center gap-x-3 w-full">
+                                <FolderClosed
+                                  style={{ width: "40px", height: "40px" }}
+                                  className="text-gray-600"
+                                  fill="#4b5563"
+                                />
+                                <span className="font-poppins font-medium text-lg text-gray-900 text-left">
+                                  {folder.title}
+                                </span>
+                                <Badge variant="outline" className={getStatusBadgeClass(folder.status)}>
+                                  {folder.status}
                                 </Badge>
-                              )}
-                              {folder.categories.length > 3 && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Badge variant="outline" className="bg-gray-300 cursor-pointer">
-                                        +{folder.categories.length - 3}
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {folder.categories.slice(3).map(cat => cat.title).join(", ")}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                            </div>
-                            <div className="text-sm text-gray-500 mt-2">
-                              Archived by <span className="text-blue-600">{folder.archived_by}</span> on {new Date(folder.archived_at || '').toLocaleDateString()}
-                            </div>
-                          </div>
-
-                          {/* Show files when folder is expanded */}
-                          {expandedFolders[folder.folder_id] && folder.files && folder.files.length > 0 && (
-                            <div className="border-t border-gray-200 p-4">
-                              <div className="space-y-2">
-                                {folder.files.map((file: ArchivedFile) => (
-                                  <div key={file.file_id} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                    <div className="flex items-center gap-3">
-                                      <FileText className="text-gray-600" size={20} />
-                                      <div>
-                                        <h4 className="font-medium text-gray-900">{file.title}</h4>
-                                        <p className="text-xs text-gray-500">
-                                          Added by {file.created_by} on {new Date(file.created_at).toLocaleDateString()}
-                                        </p>
-                                        {file.archived_by && (
-                                          <p className="text-xs text-gray-500">
-                                            Archived by {file.archived_by} on {new Date(file.archived_at || '').toLocaleDateString()}
-                                          </p>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
+                              </div>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {folder.categories.length > 0 ? (
+                                  folder.categories.slice(0, 3).map((category) => (
+                                    <Badge key={category.category_id} variant="outline" className="bg-gray-200 text-black">
+                                      {category.title}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <Badge variant="outline" className="bg-gray-100">
+                                    No categories
+                                  </Badge>
+                                )}
+                                {folder.categories.length > 3 && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <Badge variant="outline" className="bg-gray-300 cursor-pointer">
+                                          +{folder.categories.length - 3}
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {folder.categories.slice(3).map(cat => cat.title).join(", ")}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500 mt-2">
+                                Archived by <span className="text-blue-600">{folder.archived_by}</span> on {new Date(folder.archived_at || '').toLocaleDateString()}
                               </div>
                             </div>
-                          )}
-                        </div>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem onClick={() => setRestoreDialog({
-                          type: 'folder',
-                          item: folder
-                        })}>
-                          <Undo size={16} className="mr-2" /> Restore
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
-                  </div>
-                ))}
+
+                            {/* Show files when folder is expanded */}
+                            {expandedFolders[folder.folder_id] && folder.files && folder.files.length > 0 && (
+                              <div className="border-t border-gray-200 p-4">
+                                <div className="space-y-2">
+                                  {folder.files.map((file: ArchivedFile) => (
+                                    <div key={file.file_id} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                      <div className="flex items-center gap-3">
+                                        <FileText className="text-gray-600" size={20} />
+                                        <div>
+                                          <h4 className="font-medium text-gray-900">{file.title}</h4>
+                                          <p className="text-xs text-gray-500">
+                                            Added by {file.created_by} on {new Date(file.created_at).toLocaleDateString()}
+                                          </p>
+                                          {file.archived_by && (
+                                            <p className="text-xs text-gray-500">
+                                              Archived by {file.archived_by} on {new Date(file.archived_at || '').toLocaleDateString()}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem onClick={() => setRestoreDialog({
+                            type: 'folder',
+                            item: folder
+                          })}>
+                            <Undo size={16} className="mr-2" /> Restore
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Archived eBlotter Folders Section */}
+          {filteredFolders.filter(folder => folder.is_blotter).length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-medium mb-4">Archived eBlotters</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredFolders
+                  .filter(folder => folder.is_blotter)
+                  .map((folder) => (
+                    <div key={folder.folder_id} className="space-y-4">
+                      <ContextMenu>
+                        <ContextMenuTrigger>
+                          <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                            <div 
+                              className="flex flex-col items-start p-5 cursor-pointer"
+                              onClick={(e) => toggleFolder(folder.folder_id, e)}
+                            >
+                              <div className="flex items-center gap-x-3 w-full">
+                                <FolderClosed
+                                  style={{ width: "40px", height: "40px" }}
+                                  className="text-gray-600"
+                                  fill="#4b5563"
+                                />
+                                <span className="font-poppins font-medium text-lg text-gray-900 text-left">
+                                  {folder.title}
+                                </span>
+                                <Badge variant="outline" className={getStatusBadgeClass(folder.status)}>
+                                  {folder.status}
+                                </Badge>
+                              </div>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {folder.categories.length > 0 ? (
+                                  folder.categories.slice(0, 3).map((category) => (
+                                    <Badge key={category.category_id} variant="outline" className="bg-gray-200 text-black">
+                                      {category.title}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <Badge variant="outline" className="bg-gray-100">
+                                    No categories
+                                  </Badge>
+                                )}
+                                {folder.categories.length > 3 && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <Badge variant="outline" className="bg-gray-300 cursor-pointer">
+                                          +{folder.categories.length - 3}
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {folder.categories.slice(3).map(cat => cat.title).join(", ")}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500 mt-2">
+                                Archived by <span className="text-blue-600">{folder.archived_by}</span> on {new Date(folder.archived_at || '').toLocaleDateString()}
+                              </div>
+                            </div>
+
+                            {/* Show files when folder is expanded */}
+                            {expandedFolders[folder.folder_id] && folder.files && folder.files.length > 0 && (
+                              <div className="border-t border-gray-200 p-4">
+                                <div className="space-y-2">
+                                  {folder.files.map((file: ArchivedFile) => (
+                                    <div key={file.file_id} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                      <div className="flex items-center gap-3">
+                                        <FileText className="text-gray-600" size={20} />
+                                        <div>
+                                          <h4 className="font-medium text-gray-900">{file.title}</h4>
+                                          <p className="text-xs text-gray-500">
+                                            Added by {file.created_by} on {new Date(file.created_at).toLocaleDateString()}
+                                          </p>
+                                          {file.archived_by && (
+                                            <p className="text-xs text-gray-500">
+                                              Archived by {file.archived_by} on {new Date(file.archived_at || '').toLocaleDateString()}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem onClick={() => setRestoreDialog({
+                            type: 'folder',
+                            item: folder
+                          })}>
+                            <Undo size={16} className="mr-2" /> Restore
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    </div>
+                  ))}
               </div>
             </div>
           )}

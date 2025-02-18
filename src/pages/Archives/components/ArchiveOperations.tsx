@@ -1,5 +1,6 @@
 import { supabase } from "@/utils/supa";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface Category {
   category_id: number;
@@ -54,7 +55,6 @@ export const fetchArchivedContent = async () => {
         )
       `)
       .eq('is_archived', true)
-      .eq('is_blotter', false)
       .order('created_at', { ascending: false });
 
     if (foldersError) throw foldersError;
