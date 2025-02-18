@@ -546,16 +546,6 @@ export default function FileOperations({
                 <span>Last viewed: {new Date(file.viewed_at).toLocaleString()}</span>
               )}
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleFileDownload} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700">
-                <Download size={16} />
-                Download
-              </Button>
-              <Button onClick={handleFilePrint} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700">
-                <Printer size={16} />
-                Print
-              </Button>
-            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
