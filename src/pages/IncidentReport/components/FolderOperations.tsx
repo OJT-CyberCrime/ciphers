@@ -64,6 +64,22 @@ const statusOptions = [
   "under investigation"
 ];
 
+// Function to determine badge color based on status
+const getStatusBadgeClass = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return { class: 'bg-yellow-200 text-yellow-800', label: 'P' }; // Lighter for pending status
+    case 'resolved':
+      return { class: 'bg-green-200 text-green-800', label: 'R' }; // Lighter for resolved status
+    case 'dismissed':
+      return { class: 'bg-red-200 text-red-800', label: 'D' }; // Lighter for dismissed status
+    case 'under investigation':
+      return { class: 'bg-blue-200 text-blue-800', label: 'UI' }; // Lighter for under investigation status
+    default:
+      return { class: 'bg-gray-200 text-black', label: 'N/A' }; // Default case
+  }
+};
+
 export default function FolderOperations({
   isAddingFolder,
   setIsAddingFolder,
@@ -691,63 +707,59 @@ export default function FolderOperations({
             {dialogContent === "Folder Details" && selectedFolder ? (
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-gray-500 mb-1">Folder Title</h4>
+                  <h4 className="font-medium text-blue-900 mb-1">Folder Title</h4>
                   <p className="text-gray-900 text-lg font-medium">{selectedFolder.title}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-medium text-gray-500 mb-1">Created By</h4>
-                    <p className="text-blue-600 hover:text-blue-800">
-                      {selectedFolder.created_by}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-500 mb-1">Created At</h4>
-                    <p className="text-gray-900">
-                      {new Date(selectedFolder.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                  {selectedFolder.updated_by && selectedFolder.updated_at && (
-                    <>
-                      <div>
-                        <h4 className="font-medium text-gray-500 mb-1">Updated By</h4>
-                        <p className="text-blue-600 hover:text-blue-800">
-                          {selectedFolder.updated_by}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-500 mb-1">Updated At</h4>
-                        <p className="text-gray-900">
-                          {new Date(selectedFolder.updated_at).toLocaleString()}
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </div>
                 <div>
-                  <h4 className="font-medium text-gray-500 mb-1">Status</h4>
-                  <Badge variant="outline" className="bg-gray-200">
-                    {selectedFolder.status}
+                  <h4 className="font-medium text-blue-900 mb-1">Status</h4>
+                  <Badge 
+                    variant="outline" 
+                    className={`${getStatusBadgeClass(selectedFolder.status).class}`}
+                  >
+                    {selectedFolder.status.toUpperCase()}
                   </Badge>
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-500 mb-1">Categories</h4>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {selectedFolder.categories.length > 0 ? (
-                      selectedFolder.categories.map((category) => (
-                        <Badge
-                          key={category.category_id}
-                          variant="outline"
-                          className="bg-blue-100 text-blue-800"
-                        >
-                          {category.title}
-                        </Badge>
-                      ))
-                    ) : (
-                      <p className="text-gray-500">No categories assigned</p>
-                    )}
+                  <h4 className="font-medium text-blue-900 mb-1">Categories</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedFolder.categories.map((category) => (
+                      <Badge key={category.category_id} variant="outline" className="bg-gray-200">
+                        {category.title}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Folder Activity</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-600">
+                        Created: <span>
+                          {new Date(selectedFolder.created_at).toLocaleString()} by{" "}
+                          <span className="text-blue-900">{selectedFolder.created_by}</span>
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-600">
+                        Last updated: {selectedFolder.updated_at ? (
+                          <span>
+                            {new Date(selectedFolder.updated_at).toLocaleString()} by{" "}
+                            <span className="text-blue-900">{selectedFolder.updated_by}</span>
+                          </span>
+                        ) : 'Never'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter className="flex justify-end">
+                  <Button
+                    className="bg-blue-600 text-white hover:bg-blue-700"
+                    onClick={() => setDialogContent(null)}
+                  >
+                    Close
+                  </Button>
+                </DialogFooter>
               </div>
             ) : dialogContent === "Are you sure you want to archive this folder?" ? (
               <div className="space-y-4">
@@ -782,19 +794,7 @@ export default function FolderOperations({
                 </div>
               </div>
             ) : null}
-            {dialogContent === "Folder Details" && (
-              <DialogFooter>
-                <Button
-                  className="bg-blue-900 hover:bg-blue-800"
-                  onClick={() => {
-                    setDialogContent(null);
-                    setSelectedFolder(null);
-                  }}
-                >
-                  Close
-                </Button>
-              </DialogFooter>
-            )}
+          
           </DialogContent>
         </Dialog>
       )}
