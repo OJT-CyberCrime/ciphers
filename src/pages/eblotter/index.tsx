@@ -35,7 +35,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface FileRecord {
   blotter_id: number;
-  number: string;
   name: string;
   entry_num: string;
   date: string;
@@ -124,6 +123,7 @@ export default function FolderPage() {
   const [showFileDialog, setShowFileDialog] = useState<'edit' | 'archive' | 'details' | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showOptions, setShowOptions] = useState<{ [key: number]: boolean }>({});
+  const [formRef, setFormRef] = useState<HTMLFormElement | null>(null);
 
   // Get the current location to determine the previous page
   const location = useLocation();
@@ -131,9 +131,9 @@ export default function FolderPage() {
   const previousPageName = location.state?.fromName || "Incident Reports";
 
   // Handle file upload
-  const handleFileUpload = async (e: React.FormEvent) => {
+  const handleFileUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!id || !fileUpload?.[0]) return;
+    if (!id || !fileUpload?.[0] || !formRef) return;
 
     try {
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
@@ -149,8 +149,7 @@ export default function FolderPage() {
       if (!userData2) throw new Error('User not found');
 
       // Get form data
-      const formData = new FormData(e.currentTarget as HTMLFormElement);
-      const number = formData.get('number') as string;
+      const formData = new FormData(formRef);
       const name = formData.get('name') as string;
       const entry_num = formData.get('entry_num') as string;
       const date = formData.get('date') as string;
@@ -188,7 +187,6 @@ export default function FolderPage() {
         .insert([
           {
             folder_id: id,
-            number: number,
             name: name,
             entry_num: entry_num,
             date: date,
@@ -509,14 +507,14 @@ export default function FolderPage() {
               Upload a file and provide its details.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFileUpload}>
+          <form onSubmit={handleFileUpload} ref={(ref) => setFormRef(ref)}>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input
                   id="name"
+                  name="name"
                   placeholder="Enter name"
-                  value={newInvestigator}
                   onChange={(e) => setNewInvestigator(e.target.value)}
                   required
                 />
@@ -525,8 +523,8 @@ export default function FolderPage() {
                 <Label htmlFor="entry_num">Entry Number</Label>
                 <Input
                   id="entry_num"
+                  name="entry_num"
                   placeholder="Enter entry number"
-                  value={newDeskOfficer}
                   onChange={(e) => setNewDeskOfficer(e.target.value)}
                   required
                 />
@@ -535,6 +533,7 @@ export default function FolderPage() {
                 <Label htmlFor="date">Date</Label>
                 <Input
                   id="date"
+                  name="date"
                   type="date"
                   required
                 />
@@ -543,6 +542,7 @@ export default function FolderPage() {
                 <Label htmlFor="time">Time</Label>
                 <Input
                   id="time"
+                  name="time"
                   type="time"
                   required
                 />
@@ -560,6 +560,7 @@ export default function FolderPage() {
                 <Label htmlFor="file">Upload File</Label>
                 <Input
                   id="file"
+                  name="file"
                   type="file"
                   onChange={(e) => setFileUpload(e.target.files)}
                   required

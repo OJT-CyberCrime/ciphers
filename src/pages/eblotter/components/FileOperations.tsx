@@ -25,7 +25,6 @@ import { useState, useEffect } from "react";
 
 interface FileRecord {
   blotter_id: number;
-  number: string;
   name: string;
   entry_num: string;
   date: string;
@@ -324,7 +323,6 @@ export default function FileOperations({
     try {
       const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
-      const number = formData.get('number') as string;
       const name = formData.get('name') as string;
       const entry_num = formData.get('entry_num') as string;
       const date = formData.get('date') as string;
@@ -382,7 +380,6 @@ export default function FileOperations({
       const { error: updateError } = await supabase
         .from('eblotter_file')
         .update({
-          number: number,
           name: name,
           entry_num: entry_num,
           date: date,
