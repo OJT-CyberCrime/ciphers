@@ -550,7 +550,7 @@ export default function Eblotter() {
             <div key={folder.folder_id} className="relative">
               <Button
                 className="flex flex-col items-start bg-white border border-gray-300 rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full min-h-[120px] relative"
-                onClick={() => navigate(`/folder/${folder.folder_id}`, { 
+                onClick={() => navigate(`/eblotter/${folder.folder_id}`, { 
                   state: { 
                     from: '/eblotter', 
                     fromName: 'eBlotter' 
