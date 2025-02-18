@@ -7,7 +7,8 @@ import {
   FileCheck, 
   LogOut, 
   ClipboardList, 
-  Archive
+  Archive,
+  PersonStanding
 } from "lucide-react";
 import { logout } from "@/utils/auth";
 import { toast } from "sonner";
@@ -48,6 +49,7 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
         <SidebarLink to="/certifications" icon={<FileCheck size={20} />} label="Extraction Certifications" />
         <SidebarLink to="/eblotter" icon={<ClipboardList size={20} />} label="eBlotter" />
         <SidebarLink to="/archives" icon={<Archive size={20} />} label="Archives" />
+        <SidebarLink to="/wcp" icon={<PersonStanding size={20} />} label="Women and Children" />
       </nav>
 
       {/* Logout Button */}

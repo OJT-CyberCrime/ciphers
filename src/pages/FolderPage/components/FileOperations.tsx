@@ -529,9 +529,9 @@ export default function FileOperations({
                   {ext.toUpperCase()} Document • Added by {file.created_by}
                 </p>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setShowPreview(false)}>
+              {/* <Button variant="ghost" size="icon" onClick={() => setShowPreview(false)}>
                 <X size={20} />
-              </Button>
+              </Button> */}
             </div>
           </DialogHeader>
 
