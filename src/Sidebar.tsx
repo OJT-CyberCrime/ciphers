@@ -39,7 +39,7 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
   };
 
   return (
-    <aside className="h-screen w-64 bg-white shadow-md p-5 flex flex-col">
+    <aside className="h-screen w-64 bg-white shadow-md p-5 flex flex-col ">
       <ScrollArea className="h-full">
         <div className="flex flex-col items-center">
           <img
@@ -51,7 +51,7 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
             CIPHERS
           </h1>
         </div>
-        <nav className="space-y-4 font-poppins text-md">
+        <nav className="space-y-4 font-poppins text-sm">
           <SidebarLink to="/dashboard" icon={<Home size={20} />} label="Dashboard" />
           <SidebarLink to="/users" icon={<Users size={20} />} label="Account" />
           <SidebarLink to="/incident-report" icon={<FileText size={20} />} label="Incident Reports" />
