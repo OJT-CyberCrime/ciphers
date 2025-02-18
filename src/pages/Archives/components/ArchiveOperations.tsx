@@ -111,6 +111,24 @@ export const fetchArchivedContent = async () => {
 
     if (filesError) throw filesError;
 
+    // Fetch archived eblotter files
+    const { data: eblotterFilesData, error: eblotterFilesError } = await supabase
+      .from('eblotter_file')
+      .select(`
+        *,
+        creator:created_by(name),
+        updater:updated_by(name),
+        folders!inner(
+          is_archived,
+          title
+        )
+      `)
+      .eq('is_archived', true)
+      .eq('folders.is_archived', false)
+      .order('created_at', { ascending: false });
+
+    if (eblotterFilesError) throw eblotterFilesError;
+
     const formattedFiles = filesData.map(file => ({
       ...file,
       created_by: file.creator?.name || file.created_by,
@@ -120,7 +138,21 @@ export const fetchArchivedContent = async () => {
       archived_at: file.updated_at
     }));
 
-    return { folders: foldersWithCategories, files: formattedFiles };
+    const formattedEblotterFiles = eblotterFilesData.map(file => ({
+      ...file,
+      created_by: file.creator?.name || file.created_by,
+      updated_by: file.updater?.name || file.updated_by,
+      folder_title: file.folders?.title,
+      archived_by: file.updater?.name || file.updated_by,
+      archived_at: file.updated_at,
+      title: file.name, // Map name to title for consistency
+      file_path: file.path_file // Map path_file to file_path for consistency
+    }));
+
+    return { 
+      folders: foldersWithCategories, 
+      files: [...formattedFiles, ...formattedEblotterFiles]
+    };
   } catch (error) {
     console.error('Error fetching archived content:', error);
     throw error;
@@ -146,12 +178,23 @@ export const handleRestoreFolder = async (folder: Folder) => {
 
 export const handleRestoreFile = async (file: ArchivedFile) => {
   try {
-    const { error } = await supabase
-      .from('files')
-      .update({ is_archived: false })
-      .eq('file_id', file.file_id);
+    // Check if it's an eblotter file by checking for blotter_id
+    if ('blotter_id' in file) {
+      const { error } = await supabase
+        .from('eblotter_file')
+        .update({ is_archived: false })
+        .eq('blotter_id', file.blotter_id);
 
-    if (error) throw error;
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('files')
+        .update({ is_archived: false })
+        .eq('file_id', file.file_id);
+
+      if (error) throw error;
+    }
+
     toast.success("File restored successfully");
     return true;
   } catch (error: any) {
