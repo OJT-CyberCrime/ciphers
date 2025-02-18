@@ -1,11 +1,12 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/utils/supa";
 import Cookies from "js-cookie";
 import { Eye, EyeOff, Loader } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
+import HCaptcha from '@hcaptcha/react-hcaptcha'
 
 interface LoginProps {
   setIsLoggedIn: (value: boolean) => void;
@@ -21,6 +22,9 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
   const [retryTimeout, setRetryTimeout] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [remainingTime, setRemainingTime] = useState<number>(0);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha>(null);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -50,11 +54,18 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
     const email = (e.currentTarget[0] as HTMLInputElement).value;
     const password = (e.currentTarget[1] as HTMLInputElement).value;
 
+    if (!captchaToken) {
+      setErrorMessage("Please complete the captcha.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const { data: authData, error: authError } =
         await supabase.auth.signInWithPassword({
           email,
           password,
+          options: { captchaToken }
         });
 
       if (authError) {
@@ -112,6 +123,9 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
       // Error is handled above
     } finally {
       setIsLoading(false);
+      if (captchaRef.current) {
+        captchaRef.current.resetCaptcha();
+      }
     }
   };
 
@@ -135,6 +149,10 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
       return () => clearInterval(timer);
     }
   }, [retryTimeout]);
+
+  const handleVerificationSuccess = (token: string) => {
+    setCaptchaToken(token);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
@@ -195,6 +213,11 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
             {isLoading ? <Loader className="animate-spin h-5 w-5 mr-2" /> : null}
             {isLoading ? "Logging In..." : "Log In"}
           </Button>
+          <HCaptcha
+            sitekey="2028db5a-e45c-418a-bb88-cd600e04402c"
+            onVerify={handleVerificationSuccess}
+            ref={captchaRef}
+          />
         </form>
       </div>
     </div>
