@@ -13,6 +13,7 @@ import Archives from './pages/Archives/index';
 import FolderPage from "./pages/FolderPage/index";
 import ProtectedRoute from "./utils/protectedRoute";
 import Cookies from 'js-cookie';
+import WomenChildren from './pages/WomenChildren';
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -79,6 +80,11 @@ const App: React.FC = () => {
               <Route path="/folder/:id" element={
                 <ProtectedRoute>
                   <FolderPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/wcp" element={
+                <ProtectedRoute>
+                  <WomenChildren />
                 </ProtectedRoute>
               } />
               
