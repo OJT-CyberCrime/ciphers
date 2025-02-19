@@ -120,7 +120,7 @@ export default function FolderPage() {
   const [newDeskOfficer, setNewDeskOfficer] = useState("");
   const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null);
   const [showFileDialog, setShowFileDialog] = useState<'edit' | 'archive' | 'details' | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
+  const [previewStates, setPreviewStates] = useState<{ [key: number]: boolean }>({});
   const [showOptions, setShowOptions] = useState<{ [key: number]: boolean }>({});
 
   // Get the current location to determine the previous page
@@ -424,11 +424,17 @@ export default function FolderPage() {
                   </div>
                   <FileOperations
                     file={file}
-                    showPreview={showPreview}
-                    setShowPreview={setShowPreview}
+                    showPreview={previewStates[file.file_id] || false}
+                    setShowPreview={(show) => {
+                      setPreviewStates(prev => ({
+                        ...prev,
+                        [file.file_id]: show
+                      }));
+                    }}
                     showFileDialog={showFileDialog}
                     setShowFileDialog={setShowFileDialog}
                     selectedFile={selectedFile}
+                    setSelectedFile={setSelectedFile}
                     onFileUpdate={() => {
                       // Remove the file from the UI if it was archived
                       if (showFileDialog === 'archive') {
