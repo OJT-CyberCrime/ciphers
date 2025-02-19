@@ -348,11 +348,7 @@ export default function FolderPage() {
       {/* Breadcrumb Navigation */}
       <Breadcrumb className="mb-4 text-gray-600 flex space-x-2">
         <BreadcrumbItem>
-          <Link 
-            to="/dashboard"
-            state={{ from: location.pathname }}
-            className="text-gray-600 hover:text-gray-900"
-          >
+          <Link to="/dashboard" className="text-gray-600 hover:text-gray-900">
             Home
           </Link>
         </BreadcrumbItem>
@@ -360,11 +356,7 @@ export default function FolderPage() {
           <ChevronRight size={16} />
         </BreadcrumbSeparator>
         <BreadcrumbItem>
-          <Link 
-            to={previousPage}
-            state={{ from: location.pathname }}
-            className="text-gray-600 hover:text-gray-900"
-          >
+          <Link to={previousPage} className="text-gray-600 hover:text-gray-900">
             {previousPageName}
           </Link>
         </BreadcrumbItem>

@@ -34,7 +34,6 @@ import {
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import SearchBar from "@/Search";

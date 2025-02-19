@@ -26,7 +26,6 @@ import {
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import {
@@ -40,7 +39,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import SearchBar from "@/Search";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "@/utils/supa";
 import { Skeleton } from "@/components/ui/skeleton";
 import Cookies from "js-cookie";
@@ -526,13 +525,19 @@ export default function Eblotter() {
 
       <Breadcrumb className="mb-4 text-gray-600 flex space-x-2">
         <BreadcrumbItem>
-          <BreadcrumbLink href={previousPage}>{previousPageName}</BreadcrumbLink>
+          <Link 
+            to={previousPage}
+            state={{ from: location.pathname }}
+            className="text-gray-600 hover:text-gray-900"
+          >
+            {previousPageName}
+          </Link>
         </BreadcrumbItem>
         <BreadcrumbSeparator className="flex items-center">
           <ChevronRight size={16} />
         </BreadcrumbSeparator>
         <BreadcrumbItem>
-          <BreadcrumbLink href="#">eBlotter</BreadcrumbLink>
+          <span className="text-gray-900">eBlotter</span>
         </BreadcrumbItem>
       </Breadcrumb>
 
