@@ -28,6 +28,15 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check if user is already logged in
+    const userToken = Cookies.get('user_token');
+    const userData = Cookies.get('user_data');
+    if (userToken && userData) {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
+
+  useEffect(() => {
     const storedTimeout = localStorage.getItem("retryTimeout");
     if (storedTimeout) {
       const timeout = parseInt(storedTimeout, 10);
@@ -104,7 +113,18 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
 
       if (updateError) throw updateError;
 
-      Cookies.set("user_token", authData.session?.access_token || "", { expires: 7 });
+      // Store auth data in sessionStorage
+      sessionStorage.setItem('user_token', authData.session?.access_token || '');
+      sessionStorage.setItem('user_data', JSON.stringify({
+        id: userData.user_id,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        uuid: userData.uuid,
+      }));
+
+      // Set cookies with session scope
+      Cookies.set("user_token", authData.session?.access_token || "", { sameSite: 'strict' });
       Cookies.set(
         "user_data",
         JSON.stringify({
@@ -114,7 +134,7 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
           role: userData.role,
           uuid: userData.uuid,
         }),
-        { expires: 7 }
+        { sameSite: 'strict' }
       );
 
       setIsLoggedIn(true);

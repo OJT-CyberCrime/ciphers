@@ -23,20 +23,24 @@ const App: React.FC = () => {
   useEffect(() => {
     const checkAuthState = async () => {
       try {
-        const userToken = Cookies.get('user_token');
-        const userData = Cookies.get('user_data');
+        const userToken = sessionStorage.getItem('user_token');
+        const userData = sessionStorage.getItem('user_data');
         const { data: { session } } = await supabase.auth.getSession();
 
-        // Only consider logged in if all three conditions are met
+        // Only consider logged in if all conditions are met
         if (userToken && userData && session) {
           setIsLoggedIn(true);
+          // Ensure cookies are in sync with session storage
+          Cookies.set("user_token", userToken, { sameSite: 'strict' });
+          Cookies.set("user_data", userData, { sameSite: 'strict' });
         } else {
           setIsLoggedIn(false);
-          // Clean up any stray auth data
+          // Clean up all auth data
           Cookies.remove('user_token');
           Cookies.remove('user_data');
+          sessionStorage.removeItem('user_token');
+          sessionStorage.removeItem('user_data');
           localStorage.clear();
-          sessionStorage.clear();
         }
       } catch (error) {
         console.error('Auth check error:', error);
@@ -50,6 +54,12 @@ const App: React.FC = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
         setIsLoggedIn(false);
+        // Clean up all auth data
+        Cookies.remove('user_token');
+        Cookies.remove('user_data');
+        sessionStorage.removeItem('user_token');
+        sessionStorage.removeItem('user_data');
+        localStorage.clear();
       }
     });
 
@@ -68,7 +78,9 @@ const App: React.FC = () => {
           {/* Main Content */}
           <main className="flex-1 p-6">
             <Routes>
-              <Route path="/login" element={<Login setIsLoggedIn={setIsLoggedIn} />} />
+              <Route path="/login" element={
+                isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login setIsLoggedIn={setIsLoggedIn} />
+              } />
               
               {/* Protected Routes */}
               <Route path="/dashboard" element={
