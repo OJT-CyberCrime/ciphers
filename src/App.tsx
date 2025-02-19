@@ -15,22 +15,49 @@ import ProtectedRoute from "./utils/protectedRoute";
 import Cookies from 'js-cookie';
 import WomenChildren from './pages/WomenChildren';
 import { setupAutoLogout } from "./utils/auth";
+import { supabase } from "./utils/supa";
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Check for existing login state when the app loads
   useEffect(() => {
-    const userToken = Cookies.get('user_token');
-    const userData = Cookies.get('user_data');
-    if (userToken && userData) {
-      setIsLoggedIn(true);
-    } else {
-      setIsLoggedIn(false);
-    }
+    const checkAuthState = async () => {
+      try {
+        const userToken = Cookies.get('user_token');
+        const userData = Cookies.get('user_data');
+        const { data: { session } } = await supabase.auth.getSession();
 
-    // Setup auto logout
+        // Only consider logged in if all three conditions are met
+        if (userToken && userData && session) {
+          setIsLoggedIn(true);
+        } else {
+          setIsLoggedIn(false);
+          // Clean up any stray auth data
+          Cookies.remove('user_token');
+          Cookies.remove('user_data');
+          localStorage.clear();
+          sessionStorage.clear();
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        setIsLoggedIn(false);
+      }
+    };
+
+    checkAuthState();
     setupAutoLogout();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        setIsLoggedIn(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
