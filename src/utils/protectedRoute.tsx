@@ -2,6 +2,7 @@ import { ReactNode, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { supabase } from './supa';
 import Cookies from 'js-cookie';
+import { cleanupAuthState } from './auth';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -17,7 +18,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       const userData = Cookies.get('user_data');
       
       if (!userToken || !userData) {
-        // No token or user data found, redirect to login
+        // No token or user data found, cleanup and redirect to login
+        await cleanupAuthState();
         navigate('/login');
         return;
       }
@@ -27,14 +29,19 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       
       if (error || !session) {
         // Clear cookies if session is invalid
-        Cookies.remove('user_token');
-        Cookies.remove('user_data');
+        await cleanupAuthState();
         navigate('/login');
         return;
       }
     };
 
     checkAuth();
+
+    // Set up interval to periodically check auth status
+    const interval = setInterval(checkAuth, 5 * 60 * 1000); // Check every 5 minutes
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(interval);
   }, [navigate]);
 
   return isLoggedIn ? <>{children}</> : <Navigate to="/login" />;

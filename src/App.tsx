@@ -14,6 +14,7 @@ import FolderPage from "./pages/FolderPage/index";
 import ProtectedRoute from "./utils/protectedRoute";
 import Cookies from 'js-cookie';
 import WomenChildren from './pages/WomenChildren';
+import { setupAutoLogout } from "./utils/auth";
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -27,6 +28,9 @@ const App: React.FC = () => {
     } else {
       setIsLoggedIn(false);
     }
+
+    // Setup auto logout
+    setupAutoLogout();
   }, []);
 
   return (
