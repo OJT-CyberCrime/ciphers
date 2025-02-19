@@ -23,7 +23,6 @@ import {
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import SearchBar from "@/Search";
@@ -47,12 +46,15 @@ import {
   type ArchivedFile,
   type Category
 } from "./components/ArchiveOperations";
+import { useLocation, Link } from "react-router-dom";
+
 
 export default function Archives() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [folders, setFolders] = useState<Folder[]>([]);
   const [archivedFiles, setArchivedFiles] = useState<ArchivedFile[]>([]);
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<{ [key: number]: boolean }>({});
@@ -92,6 +94,9 @@ export default function Archives() {
   const filteredFiles = archivedFiles.filter(file => {
     return file.title.toLowerCase().includes(searchQuery.toLowerCase());
   });
+
+  const previousPage = location.state?.from || "/dashboard";
+  const previousPageName = location.state?.fromName || "Home";
 
   // Toggle folder expansion
   const toggleFolder = (folderId: number, e: React.MouseEvent) => {
@@ -166,13 +171,19 @@ export default function Archives() {
       {/* Breadcrumb Navigation */}
       <Breadcrumb className="mb-4 text-gray-600 flex space-x-2">
         <BreadcrumbItem>
-          <BreadcrumbLink href="/dashboard">Home</BreadcrumbLink>
+          <Link 
+            to={previousPage}
+            state={{ from: location.pathname }}
+            className="text-gray-600 hover:text-gray-900"
+          >
+            {previousPageName}
+          </Link>
         </BreadcrumbItem>
         <BreadcrumbSeparator className="flex items-center">
           <ChevronRight size={16} />
         </BreadcrumbSeparator>
         <BreadcrumbItem>
-          <BreadcrumbLink href="#">Archives</BreadcrumbLink>
+          <span className="text-gray-900">Archives</span>
         </BreadcrumbItem>
       </Breadcrumb>
 
