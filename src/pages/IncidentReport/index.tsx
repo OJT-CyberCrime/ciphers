@@ -254,8 +254,8 @@ export default function IncidentReport() {
         ) : filteredFolders.length > 0 ? (
           filteredFolders.map((folder) => (
             <div key={folder.folder_id} className="relative">
-              <Button
-                className={`flex ${isListView ? "flex-row items-center justify-between" : "flex-col items-start"} bg-white border border-gray-300 rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full ${isListView ? "min-h-[60px] p-3" : "min-h-[120px] p-5"} relative`}
+              <div
+                className={`flex ${isListView ? "flex-row items-center justify-between" : "flex-col items-start"} bg-white border border-gray-300 rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full ${isListView ? "min-h-[60px] p-3" : "min-h-[120px] p-5"} relative cursor-pointer`}
                 onClick={() => navigate(`/folder/${folder.folder_id}`, { 
                   state: { 
                     from: '/incident-reports', 
@@ -280,7 +280,7 @@ export default function IncidentReport() {
                   </Badge>
                 </div>
                 <div className={`flex ${isListView ? "flex-row items-center" : "flex-wrap"} gap-2 mt-2 ${isListView ? "text-xs" : ""} overflow-hidden`}>
-                  {folder.categories.length > 0 ? (
+                  {folder.categories && folder.categories.length > 0 ? (
                     folder.categories.slice(0, 3).map((category) => (
                       <Badge key={category.category_id} variant="outline" className="bg-gray-200 text-black">
                         {category.title}
@@ -306,23 +306,28 @@ export default function IncidentReport() {
                     </TooltipProvider>
                   )}
                 </div>
-              </Button>
+              </div>
 
-              {/* Kebab button with standing icon */}
-              <button
-                className="absolute top-2 right-2 p-2 rounded-full hover:bg-gray-200"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent click from triggering the folder button
-                  setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: !prev[folder.folder_id] }));
-                }}
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
+              {/* Kebab menu button */}
+              <div className="absolute top-2 right-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="p-2 rounded-full hover:bg-gray-200"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent click from triggering the folder button
+                    setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: !prev[folder.folder_id] }));
+                  }}
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </div>
 
-              {/* Context menu for the kebab button */}
+              {/* Context menu */}
               {contextMenuVisible[folder.folder_id] && (
-                <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-                  <button
+                <div className="absolute top-10 right-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                  <Button
+                    variant="ghost"
                     className="block w-full text-left p-2 hover:bg-gray-100"
                     onClick={() => {
                       handleEditClick(folder);
@@ -330,8 +335,9 @@ export default function IncidentReport() {
                     }}
                   >
                     <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
                     className="block w-full text-left p-2 hover:bg-gray-100"
                     onClick={() => {
                       setSelectedFolder(folder);
@@ -340,8 +346,9 @@ export default function IncidentReport() {
                     }}
                   >
                     <Archive className="inline w-4 h-4 mr-2" /> Archive
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
                     className="block w-full text-left p-2 hover:bg-gray-100"
                     onClick={() => {
                       handleViewDetails(folder);
@@ -349,7 +356,7 @@ export default function IncidentReport() {
                     }}
                   >
                     <Eye className="inline w-4 h-4 mr-2" /> View Details
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
