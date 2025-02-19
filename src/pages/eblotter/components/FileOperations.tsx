@@ -59,6 +59,7 @@ interface FileOperationsProps {
   setShowFileDialog: (dialog: 'edit' | 'archive' | 'details' | null) => void;
   onFileUpdate: () => void;
   selectedFile?: FileRecord | null;
+  setSelectedFile: (file: FileRecord | null) => void;
 }
 
 // Helper function to get file type icon
@@ -83,10 +84,15 @@ export default function FileOperations({
   showFileDialog,
   setShowFileDialog,
   onFileUpdate,
-  selectedFile
+  selectedFile,
+  setSelectedFile
 }: FileOperationsProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
-  const ext = file.path_file.split('.').pop()?.toLowerCase() || '';
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | undefined>();
+  // Use currentFile only for file operations and details dialog
+  const currentFile = showFileDialog ? (selectedFile || file) : file;
+  const ext = currentFile.path_file.split('.').pop()?.toLowerCase() || '';
   const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
   const pdfType = ['pdf'];
   const officeTypes = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
@@ -95,6 +101,9 @@ export default function FileOperations({
   useEffect(() => {
     const getSignedUrl = async () => {
       try {
+        setIsLoading(true);
+        setError(undefined);
+
         // Check if file exists first
         const { data: checkData, error: checkError } = await supabase.storage
           .from('files')
@@ -104,8 +113,7 @@ export default function FileOperations({
 
         const fileExists = checkData.some(f => f.name === file.path_file.split('/').pop());
         if (!fileExists) {
-          toast.error('File no longer exists in storage');
-          return;
+          throw new Error('File no longer exists in storage');
         }
 
         const { data, error } = await supabase.storage
@@ -114,14 +122,27 @@ export default function FileOperations({
 
         if (error) throw error;
         setSignedUrl(data.signedUrl);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error getting signed URL:', error);
-        toast.error('Error loading file preview. Please try refreshing the page.');
+        setError(error.message || 'Error loading file preview');
+        setSignedUrl(null);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    getSignedUrl();
-  }, [file.path_file, file.folder_id]);
+    if (showPreview || imageTypes.includes(ext) || pdfType.includes(ext) || officeTypes.includes(ext)) {
+      getSignedUrl();
+    }
+
+    // Cleanup function
+    return () => {
+      if (!showPreview) {
+        setSignedUrl(null);
+        setError(undefined);
+      }
+    };
+  }, [file.path_file, file.folder_id, showPreview, ext]);
 
   // Track file view when preview is opened
   useEffect(() => {
@@ -155,13 +176,13 @@ export default function FileOperations({
           viewed_by: userData2.user_id,
           viewed_at: new Date().toISOString()
         })
-        .eq('blotter_id', file.blotter_id);
+        .eq('blotter_id', currentFile.blotter_id);
 
       if (updateError) throw updateError;
 
       // Update the local state with the new user name
-      file.viewed_by = userData2.user_id;
-      file.viewed_at = new Date().toISOString();
+      currentFile.viewed_by = userData2.user_id;
+      currentFile.viewed_at = new Date().toISOString();
     } catch (error) {
       console.error('Error updating view tracking:', error);
     }
@@ -173,11 +194,11 @@ export default function FileOperations({
       // Check if file exists first
       const { data: checkData, error: checkError } = await supabase.storage
         .from('files')
-        .list(`folder_${file.folder_id}`);
+        .list(`folder_${currentFile.folder_id}`);
 
       if (checkError) throw checkError;
 
-      const fileExists = checkData.some(f => f.name === file.path_file.split('/').pop());
+      const fileExists = checkData.some(f => f.name === currentFile.path_file.split('/').pop());
       if (!fileExists) {
         toast.error('File no longer exists in storage');
         return;
@@ -203,18 +224,18 @@ export default function FileOperations({
           downloaded_by: userData2.user_id,
           downloaded_at: new Date().toISOString()
         })
-        .eq('blotter_id', file.blotter_id);
+        .eq('blotter_id', currentFile.blotter_id);
 
       if (updateError) throw updateError;
 
       // Update the local state with the new user name
-      file.downloaded_by = userData2.user_id;
-      file.downloaded_at = new Date().toISOString();
+      currentFile.downloaded_by = userData2.user_id;
+      currentFile.downloaded_at = new Date().toISOString();
 
       // Download the file
       const { data, error } = await supabase.storage
         .from('files')
-        .download(file.path_file);
+        .download(currentFile.path_file);
       
       if (error) throw error;
       
@@ -222,7 +243,7 @@ export default function FileOperations({
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = file.name + '.' + ext;
+      a.download = currentFile.name + '.' + ext;
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(url);
@@ -242,11 +263,11 @@ export default function FileOperations({
       // Check if file exists first
       const { data: checkData, error: checkError } = await supabase.storage
         .from('files')
-        .list(`folder_${file.folder_id}`);
+        .list(`folder_${currentFile.folder_id}`);
 
       if (checkError) throw checkError;
 
-      const fileExists = checkData.some(f => f.name === file.path_file.split('/').pop());
+      const fileExists = checkData.some(f => f.name === currentFile.path_file.split('/').pop());
       if (!fileExists) {
         toast.error('File no longer exists in storage');
         return;
@@ -272,18 +293,18 @@ export default function FileOperations({
           printed_by: userData2.user_id,
           printed_at: new Date().toISOString()
         })
-        .eq('blotter_id', file.blotter_id);
+        .eq('blotter_id', currentFile.blotter_id);
 
       if (updateError) throw updateError;
 
       // Update the local state with the new user name
-      file.printed_by = userData2.user_id;
-      file.printed_at = new Date().toISOString();
+      currentFile.printed_by = userData2.user_id;
+      currentFile.printed_at = new Date().toISOString();
 
       // Get the signed URL for the file
       const { data: urlData, error: urlError } = await supabase.storage
         .from('files')
-        .createSignedUrl(file.path_file, 60 * 60); // 1 hour expiry
+        .createSignedUrl(currentFile.path_file, 60 * 60); // 1 hour expiry
 
       if (urlError) throw urlError;
 
@@ -407,6 +428,28 @@ export default function FileOperations({
 
   // Render preview content
   const renderPreviewContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
+          <p className="mt-4 text-gray-600">Loading preview...</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center p-8 text-center">
+          <FileText size={48} className="text-red-400 mb-4" />
+          <p className="text-red-600 mb-4">
+            Error loading preview: {error}
+            <br />
+            Please try refreshing the page.
+          </p>
+        </div>
+      );
+    }
+
     if (!signedUrl) return null;
 
     if (imageTypes.includes(ext)) {
@@ -414,8 +457,9 @@ export default function FileOperations({
         <div className="relative aspect-video">
           <img 
             src={signedUrl} 
-            alt={file.name}
+            alt={currentFile.name}
             className="w-full h-full object-contain"
+            onError={() => setError('Failed to load image')}
           />
         </div>
       );
@@ -428,7 +472,8 @@ export default function FileOperations({
           <iframe
             src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true&rm=minimal`}
             className="w-full h-full border-none"
-            title={file.name}
+            title={currentFile.name}
+            onError={() => setError('Failed to load document preview')}
           />
         </div>
       );
@@ -449,21 +494,46 @@ export default function FileOperations({
 
   // Render card preview
   const renderCardPreview = () => {
-    if (!signedUrl) return (
-      <div className="w-full h-48 bg-gray-100 flex flex-col items-center justify-center rounded-lg border">
-        {getFileIcon(file.path_file)}
-        <span className="mt-2 text-sm text-gray-600">Loading preview...</span>
-      </div>
-    );
+    if (isLoading) {
+      return (
+        <div className="w-full h-48 bg-gray-100 flex flex-col items-center justify-center rounded-lg border">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
+          <span className="mt-2 text-sm text-gray-600">Loading preview...</span>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="w-full h-48 bg-gray-100 flex flex-col items-center justify-center rounded-lg border">
+          {getFileIcon(currentFile.path_file)}
+          <span className="mt-2 text-sm text-red-600">Error loading preview</span>
+          <span className="text-xs text-gray-500">{ext.toUpperCase()}</span>
+        </div>
+      );
+    }
+
+    if (!signedUrl) {
+      return (
+        <div className="w-full h-48 bg-gray-100 flex flex-col items-center justify-center rounded-lg border">
+          {getFileIcon(currentFile.path_file)}
+          <span className="mt-2 text-sm text-gray-600">Preview not available</span>
+          <span className="text-xs text-gray-500">{ext.toUpperCase()}</span>
+        </div>
+      );
+    }
 
     if (imageTypes.includes(ext)) {
       return (
         <div className="w-full h-48 bg-gray-100 rounded-lg border overflow-hidden">
           <img 
-            src={signedUrl} 
-            alt={file.name}
+            src={signedUrl || undefined} 
+            alt={currentFile.name}
             className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer"
-            onClick={() => setShowPreview(true)}
+            onClick={() => {
+              setSelectedFile(currentFile);
+              setShowPreview(true);
+            }}
           />
         </div>
       );
@@ -477,7 +547,7 @@ export default function FileOperations({
             <iframe
               src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true&rm=minimal`}
               className="w-full h-[400px] border-none"
-              title={file.name}
+              title={currentFile.name}
             />
           </div>
           {/* Expand button overlay */}
@@ -486,7 +556,10 @@ export default function FileOperations({
               size="default"
               variant="secondary"
               className="bg-white/90 backdrop-blur-sm hover:bg-white shadow-sm"
-              onClick={() => setShowPreview(true)}
+              onClick={() => {
+                setSelectedFile(currentFile);
+                setShowPreview(true);
+              }}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -510,8 +583,11 @@ export default function FileOperations({
     // For other file types
     return (
       <div className="w-full h-48 bg-gray-100 flex flex-col items-center justify-center rounded-lg border hover:border-blue-300 transition-colors cursor-pointer"
-           onClick={() => setShowPreview(true)}>
-        {getFileIcon(file.path_file)}
+           onClick={() => {
+             setSelectedFile(currentFile);
+             setShowPreview(true);
+           }}>
+        {getFileIcon(currentFile.path_file)}
         <span className="mt-2 text-sm text-gray-600">Click to preview</span>
         <span className="text-xs text-gray-500">{ext.toUpperCase()}</span>
       </div>
@@ -523,7 +599,12 @@ export default function FileOperations({
       {/* Preview Dialog */}
       <Dialog
         open={showPreview}
-        onOpenChange={setShowPreview}
+        onOpenChange={(open) => {
+          setShowPreview(open);
+          if (!open) {
+            setSelectedFile(null);
+          }
+        }}
       >
         <DialogContent className="max-w-6xl w-4/5 h-[80vh] overflow-y-auto bg-white shadow-lg rounded-lg font-poppins scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
           <DialogHeader>
@@ -534,13 +615,20 @@ export default function FileOperations({
                   {ext.toUpperCase()} Document • Added by {file.created_by}
                 </p>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setShowPreview(false)}>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => {
+                  setSelectedFile(null);
+                  setShowPreview(false);
+                }}
+              >
                 <X size={20} />
               </Button>
             </div>
           </DialogHeader>
 
-          {/* Scrollable Incident Summary */}
+          {/* Scrollable Preview Content */}
           <div className="flex-1 overflow-auto rounded-lg border max-h-[calc(80vh-150px)] p-4 bg-gray-50">
             {renderPreviewContent()}
           </div>
@@ -680,14 +768,14 @@ export default function FileOperations({
               <div className="space-y-4">
                 <div>
                   <h4 className="font-medium text-blue-900 mb-1">File Title</h4>
-                  <p className="text-gray-900 text-lg font-medium">{file.name}</p>
+                  <p className="text-gray-900 text-lg font-medium">{currentFile.name}</p>
                 </div>
                 <div>
                   <h4 className="font-medium text-blue-900 mb-1">Incident Summary</h4>
                   <Textarea
                     id="summary"
                     name="summary"
-                    defaultValue={file.incident_summary}
+                    defaultValue={currentFile.incident_summary}
                     readOnly
                     className="h-32 resize-none border-gray-300 rounded-md"
                   />
@@ -698,47 +786,47 @@ export default function FileOperations({
                     <div className="flex justify-between items-center">
                       <p className="text-xs text-gray-600">
                         Created: <span>
-                          {new Date(file.created_at).toLocaleString()} by{" "}
-                          <span className="text-blue-900">{file.created_by}</span>
+                          {new Date(currentFile.created_at).toLocaleString()} by{" "}
+                          <span className="text-blue-900">{currentFile.created_by}</span>
                         </span>
                       </p>
                     </div>
                     <div className="flex justify-between items-center">
                       <p className="text-xs text-gray-600">
-                        Last updated: {file.updated_at ? (
+                        Last updated: {currentFile.updated_at ? (
                           <span>
-                            {new Date(file.updated_at).toLocaleString()} by{" "}
-                            <span className="text-blue-900">{file.updated_by}</span>
+                            {new Date(currentFile.updated_at).toLocaleString()} by{" "}
+                            <span className="text-blue-900">{currentFile.updated_by}</span>
                           </span>
                         ) : 'Never'}
                       </p>
                     </div>
                     <div className="flex justify-between items-center">
                       <p className="text-xs text-gray-600">
-                        Last viewed: {file.viewed_at ? (
+                        Last viewed: {currentFile.viewed_at ? (
                           <span>
-                            {new Date(file.viewed_at).toLocaleString()} by{" "}
-                            <span className="text-blue-900">{file.viewed_by}</span>
+                            {new Date(currentFile.viewed_at).toLocaleString()} by{" "}
+                            <span className="text-blue-900">{currentFile.viewed_by}</span>
                           </span>
                         ) : 'Never'}
                       </p>
                     </div>
                     <div className="flex justify-between items-center">
                       <p className="text-xs text-gray-600">
-                        Last downloaded: {file.downloaded_at ? (
+                        Last downloaded: {currentFile.downloaded_at ? (
                           <span>
-                            {new Date(file.downloaded_at).toLocaleString()} by{" "}
-                            <span className="text-blue-900">{file.downloaded_by}</span>
+                            {new Date(currentFile.downloaded_at).toLocaleString()} by{" "}
+                            <span className="text-blue-900">{currentFile.downloaded_by}</span>
                           </span>
                         ) : 'Never'}
                       </p>
                     </div>
                     <div className="flex justify-between items-center">
                       <p className="text-xs text-gray-600">
-                        Last printed: {file.printed_at ? (
+                        Last printed: {currentFile.printed_at ? (
                           <span>
-                            {new Date(file.printed_at).toLocaleString()} by{" "}
-                            <span className="text-blue-900">{file.printed_by}</span>
+                            {new Date(currentFile.printed_at).toLocaleString()} by{" "}
+                            <span className="text-blue-900">{currentFile.printed_by}</span>
                           </span>
                         ) : 'Never'}
                       </p>

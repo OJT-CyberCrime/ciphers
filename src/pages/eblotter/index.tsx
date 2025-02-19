@@ -114,14 +114,11 @@ export default function FolderPage() {
   const [folderDetails, setFolderDetails] = useState<Folder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingFile, setIsAddingFile] = useState(false);
-  const [newFileTitle, setNewFileTitle] = useState("");
   const [newFileSummary, setNewFileSummary] = useState("");
   const [fileUpload, setFileUpload] = useState<FileList | null>(null);
-  const [newInvestigator, setNewInvestigator] = useState("");
-  const [newDeskOfficer, setNewDeskOfficer] = useState("");
   const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null);
   const [showFileDialog, setShowFileDialog] = useState<'edit' | 'archive' | 'details' | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
+  const [previewStates, setPreviewStates] = useState<{ [key: number]: boolean }>({});
   const [showOptions, setShowOptions] = useState<{ [key: number]: boolean }>({});
   const [formRef, setFormRef] = useState<HTMLFormElement | null>(null);
 
@@ -233,10 +230,7 @@ export default function FolderPage() {
       setFiles([formattedFile, ...files]);
       toast.success("File uploaded successfully");
       setIsAddingFile(false);
-      setNewFileTitle("");
       setNewFileSummary("");
-      setNewInvestigator("");
-      setNewDeskOfficer("");
       setFileUpload(null);
     } catch (error: any) {
       console.error('Error uploading file:', error);
@@ -434,11 +428,17 @@ export default function FolderPage() {
                   </div>
                   <FileOperations
                     file={file}
-                    showPreview={showPreview}
-                    setShowPreview={setShowPreview}
+                    showPreview={previewStates[file.blotter_id] || false}
+                    setShowPreview={(show) => {
+                      setPreviewStates(prev => ({
+                        ...prev,
+                        [file.blotter_id]: show
+                      }));
+                    }}
                     showFileDialog={showFileDialog}
                     setShowFileDialog={setShowFileDialog}
                     selectedFile={selectedFile}
+                    setSelectedFile={setSelectedFile}
                     onFileUpdate={() => {
                       // Remove the file from the UI if it was archived
                       if (showFileDialog === 'archive') {
@@ -515,7 +515,6 @@ export default function FolderPage() {
                   id="name"
                   name="name"
                   placeholder="Enter name"
-                  onChange={(e) => setNewInvestigator(e.target.value)}
                   required
                 />
               </div>
@@ -525,7 +524,6 @@ export default function FolderPage() {
                   id="entry_num"
                   name="entry_num"
                   placeholder="Enter entry number"
-                  onChange={(e) => setNewDeskOfficer(e.target.value)}
                   required
                 />
               </div>
@@ -573,10 +571,7 @@ export default function FolderPage() {
                 variant="outline"
                 onClick={() => {
                   setIsAddingFile(false);
-                  setNewFileTitle("");
                   setNewFileSummary("");
-                  setNewInvestigator("");
-                  setNewDeskOfficer("");
                   setFileUpload(null);
                 }}
               >
