@@ -14,7 +14,6 @@ import FolderPage from "./pages/FolderPage/index";
 import ProtectedRoute from "./utils/protectedRoute";
 import Cookies from 'js-cookie';
 import WomenChildren from './pages/WomenChildren';
-import { setupAutoLogout } from "./utils/auth";
 import { supabase } from "./utils/supa";
 
 const App: React.FC = () => {
@@ -46,7 +45,6 @@ const App: React.FC = () => {
     };
 
     checkAuthState();
-    setupAutoLogout();
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
