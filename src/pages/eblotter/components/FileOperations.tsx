@@ -767,8 +767,20 @@ export default function FileOperations({
             {showFileDialog === 'details' && (
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">File Title</h4>
+                  <h4 className="font-medium text-blue-900 mb-1">Name</h4>
                   <p className="text-gray-900 text-lg font-medium">{currentFile.name}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Entry Number</h4>
+                  <p className="text-gray-900">{currentFile.entry_num}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Date</h4>
+                  <p className="text-gray-900">{currentFile.date}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Time</h4>
+                  <p className="text-gray-900">{currentFile.time}</p>
                 </div>
                 <div>
                   <h4 className="font-medium text-blue-900 mb-1">Incident Summary</h4>
@@ -836,7 +848,10 @@ export default function FileOperations({
                 <DialogFooter className="flex justify-end">
                   <Button
                     className="bg-blue-600 text-white hover:bg-blue-700"
-                    onClick={() => setShowFileDialog(null)}
+                    onClick={() => {
+                      setSelectedFile(null);
+                      setShowFileDialog(null);
+                    }}
                   >
                     Close
                   </Button>
