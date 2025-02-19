@@ -1,4 +1,4 @@
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator} from "@/components/ui/breadcrumb";
 import SearchBar from "@/Search";
@@ -122,11 +122,10 @@ export default function FolderPage() {
   const [showFileDialog, setShowFileDialog] = useState<'edit' | 'archive' | 'details' | null>(null);
   const [previewStates, setPreviewStates] = useState<{ [key: number]: boolean }>({});
   const [showOptions, setShowOptions] = useState<{ [key: number]: boolean }>({});
-
-  // Get the current location to determine the previous page
+  const navigate = useNavigate();
   const location = useLocation();
-  const previousPage = location.state?.from || "/incident-report";
-  const previousPageName = location.state?.fromName || "Incident Reports";
+  const previousPage = "/incident-report"; // Always navigate to incident report
+  const previousPageName = "Incident Reports";
 
   // Handle file upload
   const handleFileUpload = async (e: React.FormEvent) => {
@@ -349,19 +348,31 @@ export default function FolderPage() {
       {/* Breadcrumb Navigation */}
       <Breadcrumb className="mb-4 text-gray-600 flex space-x-2">
         <BreadcrumbItem>
-          <BreadcrumbLink href="/dashboard">Home</BreadcrumbLink>
+          <Link 
+            to="/dashboard"
+            state={{ from: location.pathname }}
+            className="text-gray-600 hover:text-gray-900"
+          >
+            Home
+          </Link>
         </BreadcrumbItem>
         <BreadcrumbSeparator className="flex items-center">
           <ChevronRight size={16} />
         </BreadcrumbSeparator>
         <BreadcrumbItem>
-          <BreadcrumbLink href={previousPage}>{previousPageName}</BreadcrumbLink>
+          <Link 
+            to={previousPage}
+            state={{ from: location.pathname }}
+            className="text-gray-600 hover:text-gray-900"
+          >
+            {previousPageName}
+          </Link>
         </BreadcrumbItem>
         <BreadcrumbSeparator className="flex items-center">
           <ChevronRight size={16} />
         </BreadcrumbSeparator>
         <BreadcrumbItem>
-          <BreadcrumbLink href="#">{folderDetails?.title || `Folder ${id}`}</BreadcrumbLink>
+          <span className="text-gray-900">{folderDetails?.title || `Folder ${id}`}</span>
         </BreadcrumbItem>
       </Breadcrumb>
 

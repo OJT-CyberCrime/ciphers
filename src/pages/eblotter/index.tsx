@@ -32,6 +32,7 @@ import Cookies from "js-cookie";
 import RichTextEditor from "@/components/RichTextEditor";
 import FileOperations from "./components/FileOperations";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
 
 interface FileRecord {
   blotter_id: number;
@@ -353,19 +354,23 @@ export default function FolderPage() {
       {/* Breadcrumb Navigation */}
       <Breadcrumb className="mb-4 text-gray-600 flex space-x-2">
         <BreadcrumbItem>
-          <BreadcrumbLink href="/dashboard">Home</BreadcrumbLink>
+          <Link to="/dashboard" className="text-gray-600 hover:text-gray-900">
+            Home
+          </Link>
         </BreadcrumbItem>
         <BreadcrumbSeparator className="flex items-center">
           <ChevronRight size={16} />
         </BreadcrumbSeparator>
         <BreadcrumbItem>
-          <BreadcrumbLink href={previousPage}>{previousPageName}</BreadcrumbLink>
+          <Link to={previousPage} className="text-gray-600 hover:text-gray-900">
+            {previousPageName}
+          </Link>
         </BreadcrumbItem>
         <BreadcrumbSeparator className="flex items-center">
           <ChevronRight size={16} />
         </BreadcrumbSeparator>
         <BreadcrumbItem>
-          <BreadcrumbLink href="#">{folderDetails?.title || `Folder ${id}`}</BreadcrumbLink>
+          <span className="text-gray-900">{folderDetails?.title || `Folder ${id}`}</span>
         </BreadcrumbItem>
       </Breadcrumb>
 
