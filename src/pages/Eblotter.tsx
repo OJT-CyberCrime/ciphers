@@ -62,6 +62,7 @@ interface Folder {
   updated_at: string;
   is_archived: boolean;
   is_blotter: boolean;
+  is_womencase: boolean;
   categories: Category[];
 }
 
@@ -118,6 +119,7 @@ export default function Eblotter() {
           `)
           .eq('is_archived', false)
           .eq('is_blotter', true)
+          .eq('is_womencase', false) // Only fetch non-women case folders
           .order('created_at', { ascending: false });
 
         if (foldersError) throw foldersError;
@@ -202,6 +204,11 @@ export default function Eblotter() {
   const handleAddFolder = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
+      const formData = new FormData(e.currentTarget);
+      const title = formData.get('title') as string;
+      const status = formData.get('status') as string;
+      const selectedCategories = formData.getAll('categories') as string[];
+
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
       
       // Get the user's ID from the users table using their email
@@ -214,18 +221,17 @@ export default function Eblotter() {
       if (userError) throw userError;
       if (!userData2) throw new Error('User not found');
 
-      // Create the folder first
+      // Create the folder
       const { data: folderData, error: folderError } = await supabase
         .from('folders')
         .insert([
           {
-            title: newFolderTitle,
-            status: newFolderStatus,
+            title,
+            status,
             created_by: userData2.user_id,
-            updated_by: null,
-            updated_at: null,
             is_archived: false,
-            is_blotter: true // Set is_blotter to true for eBlotter folders
+            is_blotter: true,
+            is_womencase: false // Set is_womencase to false for eblotter folders
           }
         ])
         .select()

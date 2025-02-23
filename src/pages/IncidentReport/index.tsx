@@ -109,6 +109,7 @@ export default function IncidentReport() {
           `)
           .eq('is_archived', false)
           .eq('is_blotter', false)
+          .eq('is_womencase', false) // Only fetch non-women case folders
           .order('created_at', { ascending: false });
 
         if (foldersError) throw foldersError;
