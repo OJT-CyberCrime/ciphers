@@ -19,6 +19,7 @@ interface Folder {
   updated_at: string;
   is_archived: boolean;
   is_blotter: boolean;
+  is_womencase: boolean;
   categories: Category[];
   archived_by?: string;
   archived_at?: string;
