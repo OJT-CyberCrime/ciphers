@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FolderClosed, Plus, ChevronRight } from "lucide-react";
+import { FolderClosed, Plus, ChevronRight, Pencil, Archive, Eye, MoreVertical } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -214,7 +214,7 @@ export default function WomenChildren() {
           onClick={() => setIsAddingFolder(true)}
           className="bg-blue-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-800"
         >
-          <Plus size={16} /> Add Folder
+          <Plus size={16} /> Add Case
         </Button>
       </div>
 
@@ -273,7 +273,66 @@ export default function WomenChildren() {
                 >
                   {getStatusBadgeClass(folder.status).label}
                 </Badge>
+
+                {/* Kebab menu button */}
+                <div className="ml-auto">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="p-2 rounded-full hover:bg-gray-200"
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent default
+                      e.stopPropagation(); // Stop event from bubbling up
+                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: !prev[folder.folder_id] }));
+                    }}
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
+
+              {/* Context menu */}
+              {contextMenuVisible[folder.folder_id] && (
+                <div className="absolute top-10 right-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                  <Button
+                    variant="ghost"
+                    className="block w-full text-left p-2 hover:bg-gray-100"
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent default
+                      e.stopPropagation(); // Stop event from bubbling up
+                      handleEditClick(folder);
+                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
+                    }}
+                  >
+                    <Pencil className="inline w-4 h-4 mr-2" /> Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="block w-full text-left p-2 hover:bg-gray-100"
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent default
+                      e.stopPropagation(); // Stop event from bubbling up
+                      setSelectedFolder(folder);
+                      setDialogContent("Are you sure you want to archive this case?");
+                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
+                    }}
+                  >
+                    <Archive className="inline w-4 h-4 mr-2" /> Archive
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="block w-full text-left p-2 hover:bg-gray-100"
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent default
+                      e.stopPropagation(); // Stop event from bubbling up
+                      handleViewDetails(folder);
+                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
+                    }}
+                  >
+                    <Eye className="inline w-4 h-4 mr-2" /> View Details
+                  </Button>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2 mt-2">
                 {folder.categories && folder.categories.length > 0 ? (
                   folder.categories.map((category) => (
