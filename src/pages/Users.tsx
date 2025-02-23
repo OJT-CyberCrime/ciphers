@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "../utils/supa";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -29,6 +29,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
+import HCaptcha from '@hcaptcha/react-hcaptcha';
 
 // Define the form schema
 const formSchema = z.object({
@@ -47,6 +48,8 @@ interface UserData {
 export default function Users() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha>(null);
 
   // Initialize form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -76,6 +79,11 @@ export default function Users() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
+      if (!captchaToken) {
+        toast.error("Please complete the captcha verification");
+        return;
+      }
+
       // Create user in Supabase Auth first
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: values.email,
@@ -84,7 +92,8 @@ export default function Users() {
           data: {
             name: values.name,
             role: values.role,
-          }
+          },
+          captchaToken: captchaToken
         }
       });
 
@@ -107,8 +116,6 @@ export default function Users() {
 
       if (dbError) {
         console.error("Database error:", dbError);
-        // If database insert fails, we should ideally delete the auth user
-        // but this requires admin rights in Supabase
         throw dbError;
       }
 
@@ -116,10 +123,22 @@ export default function Users() {
       setIsDialogOpen(false);
       form.reset();
       fetchUsers(); // Refresh the users list
+      if (captchaRef.current) {
+        captchaRef.current.resetCaptcha();
+      }
+      setCaptchaToken(null);
     } catch (error: any) {
       console.error("Error adding user:", error);
       toast.error(error.message || "Failed to add user");
+      if (captchaRef.current) {
+        captchaRef.current.resetCaptcha();
+      }
+      setCaptchaToken(null);
     }
+  };
+
+  const handleVerificationSuccess = (token: string) => {
+    setCaptchaToken(token);
   };
 
   return (
@@ -213,12 +232,20 @@ export default function Users() {
                       <SelectContent>
                         <SelectItem value="admin">Admin</SelectItem>
                         <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="wcpd">WCPD</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <div className="mt-4">
+                <HCaptcha
+                  sitekey="2028db5a-e45c-418a-bb88-cd600e04402c"
+                  onVerify={handleVerificationSuccess}
+                  ref={captchaRef}
+                />
+              </div>
               <DialogFooter>
                 <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
                   Add User
