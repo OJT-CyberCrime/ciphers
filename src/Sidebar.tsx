@@ -14,6 +14,7 @@ import { logout } from "@/utils/auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import Cookies from "js-cookie";
 
 interface SidebarProps {
   setIsLoggedIn: (value: boolean) => void;
@@ -21,6 +22,8 @@ interface SidebarProps {
 
 export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
   const navigate = useNavigate();
+  const userData = JSON.parse(Cookies.get('user_data') || '{}');
+  const userRole = userData.role;
 
   const handleLogout = async () => {
     try {
@@ -58,7 +61,9 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
           <SidebarLink to="/certifications" icon={<FileCheck size={20} />} label="Extraction Certifications" />
           <SidebarLink to="/eblotter" icon={<ClipboardList size={20} />} label="eBlotter" />
           <SidebarLink to="/archives" icon={<Archive size={20} />} label="Archives" />
-          <SidebarLink to="/wcp" icon={<PersonStanding size={20} />} label="Women and Children" />
+          {userRole === 'wcpd' && (
+            <SidebarLink to="/wcp" icon={<PersonStanding size={20} />} label="Women and Children" />
+          )}
         </nav>
         <Button
           className="w-full bg-blue-900 hover:bg-blue-700 flex items-center gap-2 mt-6"
