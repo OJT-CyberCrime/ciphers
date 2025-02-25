@@ -614,7 +614,7 @@ export default function FileOperations({
               </div>
               {/* <Button 
                 variant="ghost" 
-                size="icon" 
+                size="icon"   
                 onClick={() => {
                   setSelectedFile(null);
                   setShowPreview(false);
