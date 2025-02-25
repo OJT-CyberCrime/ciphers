@@ -72,8 +72,8 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
     try {
       const { data: authData, error: authError } =
         await supabase.auth.signInWithPassword({
-          email,
-          password,
+        email,
+        password,
           options: { captchaToken }
         });
 
@@ -209,12 +209,12 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
             required
           />
           <div className="relative">
-            <Input
+          <Input
               type={showPassword ? "text" : "password"}
-              placeholder="Enter Password"
-              className="p-4 text-lg h-12 w-full border border-gray-300 rounded-md font-poppins focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
+            placeholder="Enter Password"
+            className="p-4 text-lg h-12 w-full border border-gray-300 rounded-md font-poppins focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
