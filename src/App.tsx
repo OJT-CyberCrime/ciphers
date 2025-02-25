@@ -71,7 +71,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 overflow-hidden">
       <Router>
-        <div className="flex">
+        <div className={`flex ${isLoggedIn ? "ml-64" : ""}`}>
           {/* Sidebar appears only if logged in */}
           {isLoggedIn && <Sidebar setIsLoggedIn={setIsLoggedIn} />}
 

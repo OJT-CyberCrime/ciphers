@@ -612,16 +612,16 @@ export default function FileOperations({
                   {ext.toUpperCase()} Document • Added by {currentFile.created_by}
                 </p>
               </div>
-              <Button 
+              {/* <Button 
                 variant="ghost" 
-                size="icon" 
+                size="icon"   
                 onClick={() => {
                   setSelectedFile(null);
                   setShowPreview(false);
                 }}
               >
                 <X size={20} />
-              </Button>
+              </Button> */}
             </div>
           </DialogHeader>
 
