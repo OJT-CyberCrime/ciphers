@@ -33,14 +33,20 @@ import RichTextEditor from "@/components/RichTextEditor";
 import FileOperations from "./components/FileOperations";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface FileRecord {
   blotter_id: number;
-  name: string;
+  case_title: string;
   entry_num: string;
-  date: string;
-  time: string;
+  date_reported: string;
+  time_reported: string;
+  date_committed: string;  
+  time_committed: string;
   path_file: string;
+  investigator: string;
+  desk_officer: string;
+  signatory_name: string;
   created_by: number;
   updated_by: number | null;
   created_at: string;
@@ -148,10 +154,15 @@ export default function FolderPage() {
 
       // Get form data
       const formData = new FormData(formRef);
-      const name = formData.get('name') as string;
+      const case_title = formData.get('case_title') as string;
       const entry_num = formData.get('entry_num') as string;
-      const date = formData.get('date') as string;
-      const time = formData.get('time') as string;
+      const date_reported = formData.get('date_reported') as string;
+      const time_reported = formData.get('time_reported') as string;
+      const date_committed = formData.get('date_committed') as string;
+      const time_committed = formData.get('time_committed') as string;
+      const investigator = formData.get('investigator') as string;
+      const desk_officer = formData.get('desk_officer') as string;
+      const signatory_name = formData.get('signatory_name') as string;
 
       // Upload file to storage
       const file = fileUpload[0];
@@ -185,12 +196,16 @@ export default function FolderPage() {
         .insert([
           {
             folder_id: id,
-            name: name,
+            case_title: case_title,
             entry_num: entry_num,
-            date: date,
-            time: time,
-            incident_summary: cleanSummary,
+            date_reported: date_reported,
+            time_reported: time_reported,
+            date_committed: date_committed,
+            time_committed: time_committed,
             path_file: filePath,
+            investigator: investigator,
+            desk_officer: desk_officer,
+            signatory_name: signatory_name,
             created_by: userData2.user_id,
             is_archived: false,
             public_url: publicUrl,
@@ -301,7 +316,7 @@ export default function FolderPage() {
 
   // Filter files based on search query and type
   const filteredFiles = files.filter(file => {
-    const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = file.case_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          file.incident_summary.toLowerCase().includes(searchQuery.toLowerCase());
     const fileExtension = file.path_file.split('.').pop()?.toLowerCase() || '';
     
@@ -417,7 +432,7 @@ export default function FolderPage() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       {getFileIcon(file.path_file)}
-                      <h3 className="font-medium text-gray-900">{file.name}</h3>
+                      <h3 className="font-medium text-gray-900">{file.case_title}</h3>
                     </div>
                     <button
                       className="p-2 rounded-full hover:bg-gray-200"
@@ -513,63 +528,114 @@ export default function FolderPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleFileUpload} ref={(ref) => setFormRef(ref)}>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  placeholder="Enter name"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="entry_num">Entry Number</Label>
-                <Input
-                  id="entry_num"
-                  name="entry_num"
-                  placeholder="Enter entry number"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  name="date"
-                  type="date"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="time">Time</Label>
-                <Input
-                  id="time"
-                  name="time"
-                  type="time"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="summary">Incident Summary</Label>
-                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                  <RichTextEditor
-                    content={newFileSummary}
-                    onChange={setNewFileSummary}
+            <ScrollArea className="h-[60vh]">
+              <div className="space-y-4 px-4">
+                <div className="space-y-2">
+                  <Label htmlFor="case_title">Case Title</Label>
+                  <Input
+                    id="case_title"
+                    name="case_title"
+                    placeholder="Enter case title"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="entry_num">Entry Number</Label>
+                  <Input
+                    id="entry_num"
+                    name="entry_num"
+                    placeholder="Enter entry number"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="date_reported">Date Reported</Label>
+                    <Input
+                      id="date_reported"
+                      name="date_reported"
+                      type="date"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="date_committed">Date Committed</Label>
+                    <Input
+                      id="date_committed"
+                      name="date_committed"
+                      type="date"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="time_reported">Time Reported</Label>
+                    <Input
+                      id="time_reported"
+                      name="time_reported"
+                      type="time"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="time_committed">Time Committed</Label>
+                    <Input
+                      id="time_committed"
+                      name="time_committed"
+                      type="time"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="investigator">Investigator</Label>
+                  <Input
+                    id="investigator"
+                    name="investigator"
+                    placeholder="Enter investigator name"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="desk_officer">Desk Officer</Label>
+                  <Input
+                    id="desk_officer"
+                    name="desk_officer"
+                    placeholder="Enter desk officer name"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signatory_name">Signatory Name</Label>
+                  <Input
+                    id="signatory_name"
+                    name="signatory_name"
+                    placeholder="Enter signatory name"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="summary">Incident Summary</Label>
+                  <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                    <RichTextEditor
+                      content={newFileSummary}
+                      onChange={setNewFileSummary}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="file">Upload File</Label>
+                  <Input
+                    id="file"
+                    name="file"
+                    type="file"
+                    onChange={(e) => setFileUpload(e.target.files)}
+                    required
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="file">Upload File</Label>
-                <Input
-                  id="file"
-                  name="file"
-                  type="file"
-                  onChange={(e) => setFileUpload(e.target.files)}
-                  required
-                />
-              </div>
-            </div>
+            </ScrollArea>
             <DialogFooter className="mt-4">
               <Button
                 type="button"

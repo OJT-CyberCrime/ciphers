@@ -22,14 +22,20 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface FileRecord {
   blotter_id: number;
-  name: string;
+  case_title: string;
   entry_num: string;
-  date: string;
-  time: string;
+  date_reported: string;
+  time_reported: string;
+  date_committed: string;
+  time_committed: string;
   path_file: string;
+  investigator: string;
+  desk_officer: string;
+  signatory_name: string;
   created_by: number;
   updated_by: number | null;
   created_at: string;
@@ -243,7 +249,7 @@ export default function FileOperations({
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = currentFile.name + '.' + ext;
+      a.download = currentFile.case_title + '.' + ext;
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(url);
@@ -344,10 +350,12 @@ export default function FileOperations({
     try {
       const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
-      const name = formData.get('name') as string;
+      const case_title = formData.get('case_title') as string;
       const entry_num = formData.get('entry_num') as string;
-      const date = formData.get('date') as string;
-      const time = formData.get('time') as string;
+      const date_reported = formData.get('date_reported') as string;
+      const time_reported = formData.get('time_reported') as string;
+      const date_committed = formData.get('date_committed') as string;
+      const time_committed = formData.get('time_committed') as string;
       const summary = formData.get('summary') as string;
       const uploadedFile = (formData.get('file') as unknown) as globalThis.File | null;
 
@@ -401,10 +409,12 @@ export default function FileOperations({
       const { error: updateError } = await supabase
         .from('eblotter_file')
         .update({
-          name: name,
+          case_title: case_title,
           entry_num: entry_num,
-          date: date,
-          time: time,
+          date_reported: date_reported,
+          time_reported: time_reported,
+          date_committed: date_committed,
+          time_committed: time_committed,
           incident_summary: summary,
           ...(uploadedFile && uploadedFile instanceof globalThis.File && uploadedFile.size > 0 ? {
             path_file: filePath,
@@ -457,7 +467,7 @@ export default function FileOperations({
         <div className="relative aspect-video">
           <img 
             src={signedUrl} 
-            alt={currentFile.name}
+            alt={currentFile.case_title}
             className="w-full h-full object-contain"
             onError={() => setError('Failed to load image')}
           />
@@ -472,7 +482,7 @@ export default function FileOperations({
           <iframe
             src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true&rm=minimal`}
             className="w-full h-full border-none"
-            title={currentFile.name}
+            title={currentFile.case_title}
             onError={() => setError('Failed to load document preview')}
           />
         </div>
@@ -528,7 +538,7 @@ export default function FileOperations({
         <div className="w-full h-48 bg-gray-100 rounded-lg border overflow-hidden">
           <img 
             src={signedUrl || undefined} 
-            alt={currentFile.name}
+            alt={currentFile.case_title}
             className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer"
             onClick={() => {
               setSelectedFile(currentFile);
@@ -547,7 +557,7 @@ export default function FileOperations({
             <iframe
               src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true&rm=minimal`}
               className="w-full h-[400px] border-none"
-              title={currentFile.name}
+              title={currentFile.case_title}
             />
           </div>
           {/* Expand button overlay */}
@@ -610,9 +620,9 @@ export default function FileOperations({
           <DialogHeader>
             <div className="flex justify-between items-center">
               <div>
-                <DialogTitle className="text-2xl font-semibold">{file.name}</DialogTitle>
+                <DialogTitle className="text-2xl font-semibold">{currentFile.case_title}</DialogTitle>
                 <p className="text-sm text-gray-500 mt-1">
-                  {ext.toUpperCase()} Document • Added by {file.created_by}
+                  {ext.toUpperCase()} Document • Added by {currentFile.created_by}
                 </p>
               </div>
               <Button 
@@ -635,8 +645,8 @@ export default function FileOperations({
 
           <DialogFooter className="flex justify-between items-center">
             <div className="flex items-center gap-2 text-sm text-gray-500">
-              {file.viewed_at && (
-                <span>Last viewed: {new Date(file.viewed_at).toLocaleString()}</span>
+              {currentFile.viewed_at && (
+                <span>Last viewed: {new Date(currentFile.viewed_at).toLocaleString()}</span>
               )}
             </div>
           </DialogFooter>
@@ -663,72 +673,130 @@ export default function FileOperations({
           <div className="space-y-4">
             {showFileDialog === 'edit' && (
               <form onSubmit={handleEditFile}>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Name</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      defaultValue={(selectedFile || file).name}
-                      required
-                      className="border-gray-300 rounded-md"
-                    />
+                <ScrollArea className="h-[60vh]">
+                  <div className="space-y-4 px-4">
+                    <div>
+                      <Label htmlFor="case_title">Case Title</Label>
+                      <Input
+                        id="case_title"
+                        name="case_title"
+                        defaultValue={(selectedFile || file).case_title}
+                        required
+                        className="border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="entry_num">Entry Number</Label>
+                      <Input
+                        id="entry_num"
+                        name="entry_num"
+                        defaultValue={(selectedFile || file).entry_num}
+                        required
+                        className="border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="date_reported">Date Reported</Label>
+                        <Input
+                          id="date_reported"
+                          name="date_reported"
+                          type="date"
+                          defaultValue={(selectedFile || file).date_reported}
+                          required
+                          className="border-gray-300 rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="date_committed">Date Committed</Label>
+                        <Input
+                          id="date_committed"
+                          name="date_committed"
+                          type="date"
+                          defaultValue={(selectedFile || file).date_committed}
+                          required
+                          className="border-gray-300 rounded-md"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="time_reported">Time Reported</Label>
+                        <Input
+                          id="time_reported"
+                          name="time_reported"
+                          type="time"
+                          defaultValue={(selectedFile || file).time_reported}
+                          required
+                          className="border-gray-300 rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="time_committed">Time Committed</Label>
+                        <Input
+                          id="time_committed"
+                          name="time_committed"
+                          type="time"
+                          defaultValue={(selectedFile || file).time_committed}
+                          required
+                          className="border-gray-300 rounded-md"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="investigator">Investigator</Label>
+                      <Input
+                        id="investigator"
+                        name="investigator"
+                        defaultValue={(selectedFile || file).investigator}
+                        required
+                        className="border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="desk_officer">Desk Officer</Label>
+                      <Input
+                        id="desk_officer"
+                        name="desk_officer"
+                        defaultValue={(selectedFile || file).desk_officer}
+                        required
+                        className="border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="signatory_name">Signatory Name</Label>
+                      <Input
+                        id="signatory_name"
+                        name="signatory_name"
+                        defaultValue={(selectedFile || file).signatory_name}
+                        required
+                        className="border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="summary">Incident Summary</Label>
+                      <Textarea
+                        id="summary"
+                        name="summary"
+                        defaultValue={(selectedFile || file).incident_summary}
+                        required
+                        className="h-32 resize-none border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="file">Update File (Optional)</Label>
+                      <Input
+                        id="file"
+                        name="file"
+                        type="file"
+                        className="border-gray-300 rounded-md"
+                      />
+                      <p className="text-sm text-gray-500">
+                        Leave empty to keep the current file
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="entry_num">Entry Number</Label>
-                    <Input
-                      id="entry_num"
-                      name="entry_num"
-                      defaultValue={(selectedFile || file).entry_num}
-                      required
-                      className="border-gray-300 rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="date">Date</Label>
-                    <Input
-                      id="date"
-                      name="date"
-                      type="date"
-                      defaultValue={(selectedFile || file).date}
-                      required
-                      className="border-gray-300 rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="time">Time</Label>
-                    <Input
-                      id="time"
-                      name="time"
-                      type="time"
-                      defaultValue={(selectedFile || file).time}
-                      required
-                      className="border-gray-300 rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="summary">Incident Summary</Label>
-                    <Textarea
-                      id="summary"
-                      name="summary"
-                      defaultValue={(selectedFile || file).incident_summary}
-                      required
-                      className="h-32 resize-none border-gray-300 rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="file">Update File (Optional)</Label>
-                    <Input
-                      id="file"
-                      name="file"
-                      type="file"
-                      className="border-gray-300 rounded-md"
-                    />
-                    <p className="text-sm text-gray-500">
-                      Leave empty to keep the current file
-                    </p>
-                  </div>
-                </div>
+                </ScrollArea>
                 <DialogFooter className="mt-4 flex justify-end">
                   <Button type="button" variant="outline" onClick={() => setShowFileDialog(null)} className="mr-2">
                     Cancel
@@ -768,19 +836,43 @@ export default function FileOperations({
               <div className="space-y-4">
                 <div>
                   <h4 className="font-medium text-blue-900 mb-1">Name</h4>
-                  <p className="text-gray-900 text-lg font-medium">{currentFile.name}</p>
+                  <p className="text-gray-900 text-lg font-medium">{currentFile.case_title}</p>
                 </div>
                 <div>
                   <h4 className="font-medium text-blue-900 mb-1">Entry Number</h4>
                   <p className="text-gray-900">{currentFile.entry_num}</p>
                 </div>
-                <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Date</h4>
-                  <p className="text-gray-900">{currentFile.date}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium text-blue-900 mb-1">Date Reported</h4>
+                    <p className="text-gray-900">{currentFile.date_reported}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-blue-900 mb-1">Date Committed</h4>
+                    <p className="text-gray-900">{currentFile.date_committed}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium text-blue-900 mb-1">Time Reported</h4>
+                    <p className="text-gray-900">{currentFile.time_reported}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-blue-900 mb-1">Time Committed</h4>
+                    <p className="text-gray-900">{currentFile.time_committed}</p>
+                  </div>
                 </div>
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Time</h4>
-                  <p className="text-gray-900">{currentFile.time}</p>
+                  <h4 className="font-medium text-blue-900 mb-1">Investigator</h4>
+                  <p className="text-gray-900">{currentFile.investigator}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Desk Officer</h4>
+                  <p className="text-gray-900">{currentFile.desk_officer}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Signatory Name</h4>
+                  <p className="text-gray-900">{currentFile.signatory_name}</p>
                 </div>
                 <div>
                   <h4 className="font-medium text-blue-900 mb-1">Incident Summary</h4>
