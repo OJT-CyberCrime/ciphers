@@ -612,7 +612,7 @@ export default function FileOperations({
                   {ext.toUpperCase()} Document • Added by {currentFile.created_by}
                 </p>
               </div>
-              <Button 
+              {/* <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={() => {
@@ -621,7 +621,7 @@ export default function FileOperations({
                 }}
               >
                 <X size={20} />
-              </Button>
+              </Button> */}
             </div>
           </DialogHeader>
 
