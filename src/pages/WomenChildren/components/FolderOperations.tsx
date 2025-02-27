@@ -41,6 +41,7 @@ interface Folder {
   is_archived: boolean;
   is_blotter: boolean;
   is_womencase: boolean;
+  is_extraction: boolean;
   categories: Category[];
 }
 
@@ -150,10 +151,23 @@ export default function FolderOperations({
             updated_at: null,
             is_archived: false,
             is_blotter: false,
-            is_womencase: true // Always set to true for women's cases
+            is_womencase: true,
+            is_extraction: false
           }
         ])
-        .select()
+        .select(`
+          *,
+          creator:created_by(name),
+          updater:updated_by(name),
+          categories:folder_categories(
+            categories(
+              category_id,
+              title,
+              created_by,
+              created_at
+            )
+          )
+        `)
         .single();
 
       if (folderError) throw folderError;

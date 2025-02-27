@@ -204,11 +204,6 @@ export default function Eblotter() {
   const handleAddFolder = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const formData = new FormData(e.currentTarget);
-      const title = formData.get('title') as string;
-      const status = formData.get('status') as string;
-      const selectedCategories = formData.getAll('categories') as string[];
-
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
       
       // Get the user's ID from the users table using their email
@@ -221,20 +216,35 @@ export default function Eblotter() {
       if (userError) throw userError;
       if (!userData2) throw new Error('User not found');
 
-      // Create the folder
+      // Create the folder first
       const { data: folderData, error: folderError } = await supabase
         .from('folders')
         .insert([
           {
-            title,
-            status,
+            title: newFolderTitle,
+            status: newFolderStatus,
             created_by: userData2.user_id,
+            updated_by: null,
+            updated_at: null,
             is_archived: false,
             is_blotter: true,
-            is_womencase: false // Set is_womencase to false for eblotter folders
+            is_womencase: false,
+            is_extraction: false
           }
         ])
-        .select()
+        .select(`
+          *,
+          creator:created_by(name),
+          updater:updated_by(name),
+          categories:folder_categories(
+            categories(
+              category_id,
+              title,
+              created_by,
+              created_at
+            )
+          )
+        `)
         .single();
 
       if (folderError) throw folderError;
@@ -679,6 +689,7 @@ export default function Eblotter() {
                 <Label htmlFor="title">Folder Title</Label>
                 <Input
                   id="title"
+                  name="title"
                   placeholder="Enter folder title"
                   value={newFolderTitle}
                   onChange={(e) => setNewFolderTitle(e.target.value)}
@@ -750,6 +761,7 @@ export default function Eblotter() {
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select 
+                  name="status"
                   value={newFolderStatus}
                   onValueChange={setNewFolderStatus}
                 >

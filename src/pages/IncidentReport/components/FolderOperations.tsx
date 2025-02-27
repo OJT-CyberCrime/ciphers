@@ -40,6 +40,8 @@ interface Folder {
   updated_at: string;
   is_archived: boolean;
   is_blotter: boolean;
+  is_womencase: boolean;
+  is_extraction: boolean;
   categories: Category[];
 }
 
@@ -147,10 +149,23 @@ export default function FolderOperations({
             updated_at: null,
             is_archived: false,
             is_blotter: false,
-            is_womencase: false
+            is_womencase: false,
+            is_extraction: false
           }
         ])
-        .select()
+        .select(`
+          *,
+          creator:created_by(name),
+          updater:updated_by(name),
+          categories:folder_categories(
+            categories(
+              category_id,
+              title,
+              created_by,
+              created_at
+            )
+          )
+        `)
         .single();
 
       if (folderError) throw folderError;
@@ -170,33 +185,12 @@ export default function FolderOperations({
         if (categoriesError) throw categoriesError;
       }
 
-      // Fetch the complete folder data with categories for the UI update
-      const { data: newFolderWithCategories, error: fetchError } = await supabase
-        .from('folders')
-        .select(`
-          *,
-          creator:created_by(name),
-          updater:updated_by(name),
-          categories:folder_categories(
-            categories(
-              category_id,
-              title,
-              created_by,
-              created_at
-            )
-          )
-        `)
-        .eq('folder_id', folderData.folder_id)
-        .single();
-
-      if (fetchError) throw fetchError;
-
       // Format the categories data for the UI
       const formattedFolder = {
-        ...newFolderWithCategories,
-        created_by: newFolderWithCategories.creator?.name || newFolderWithCategories.created_by,
-        updated_by: newFolderWithCategories.updater?.name || newFolderWithCategories.updated_by,
-        categories: newFolderWithCategories.categories
+        ...folderData,
+        created_by: folderData.creator?.name || folderData.created_by,
+        updated_by: folderData.updater?.name || folderData.updated_by,
+        categories: folderData.categories
           .map((item: any) => item.categories)
           .filter(Boolean)
       };

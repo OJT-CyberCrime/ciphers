@@ -40,6 +40,7 @@ interface Folder {
   is_archived: boolean;
   is_blotter: boolean;
   is_womencase: boolean;
+  is_extraction: boolean;
   categories: Category[];
 }
 
