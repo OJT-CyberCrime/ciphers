@@ -57,7 +57,6 @@ interface FolderOperationsProps {
   folders: Folder[];
   setFolders: (folders: Folder[]) => void;
   availableCategories: Category[];
-  isWomenCase: boolean;
 }
 
 const statusOptions = [
@@ -95,7 +94,6 @@ export default function FolderOperations({
   folders,
   setFolders,
   availableCategories,
-  isWomenCase
 }: FolderOperationsProps) {
   const [newFolderTitle, setNewFolderTitle] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -187,47 +185,26 @@ export default function FolderOperations({
         if (categoriesError) throw categoriesError;
       }
 
-      // Fetch the complete folder data with categories for the UI update
-      const { data: newFolderWithCategories, error: fetchError } = await supabase
-        .from('folders')
-        .select(`
-          *,
-          creator:created_by(name),
-          updater:updated_by(name),
-          categories:folder_categories(
-            categories(
-              category_id,
-              title,
-              created_by,
-              created_at
-            )
-          )
-        `)
-        .eq('folder_id', folderData.folder_id)
-        .single();
-
-      if (fetchError) throw fetchError;
-
       // Format the categories data for the UI
       const formattedFolder = {
-        ...newFolderWithCategories,
-        created_by: newFolderWithCategories.creator?.name || newFolderWithCategories.created_by,
-        updated_by: newFolderWithCategories.updater?.name || newFolderWithCategories.updated_by,
-        categories: newFolderWithCategories.categories
+        ...folderData,
+        created_by: folderData.creator?.name || folderData.created_by,
+        updated_by: folderData.updater?.name || folderData.updated_by,
+        categories: folderData.categories
           .map((item: any) => item.categories)
           .filter(Boolean)
       };
 
       // Update the UI with the new folder
       setFolders([formattedFolder, ...folders]);
-      toast.success("Case created successfully");
+      toast.success("Folder created successfully");
       setIsAddingFolder(false);
       setNewFolderTitle("");
       setNewFolderStatus("pending");
       setSelectedCategories([]);
     } catch (error: any) {
-      console.error('Error adding case:', error);
-      toast.error(error.message || "Failed to create case");
+      console.error('Error adding folder:', error);
+      toast.error(error.message || "Failed to create folder");
     }
   };
 
@@ -320,19 +297,19 @@ export default function FolderOperations({
         f.folder_id === selectedFolder.folder_id ? formattedFolder : f
       ));
 
-      toast.success("Case updated successfully");
+      toast.success("Folder updated successfully");
       setIsEditingFolder(false);
       setSelectedFolder(null);
     } catch (error: any) {
-      console.error('Error updating case:', error);
-      toast.error(error.message || "Failed to update case");
+      console.error('Error updating folder:', error);
+      toast.error(error.message || "Failed to update folder");
     }
   };
 
   // Handle archive folder
   const handleArchiveFolder = async () => {
     if (!selectedFolder) {
-      console.error('No case selected for archiving');
+      console.error('No folder selected for archiving');
       return;
     }
 
@@ -363,12 +340,12 @@ export default function FolderOperations({
 
       // Remove the archived folder from the UI
       setFolders(folders.filter(f => f.folder_id !== selectedFolder.folder_id));
-      toast.success("Case archived successfully");
+      toast.success("Folder archived successfully");
       setDialogContent(null);
       setSelectedFolder(null);
     } catch (error: any) {
-      console.error('Error archiving case:', error);
-      toast.error(error.message || "Failed to archive case");
+      console.error('Error archiving folder:', error);
+      toast.error(error.message || "Failed to archive folder");
     }
   };
 
@@ -544,7 +521,7 @@ export default function FolderOperations({
                 Cancel
               </Button>
               <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                Create Case
+                Create Folder
               </Button>
             </DialogFooter>
           </form>
@@ -596,18 +573,18 @@ export default function FolderOperations({
       <Dialog open={isEditingFolder} onOpenChange={setIsEditingFolder}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Case</DialogTitle>
+            <DialogTitle>Edit Folder</DialogTitle>
             <DialogDescription>
-              Make changes to your case here.
+              Make changes to your folder here.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditFolder}>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-title">Case Title</Label>
+                <Label htmlFor="edit-title">Folder Title</Label>
                 <Input
                   id="edit-title"
-                  placeholder="Enter case title"
+                  placeholder="Enter folder title"
                   value={editFolderTitle}
                   onChange={(e) => setEditFolderTitle(e.target.value)}
                   required
@@ -725,7 +702,7 @@ export default function FolderOperations({
             {dialogContent === "Folder Details" && selectedFolder ? (
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Case Title</h4>
+                  <h4 className="font-medium text-blue-900 mb-1">Folder Title</h4>
                   <p className="text-gray-900 text-lg font-medium">{selectedFolder.title}</p>
                 </div>
                 <div>
@@ -748,7 +725,7 @@ export default function FolderOperations({
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Case Activity</h4>
+                  <h4 className="font-medium text-blue-900 mb-1">Folder Activity</h4>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <p className="text-xs text-gray-600">
@@ -779,10 +756,10 @@ export default function FolderOperations({
                   </Button>
                 </DialogFooter>
               </div>
-            ) : dialogContent === "Are you sure you want to archive this case?" ? (
+            ) : dialogContent === "Are you sure you want to archive this folder?" ? (
               <div className="space-y-4">
                 <DialogDescription>
-                  This action will archive the case and remove it from the active cases list. 
+                  This action will archive the folder and remove it from the active folders list. 
                   You can access it later in the Archives section.
                 </DialogDescription>
                 <div className="flex justify-end space-x-2">
@@ -803,7 +780,7 @@ export default function FolderOperations({
                       if (selectedFolder) {
                         await handleArchiveFolder();
                       } else {
-                        toast.error("No case selected for archiving");
+                        toast.error("No folder selected for archiving");
                       }
                     }}
                   >
@@ -812,6 +789,7 @@ export default function FolderOperations({
                 </div>
               </div>
             ) : null}
+          
           </DialogContent>
         </Dialog>
       )}
