@@ -180,7 +180,7 @@ export default function IncidentReport() {
   });
 
   const handleFolderClick = (folder: Folder) => {
-    navigate(`/folder/${folder.folder_id}`, {
+    navigate(`/IncidentReportFile/${folder.folder_id}`, {
       state: { from: location.pathname, fromName: "Incident Report" }
     });
   };
