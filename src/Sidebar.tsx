@@ -58,7 +58,7 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
           <SidebarLink to="/dashboard" icon={<Home size={20} />} label="Dashboard" />
           <SidebarLink to="/users" icon={<Users size={20} />} label="Account" />
           <SidebarLink to="/incident-report" icon={<FileText size={20} />} label="Incident Reports" />
-          <SidebarLink to="/certifications" icon={<FileCheck size={20} />} label="Extraction Certifications" />
+          <SidebarLink to="/extraction" icon={<FileCheck size={20} />} label="Extraction Certifications" />
           <SidebarLink to="/eblotter" icon={<ClipboardList size={20} />} label="eBlotter" />
           <SidebarLink to="/archives" icon={<Archive size={20} />} label="Archives" />
           {userRole === 'wcpd' && (
