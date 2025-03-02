@@ -10,7 +10,7 @@ import { useState, useEffect } from "react";
 import Eblotter from './pages/Eblotter';
 import EblotterFile from './pages/eblotter/index';
 import Archives from './pages/Archives/index';
-import FolderPage from "./pages/FolderPage/index";
+import IncidentReportFile from "./pages/IncidentReportFile/index";
 import ProtectedRoute from "./utils/protectedRoute";
 import Cookies from 'js-cookie';
 import WomenChildren from './pages/WomenChildren/index';
@@ -122,9 +122,9 @@ const App: React.FC = () => {
                   <Archives />
                 </ProtectedRoute>
               } />
-              <Route path="/folder/:id" element={
+              <Route path="/IncidentReportFile/:id" element={
                 <ProtectedRoute>
-                  <FolderPage />
+                  <IncidentReportFile />
                 </ProtectedRoute>
               } />
               <Route path="/wcp" element={
