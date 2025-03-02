@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import SearchBar from "@/Search";
 import { supabase } from "@/utils/supa";
-import FolderOperations from "./WomenChildren/components/FolderOperations";
+import CertificationOperations from "./Certifications/components/CertificationOperations";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Category {
@@ -350,12 +350,12 @@ export default function Certifications() {
           ))
         ) : (
           <div className="text-center text-gray-500 py-8 col-span-full">
-            No folder found
+            No cases found
           </div>
         )}
       </div>
 
-      <FolderOperations
+      <CertificationOperations
         isAddingFolder={isAddingFolder}
         setIsAddingFolder={setIsAddingFolder}
         isEditingFolder={isEditingFolder}
@@ -367,7 +367,6 @@ export default function Certifications() {
         folders={folders}
         setFolders={setFolders}
         availableCategories={availableCategories}
-        isWomenCase={false}
       />
     </div>
   );
