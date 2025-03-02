@@ -1,4 +1,4 @@
-import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator} from "@/components/ui/breadcrumb";
 import SearchBar from "@/Search";
@@ -32,36 +32,35 @@ import Cookies from "js-cookie";
 import RichTextEditor from "@/components/RichTextEditor";
 import FileOperations from "./components/FileOperations";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-interface Extraction {
-  extraction_id: number;
+interface FileRecord {
+  blotter_id: number;
   case_title: string;
-  control_num: number;
-  complainant: string;
-  assisted_by: string;
-  accompanied_by: string;
-  witnesses: string;
-  respondent: string;
+  entry_num: string;
+  date_reported: string;
+  time_reported: string;
+  date_committed: string;  
+  time_committed: string;
+  path_file: string;
   investigator: string;
-  contact_num: string;
-  fb_account: string;
-  station_unit: string;
-  date_release: string;
-  signatories: string;
-  incident_summary: string;
-  file_path: string;
-  public_url: string;
-  is_archived: boolean;
-  created_by: string;
-  updated_by: string | null;
-  viewed_by: string | null;
-  downloaded_by: string | null;
-  printed_by: string | null;
+  desk_officer: string;
+  signatory_name: string;
+  created_by: number;
+  updated_by: number | null;
   created_at: string;
   updated_at: string | null;
+  is_archived: boolean;
+  folder_id: number;
+  viewed_by: number | null;
   viewed_at: string | null;
+  downloaded_by: number | null;
   downloaded_at: string | null;
+  printed_by: number | null;
   printed_at: string | null;
+  incident_summary: string;
+  public_url: string;
   creator?: { name: string };
   updater?: { name: string };
   viewer?: { name: string };
@@ -98,48 +97,52 @@ const stripHtml = (html: string) => {
   return doc.body.textContent || '';
 };
 
-export default function extractionFile() {
+// Update the helper function to return an object with class and label
+const getStatusBadgeClass = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return { class: 'bg-yellow-200 text-yellow-800', label: 'Pending' }; // Lighter for pending status
+    case 'resolved':
+      return { class: 'bg-green-200 text-green-800', label: 'Resolved' }; // Lighter for resolved status
+    case 'dismissed':
+      return { class: 'bg-red-200 text-red-800', label: 'Dismissed' }; // Lighter for dismissed status
+    case 'under investigation':
+      return { class: 'bg-blue-200 text-blue-800', label: 'Under Investigation' }; // Lighter for under investigation status
+    default:
+      return { class: 'bg-gray-200 text-black', label: 'N/A' }; // Default case
+  }
+};
+
+export default function FolderPage() {
   const { id } = useParams<{ id: string }>();
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
-  const [files, setFiles] = useState<Extraction[]>([]);
+  const [files, setFiles] = useState<FileRecord[]>([]);
   const [folderDetails, setFolderDetails] = useState<Folder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingFile, setIsAddingFile] = useState(false);
-  const [newFile, setNewFile] = useState<Partial<Extraction>>({
-    case_title: "",
-    control_num: 0,
-    complainant: "",
-    assisted_by: "",
-    accompanied_by: "",
-    witnesses: "",
-    respondent: "",
-    investigator: "",
-    contact_num: "",
-    fb_account: "",
-    station_unit: "",
-    date_release: new Date().toISOString().split('T')[0],
-    signatories: "",
-    incident_summary: "",
-  });
+  const [newFileSummary, setNewFileSummary] = useState("");
   const [fileUpload, setFileUpload] = useState<FileList | null>(null);
-  const [selectedFile, setSelectedFile] = useState<Extraction | null>(null);
+  const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null);
   const [showFileDialog, setShowFileDialog] = useState<'edit' | 'archive' | 'details' | null>(null);
   const [previewStates, setPreviewStates] = useState<{ [key: number]: boolean }>({});
   const [showOptions, setShowOptions] = useState<{ [key: number]: boolean }>({});
-  const navigate = useNavigate();
+  const [formRef, setFormRef] = useState<HTMLFormElement | null>(null);
+
+  // Get the current location to determine the previous page
   const location = useLocation();
-  const previousPage = "/extraction"; // Path to extraction page
-  const previousPageName = "Certification of Extraction"; // Name for breadcrumb
+  const previousPage = location.state?.from || "/incident-report";
+  const previousPageName = location.state?.fromName || "Incident Reports";
 
   // Handle file upload
-  const handleFileUpload = async (e: React.FormEvent) => {
+  const handleFileUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!id || !fileUpload?.[0]) return;
+    if (!id || !fileUpload?.[0] || !formRef) return;
 
     try {
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
       
+      // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
         .from('users')
         .select('user_id')
@@ -149,11 +152,23 @@ export default function extractionFile() {
       if (userError) throw userError;
       if (!userData2) throw new Error('User not found');
 
+      // Get form data
+      const formData = new FormData(formRef);
+      const case_title = formData.get('case_title') as string;
+      const entry_num = formData.get('entry_num') as string;
+      const date_reported = formData.get('date_reported') as string;
+      const time_reported = formData.get('time_reported') as string;
+      const date_committed = formData.get('date_committed') as string;
+      const time_committed = formData.get('time_committed') as string;
+      const investigator = formData.get('investigator') as string;
+      const desk_officer = formData.get('desk_officer') as string;
+      const signatory_name = formData.get('signatory_name') as string;
+
       // Upload file to storage
       const file = fileUpload[0];
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `extractions/${fileName}`;
+      const filePath = `folder_${id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('files')
@@ -162,61 +177,80 @@ export default function extractionFile() {
           upsert: false
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
-      // Get public URL
+      // Get the public URL for the uploaded file
       const { data: { publicUrl } } = supabase.storage
         .from('files')
         .getPublicUrl(filePath);
 
-      // Create extraction record
-      const { data: extractionData, error: extractionError } = await supabase
-        .from('extraction')
+      // Strip HTML tags from the incident summary
+      const cleanSummary = stripHtml(newFileSummary);
+
+      // Create file record in database
+      const { data: fileData, error: fileError } = await supabase
+        .from('eblotter_file')
         .insert([
           {
-            ...newFile,
-            file_path: filePath,
-            public_url: publicUrl,
-            is_archived: false,
+            folder_id: id,
+            case_title: case_title,
+            entry_num: entry_num,
+            date_reported: date_reported,
+            time_reported: time_reported,
+            date_committed: date_committed,
+            time_committed: time_committed,
+            path_file: filePath,
+            investigator: investigator,
+            desk_officer: desk_officer,
+            signatory_name: signatory_name,
             created_by: userData2.user_id,
-            folder_id: id
+            is_archived: false,
+            public_url: publicUrl,
+            viewed_by: null,
+            downloaded_by: null,
+            printed_by: null,
+            viewed_at: null,
+            downloaded_at: null,
+            printed_at: null
           }
         ])
+        .select()
+        .single();
+
+      if (fileError) throw fileError;
+
+      // Fetch the complete file data with user information
+      const { data: newFileWithUser, error: fetchError } = await supabase
+        .from('eblotter_file')
         .select(`
           *,
           creator:created_by(name),
-          updater:updated_by(name),
-          viewer:viewed_by(name),
-          downloader:downloaded_by(name),
-          printer:printed_by(name)
+          updater:updated_by(name)
         `)
+        .eq('blotter_id', fileData.blotter_id)
         .single();
 
-      if (extractionError) throw extractionError;
+      if (fetchError) throw fetchError;
 
-      setFiles([extractionData, ...files]);
-      toast.success("Certificate file added successfully");
+      // Format the file data for the UI
+      const formattedFile = {
+        ...newFileWithUser,
+        created_by: newFileWithUser.creator?.name || newFileWithUser.created_by,
+        updated_by: newFileWithUser.updater?.name || newFileWithUser.updated_by
+      };
+
+      // Update the UI with the new file
+      setFiles([formattedFile, ...files]);
+      toast.success("File uploaded successfully");
       setIsAddingFile(false);
-      setNewFile({
-        case_title: "",
-        control_num: 0,
-        complainant: "",
-        assisted_by: "",
-        accompanied_by: "",
-        witnesses: "",
-        respondent: "",
-        investigator: "",
-        contact_num: "",
-        fb_account: "",
-        station_unit: "",
-        date_release: new Date().toISOString().split('T')[0],
-        signatories: "",
-        incident_summary: "",
-      });
+      setNewFileSummary("");
       setFileUpload(null);
     } catch (error: any) {
-      console.error('Error adding certificate file:', error);
-      toast.error(error.message || "Failed to add certificate file");
+      console.error('Error uploading file:', error);
+      toast.error(error.message || "Failed to upload file");
     }
   };
 
@@ -243,9 +277,9 @@ export default function extractionFile() {
           created_by: folderData.creator?.name || folderData.created_by
         });
 
-        // Fetch extraction files in the folder
+        // Fetch files in the folder
         const { data: filesData, error: filesError } = await supabase
-          .from('extraction')
+          .from('eblotter_file')
           .select(`
             *,
             creator:created_by(name),
@@ -280,11 +314,27 @@ export default function extractionFile() {
     fetchFolderAndFiles();
   }, [id]);
 
-  // Filter files based on search query
+  // Filter files based on search query and type
   const filteredFiles = files.filter(file => {
     const matchesSearch = file.case_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          file.incident_summary.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+    const fileExtension = file.path_file.split('.').pop()?.toLowerCase() || '';
+    
+    let matchesFilter = true;
+    if (filter !== 'all') {
+      const documentTypes = ['pdf', 'doc', 'docx', 'txt'];
+      const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
+      
+      if (filter === 'document') {
+        matchesFilter = documentTypes.includes(fileExtension);
+      } else if (filter === 'image') {
+        matchesFilter = imageTypes.includes(fileExtension);
+      } else if (filter === 'other') {
+        matchesFilter = !documentTypes.includes(fileExtension) && !imageTypes.includes(fileExtension);
+      }
+    }
+    
+    return matchesSearch && matchesFilter;
   });
 
   return (
@@ -293,14 +343,26 @@ export default function extractionFile() {
         <SearchBar
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search certificates..."
+          placeholder="Search files..."
         />
+
+        <Select onValueChange={setFilter} defaultValue="all">
+          <SelectTrigger className="w-48 p-5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Files</SelectItem>
+            <SelectItem value="document">Documents</SelectItem>
+            <SelectItem value="image">Images</SelectItem>
+            <SelectItem value="other">Others</SelectItem>
+          </SelectContent>
+        </Select>
 
         <Button
           onClick={() => setIsAddingFile(true)}
           className="bg-blue-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-800"
         >
-          <Plus size={16} /> Add Certificate
+          <Plus size={16} /> Add File
         </Button>
       </div>
 
@@ -331,11 +393,22 @@ export default function extractionFile() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           {isLoading ? (
-            <Skeleton className="h-8 w-1/2 rounded-lg" />
+            <>
+              <Skeleton className="h-8 w-1/2 rounded-lg" /> {/* Skeleton for folder title */}
+              <Skeleton className="h-8 w-1/4 rounded-lg" /> {/* Skeleton for status badge */}
+            </>
           ) : (
-            <h1 className="text-2xl font-medium font-poppins text-blue-900">
-              {folderDetails?.title || `Folder ${id}`}
-            </h1>
+            <>
+              <h1 className="text-2xl font-medium font-poppins text-blue-900">
+                {folderDetails?.title || `Folder ${id}`}
+              </h1>
+              <Badge 
+                variant="outline" 
+                className={getStatusBadgeClass(folderDetails?.status || 'unknown').class}
+              >
+                {getStatusBadgeClass(folderDetails?.status || 'unknown').label}
+              </Badge>
+            </>
           )}
         </div>
 
@@ -350,7 +423,7 @@ export default function extractionFile() {
         ) : filteredFiles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredFiles.map((file) => (
-              <div key={file.extraction_id} className="relative">
+              <div key={file.blotter_id} className="relative">
                 <div
                   className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
                   style={{ height: '420px', width: '100%', overflow: 'hidden' }}
@@ -358,29 +431,28 @@ export default function extractionFile() {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                      {getFileIcon(file.file_path)}
+                      {getFileIcon(file.path_file)}
                       <h3 className="font-medium text-gray-900">{file.case_title}</h3>
                     </div>
                     <button
                       className="p-2 rounded-full hover:bg-gray-200"
-                      onClick={() => setShowOptions(prev => ({ ...prev, [file.extraction_id]: !prev[file.extraction_id] }))}
+                      onClick={() => setShowOptions(prev => ({ ...prev, [file.blotter_id]: !prev[file.blotter_id] }))}
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="prose prose-sm max-w-none mb-2 text-gray-600">
-                    <p><strong>Control #:</strong> {file.control_num}</p>
-                    <p><strong>Complainant:</strong> {file.complainant}</p>
-                    <p><strong>Respondent:</strong> {file.respondent}</p>
-                    <p><strong>Release Date:</strong> {new Date(file.date_release).toLocaleDateString()}</p>
+                  <div 
+                    className="prose prose-sm max-w-none mb-2 text-gray-600 line-clamp-3 whitespace-pre-line overflow-hidden text-ellipsis"
+                  >
+                    {file.incident_summary}
                   </div>
                   <FileOperations
                     file={file}
-                    showPreview={previewStates[file.extraction_id] || false}
+                    showPreview={previewStates[file.blotter_id] || false}
                     setShowPreview={(show) => {
                       setPreviewStates(prev => ({
                         ...prev,
-                        [file.extraction_id]: show
+                        [file.blotter_id]: show
                       }));
                     }}
                     showFileDialog={showFileDialog}
@@ -388,9 +460,11 @@ export default function extractionFile() {
                     selectedFile={selectedFile}
                     setSelectedFile={setSelectedFile}
                     onFileUpdate={() => {
+                      // Remove the file from the UI if it was archived
                       if (showFileDialog === 'archive') {
-                        setFiles(files.filter(f => f.extraction_id !== selectedFile?.extraction_id));
+                        setFiles(files.filter(f => f.blotter_id !== selectedFile?.blotter_id));
                       } else {
+                        // Refresh the files list
                         window.location.reload();
                       }
                     }}
@@ -400,14 +474,14 @@ export default function extractionFile() {
                   </div>
                 </div>
 
-                {showOptions[file.extraction_id] && (
+                {showOptions[file.blotter_id] && (
                   <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
                     <button
                       className="block w-full text-left p-2 hover:bg-gray-100"
                       onClick={() => {
                         setSelectedFile(file);
                         setShowFileDialog('edit');
-                        setShowOptions(prev => ({ ...prev, [file.extraction_id]: false }));
+                        setShowOptions(prev => ({ ...prev, [file.blotter_id]: false }));
                       }}
                     >
                       <Pencil className="inline w-4 h-4 mr-2" /> Edit
@@ -417,7 +491,7 @@ export default function extractionFile() {
                       onClick={() => {
                         setSelectedFile(file);
                         setShowFileDialog('archive');
-                        setShowOptions(prev => ({ ...prev, [file.extraction_id]: false }));
+                        setShowOptions(prev => ({ ...prev, [file.blotter_id]: false }));
                       }}
                     >
                       <Archive className="inline w-4 h-4 mr-2" /> Archive
@@ -427,7 +501,7 @@ export default function extractionFile() {
                       onClick={() => {
                         setSelectedFile(file);
                         setShowFileDialog('details');
-                        setShowOptions(prev => ({ ...prev, [file.extraction_id]: false }));
+                        setShowOptions(prev => ({ ...prev, [file.blotter_id]: false }));
                       }}
                     >
                       <Eye className="inline w-4 h-4 mr-2" /> View Details
@@ -439,187 +513,143 @@ export default function extractionFile() {
           </div>
         ) : (
           <div className="text-center text-gray-500 py-8">
-            No certificates found in this folder
+            No files found in this folder
           </div>
         )}
       </div>
 
       {/* Add File Dialog */}
       <Dialog open={isAddingFile} onOpenChange={setIsAddingFile}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Certificate of Extraction</DialogTitle>
+            <DialogTitle>Add New File</DialogTitle>
             <DialogDescription>
-              Enter the details for the new certificate.
+              Upload a file and provide its details.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFileUpload} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="case_title">Case Title</Label>
-                <Input
-                  id="case_title"
-                  value={newFile.case_title}
-                  onChange={(e) => setNewFile({ ...newFile, case_title: e.target.value })}
-                  required
-                />
+          <form onSubmit={handleFileUpload} ref={(ref) => setFormRef(ref)}>
+            <ScrollArea className="h-[60vh]">
+              <div className="space-y-4 px-4">
+                <div className="space-y-2">
+                  <Label htmlFor="case_title">Case Title</Label>
+                  <Input
+                    id="case_title"
+                    name="case_title"
+                    placeholder="Enter case title"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="entry_num">Entry Number</Label>
+                  <Input
+                    id="entry_num"
+                    name="entry_num"
+                    placeholder="Enter entry number"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="date_reported">Date Reported</Label>
+                    <Input
+                      id="date_reported"
+                      name="date_reported"
+                      type="date"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="date_committed">Date Committed</Label>
+                    <Input
+                      id="date_committed"
+                      name="date_committed"
+                      type="date"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="time_reported">Time Reported</Label>
+                    <Input
+                      id="time_reported"
+                      name="time_reported"
+                      type="time"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="time_committed">Time Committed</Label>
+                    <Input
+                      id="time_committed"
+                      name="time_committed"
+                      type="time"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="investigator">Investigator</Label>
+                  <Input
+                    id="investigator"
+                    name="investigator"
+                    placeholder="Enter investigator name"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="desk_officer">Desk Officer</Label>
+                  <Input
+                    id="desk_officer"
+                    name="desk_officer"
+                    placeholder="Enter desk officer name"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signatory_name">Signatory Name</Label>
+                  <Input
+                    id="signatory_name"
+                    name="signatory_name"
+                    placeholder="Enter signatory name"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="summary">Incident Summary</Label>
+                  <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                    <RichTextEditor
+                      content={newFileSummary}
+                      onChange={setNewFileSummary}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="file">Upload File</Label>
+                  <Input
+                    id="file"
+                    name="file"
+                    type="file"
+                    onChange={(e) => setFileUpload(e.target.files)}
+                    required
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="control_num">Control Number</Label>
-                <Input
-                  id="control_num"
-                  type="number"
-                  value={newFile.control_num}
-                  onChange={(e) => setNewFile({ ...newFile, control_num: parseInt(e.target.value) })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="complainant">Complainant</Label>
-                <Input
-                  id="complainant"
-                  value={newFile.complainant}
-                  onChange={(e) => setNewFile({ ...newFile, complainant: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="assisted_by">Assisted By</Label>
-                <Input
-                  id="assisted_by"
-                  value={newFile.assisted_by}
-                  onChange={(e) => setNewFile({ ...newFile, assisted_by: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="accompanied_by">Accompanied By</Label>
-                <Input
-                  id="accompanied_by"
-                  value={newFile.accompanied_by}
-                  onChange={(e) => setNewFile({ ...newFile, accompanied_by: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="witnesses">Witnesses</Label>
-                <Input
-                  id="witnesses"
-                  value={newFile.witnesses}
-                  onChange={(e) => setNewFile({ ...newFile, witnesses: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="respondent">Respondent</Label>
-                <Input
-                  id="respondent"
-                  value={newFile.respondent}
-                  onChange={(e) => setNewFile({ ...newFile, respondent: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="investigator">Investigator</Label>
-                <Input
-                  id="investigator"
-                  value={newFile.investigator}
-                  onChange={(e) => setNewFile({ ...newFile, investigator: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contact_num">Contact Number</Label>
-                <Input
-                  id="contact_num"
-                  value={newFile.contact_num}
-                  onChange={(e) => setNewFile({ ...newFile, contact_num: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="fb_account">Facebook Account</Label>
-                <Input
-                  id="fb_account"
-                  value={newFile.fb_account}
-                  onChange={(e) => setNewFile({ ...newFile, fb_account: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="station_unit">Station/Unit</Label>
-                <Input
-                  id="station_unit"
-                  value={newFile.station_unit}
-                  onChange={(e) => setNewFile({ ...newFile, station_unit: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="date_release">Date of Release</Label>
-                <Input
-                  id="date_release"
-                  type="date"
-                  value={newFile.date_release}
-                  onChange={(e) => setNewFile({ ...newFile, date_release: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signatories">Signatories</Label>
-                <Input
-                  id="signatories"
-                  value={newFile.signatories}
-                  onChange={(e) => setNewFile({ ...newFile, signatories: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2 col-span-2">
-                <Label htmlFor="incident_summary">Incident Summary</Label>
-                <RichTextEditor
-                  content={newFile.incident_summary || ""}
-                  onChange={(content) => setNewFile({ ...newFile, incident_summary: content })}
-                />
-              </div>
-              <div className="space-y-2 col-span-2">
-                <Label htmlFor="file">Upload File</Label>
-                <Input
-                  id="file"
-                  type="file"
-                  onChange={(e) => setFileUpload(e.target.files)}
-                  required
-                />
-              </div>
-            </div>
-            <DialogFooter>
+            </ScrollArea>
+            <DialogFooter className="mt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
                   setIsAddingFile(false);
-                  setNewFile({
-                    case_title: "",
-                    control_num: 0,
-                    complainant: "",
-                    assisted_by: "",
-                    accompanied_by: "",
-                    witnesses: "",
-                    respondent: "",
-                    investigator: "",
-                    contact_num: "",
-                    fb_account: "",
-                    station_unit: "",
-                    date_release: new Date().toISOString().split('T')[0],
-                    signatories: "",
-                    incident_summary: "",
-                  });
+                  setNewFileSummary("");
                   setFileUpload(null);
                 }}
               >
                 Cancel
               </Button>
               <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                Add Certificate
+                Upload File
               </Button>
             </DialogFooter>
           </form>
