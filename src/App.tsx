@@ -3,22 +3,21 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Sidebar from "./Sidebar";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
-import IncidentReport from "./pages/IncidentReport/index";
-import Certifications from "./pages/Certifications";
 import Login from "./Screens/Login";
 import { useState, useEffect } from "react";
-import Eblotter from './pages/Eblotter';
-import EblotterFile from './pages/eblotter/index';
-import Archives from './pages/Archives/index';
-import IncidentReportFile from "./pages/IncidentReportFile/index";
 import ProtectedRoute from "./utils/protectedRoute";
 import Cookies from 'js-cookie';
+import { supabase } from "./utils/supa";
+import IncidentReport from "./pages/IncidentReport/index";
+import IncidentReportFile from "./pages/IncidentReportFile/index";
+import Eblotter from './pages/Eblotter';
+import EblotterFile from './pages/eblotter/index';
 import WomenChildren from './pages/WomenChildren/index';
 import WomenChildrenFile from './pages/WomenChildrenFile/index';
+import Extraction from "./pages/extraction/index";
+import ExtractionFile from './pages/extractionFile/index';
+import Archives from './pages/Archives/index';
 
-
-
-import { supabase } from "./utils/supa";
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -102,12 +101,12 @@ const App: React.FC = () => {
                   <IncidentReport />
                 </ProtectedRoute>
               } />
-              <Route path="/certifications" element={
+               <Route path="/IncidentReportFile/:id" element={
                 <ProtectedRoute>
-                  <Certifications />
+                  <IncidentReportFile />
                 </ProtectedRoute>
               } />
-              <Route path="/eblotter" element={
+                <Route path="/eblotter" element={
                 <ProtectedRoute>
                   <Eblotter />
                 </ProtectedRoute>
@@ -117,25 +116,29 @@ const App: React.FC = () => {
                   <EblotterFile />
                 </ProtectedRoute>
               } />
-              <Route path="/archives" element={
-                <ProtectedRoute>
-                  <Archives />
-                </ProtectedRoute>
-              } />
-              <Route path="/IncidentReportFile/:id" element={
-                <ProtectedRoute>
-                  <IncidentReportFile />
-                </ProtectedRoute>
-              } />
               <Route path="/wcp" element={
                 <ProtectedRoute>
                   <WomenChildren />
                 </ProtectedRoute>
               } />
-
               <Route path="/wcp/:id" element={
                 <ProtectedRoute>
                   <WomenChildrenFile />
+                </ProtectedRoute>
+              } />
+              <Route path="/extraction" element={
+                <ProtectedRoute>
+                  <Extraction />
+                </ProtectedRoute>
+              } />
+              <Route path="/extraction/:id" element={
+                <ProtectedRoute>
+                  <ExtractionFile />
+                </ProtectedRoute>
+              } />
+              <Route path="/archives" element={
+                <ProtectedRoute>
+                  <Archives />
                 </ProtectedRoute>
               } />
               
