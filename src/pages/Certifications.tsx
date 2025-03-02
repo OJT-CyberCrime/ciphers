@@ -257,16 +257,16 @@ export default function Certifications() {
                   handleFolderClick(folder);
                 }
               }}
-            >
-              <div className="flex items-center gap-x-3 w-full">
-                <FolderClosed
-                  style={{ width: "40px", height: "40px" }}
-                  className="text-gray-600"
-                  fill="#4b5563"
-                />
+              >
+                <div className="flex items-center gap-x-3 w-full">
+                  <FolderClosed
+                    style={{ width: "40px", height: "40px" }}
+                    className="text-gray-600"
+                    fill="#4b5563"
+                  />
                 <span className="font-poppins font-medium text-lg text-gray-900 text-left overflow-hidden whitespace-nowrap text-ellipsis">
                   {folder.title}
-                </span>
+                  </span>
                 <Badge 
                   variant="outline" 
                   className={getStatusBadgeClass(folder.status).class}
@@ -343,9 +343,9 @@ export default function Certifications() {
                 ) : (
                   <Badge variant="outline" className="bg-gray-200 text-black">
                     No categories
-                  </Badge>
-                )}
-              </div>
+                          </Badge>
+                  )}
+                </div>
             </div>
           ))
         ) : (
