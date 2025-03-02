@@ -409,9 +409,9 @@ export default function CertificationOperations({
       <Dialog open={isAddingFolder} onOpenChange={setIsAddingFolder}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Certificate Folder</DialogTitle>
+            <DialogTitle>Create New Folder</DialogTitle>
             <DialogDescription>
-              Enter the details for your new certificate folder.
+              Enter the details for your new folder.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddFolder}>
@@ -526,7 +526,7 @@ export default function CertificationOperations({
                 Cancel
               </Button>
               <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                Create Certificate
+                Create Folder
               </Button>
             </DialogFooter>
           </form>
@@ -578,15 +578,15 @@ export default function CertificationOperations({
       <Dialog open={isEditingFolder} onOpenChange={setIsEditingFolder}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Certificate</DialogTitle>
+            <DialogTitle>Edit Folder</DialogTitle>
             <DialogDescription>
-              Make changes to your certificate folder here.
+              Make changes to your folder here.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditFolder}>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-title">Certificate Title</Label>
+                <Label htmlFor="edit-title">Folder Title</Label>
                 <Input
                   id="edit-title"
                   placeholder="Enter certificate title"

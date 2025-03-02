@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import SearchBar from "@/Search";
 import { supabase } from "@/utils/supa";
-import CertificationOperations from "./Certifications/components/CertificationOperations";
+import CertificationOperations from "./components/FolderOperation";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Category {
@@ -169,7 +169,7 @@ export default function Certifications() {
   });
 
   const handleFolderClick = (folder: Folder) => {
-    navigate(`/folder/${folder.folder_id}`, {
+    navigate(`/extraction/${folder.folder_id}`, {
       state: { from: location.pathname, fromName: "Certificate of Extraction" }
     });
   };
