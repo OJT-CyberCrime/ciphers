@@ -13,7 +13,11 @@ import Archives from './pages/Archives/index';
 import FolderPage from "./pages/FolderPage/index";
 import ProtectedRoute from "./utils/protectedRoute";
 import Cookies from 'js-cookie';
-import WomenChildren from './pages/WomenChildren';
+import WomenChildren from './pages/WomenChildren/index';
+import WomenChildrenFile from './pages/WomenChildrenFile/index';
+
+
+
 import { supabase } from "./utils/supa";
 
 const App: React.FC = () => {
@@ -126,6 +130,12 @@ const App: React.FC = () => {
               <Route path="/wcp" element={
                 <ProtectedRoute>
                   <WomenChildren />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/wcp/:id" element={
+                <ProtectedRoute>
+                  <WomenChildrenFile />
                 </ProtectedRoute>
               } />
               
