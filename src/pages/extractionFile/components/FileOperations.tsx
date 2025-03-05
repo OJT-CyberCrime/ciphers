@@ -24,32 +24,36 @@ import {
 import { useState, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-interface FileRecord {
-  blotter_id: number;
+interface Extraction {
+  extraction_id: number;
   case_title: string;
-  entry_num: string;
-  date_reported: string;
-  time_reported: string;
-  date_committed: string;
-  time_committed: string;
-  path_file: string;
+  control_num: string;
+  complainant: string;
+  assisted_by: string;
+  accompanied_by: string;
+  witnesses: string;
+  respondent: string;
   investigator: string;
-  desk_officer: string;
-  signatory_name: string;
-  created_by: number;
-  updated_by: number | null;
-  created_at: string;
-  updated_at: string | null;
+  contact_num: string;
+  fb_account: string;
+  station_unit: string;
+  date_release: string;
+  signatories: string;
+  incident_summary: string;
+  file_path: string;
+  public_url: string;
   is_archived: boolean;
   folder_id: number;
-  viewed_by: number | null;
+  created_by: string;
+  updated_by: string | null;
+  viewed_by: string | null;
+  downloaded_by: string | null;
+  printed_by: string | null;
+  created_at: string;
+  updated_at: string | null;
   viewed_at: string | null;
-  downloaded_by: number | null;
   downloaded_at: string | null;
-  printed_by: number | null;
   printed_at: string | null;
-  incident_summary: string;
-  public_url: string;
   creator?: { name: string };
   updater?: { name: string };
   viewer?: { name: string };
@@ -58,14 +62,14 @@ interface FileRecord {
 }
 
 interface FileOperationsProps {
-  file: FileRecord;
+  file: Extraction;
   showPreview: boolean;
   setShowPreview: (show: boolean) => void;
   showFileDialog: 'edit' | 'archive' | 'details' | null;
   setShowFileDialog: (dialog: 'edit' | 'archive' | 'details' | null) => void;
   onFileUpdate: () => void;
-  selectedFile?: FileRecord | null;
-  setSelectedFile: (file: FileRecord | null) => void;
+  selectedFile?: Extraction | null;
+  setSelectedFile: (file: Extraction | null) => void;
 }
 
 // Helper function to get file type icon
@@ -96,9 +100,16 @@ export default function FileOperations({
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
+
+  // Ensure we have valid file data
+  if (!file || !file.file_path) {
+    console.error('Invalid file data:', file);
+    return null;
+  }
+
   // Use currentFile only for file operations and details dialog
   const currentFile = showFileDialog ? (selectedFile || file) : file;
-  const ext = currentFile.path_file.split('.').pop()?.toLowerCase() || '';
+  const ext = currentFile.file_path.split('.').pop()?.toLowerCase() || '';
   const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
   const pdfType = ['pdf'];
   const officeTypes = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
@@ -106,6 +117,12 @@ export default function FileOperations({
   // Get signed URL on component mount and when showing preview
   useEffect(() => {
     const getSignedUrl = async () => {
+      // Add null check for file_path
+      if (!file?.file_path || !file?.folder_id) {
+        setError('Invalid file data');
+        return;
+      }
+      
       try {
         setIsLoading(true);
         setError(undefined);
@@ -117,14 +134,14 @@ export default function FileOperations({
 
         if (checkError) throw checkError;
 
-        const fileExists = checkData.some(f => f.name === file.path_file.split('/').pop());
+        const fileExists = checkData.some(f => f.name === file.file_path.split('/').pop());
         if (!fileExists) {
           throw new Error('File no longer exists in storage');
         }
 
         const { data, error } = await supabase.storage
           .from('files')
-          .createSignedUrl(file.path_file, 60 * 60 * 24); // 24 hour expiry
+          .createSignedUrl(file.file_path, 60 * 60 * 24); // 24 hour expiry
 
         if (error) throw error;
         setSignedUrl(data.signedUrl);
@@ -148,7 +165,7 @@ export default function FileOperations({
         setError(undefined);
       }
     };
-  }, [file.path_file, file.folder_id, showPreview, ext]);
+  }, [file.file_path, file.folder_id, showPreview, ext]);
 
   // Track file view when preview is opened
   useEffect(() => {
@@ -177,12 +194,12 @@ export default function FileOperations({
 
       // Update the file's viewed_by and viewed_at
       const { error: updateError } = await supabase
-        .from('eblotter_file')
+        .from('extraction')
         .update({
           viewed_by: userData2.user_id,
           viewed_at: new Date().toISOString()
         })
-        .eq('blotter_id', currentFile.blotter_id);
+        .eq('extraction_id', currentFile.extraction_id);
 
       if (updateError) throw updateError;
 
@@ -204,7 +221,7 @@ export default function FileOperations({
 
       if (checkError) throw checkError;
 
-      const fileExists = checkData.some(f => f.name === currentFile.path_file.split('/').pop());
+      const fileExists = checkData.some(f => f.name === currentFile.file_path.split('/').pop());
       if (!fileExists) {
         toast.error('File no longer exists in storage');
         return;
@@ -225,12 +242,12 @@ export default function FileOperations({
 
       // Update the file's downloaded_by and downloaded_at
       const { error: updateError } = await supabase
-        .from('eblotter_file')
+        .from('extraction')
         .update({
           downloaded_by: userData2.user_id,
           downloaded_at: new Date().toISOString()
         })
-        .eq('blotter_id', currentFile.blotter_id);
+        .eq('extraction_id', currentFile.extraction_id);
 
       if (updateError) throw updateError;
 
@@ -241,7 +258,7 @@ export default function FileOperations({
       // Download the file
       const { data, error } = await supabase.storage
         .from('files')
-        .download(currentFile.path_file);
+        .download(currentFile.file_path);
       
       if (error) throw error;
       
@@ -273,7 +290,7 @@ export default function FileOperations({
 
       if (checkError) throw checkError;
 
-      const fileExists = checkData.some(f => f.name === currentFile.path_file.split('/').pop());
+      const fileExists = checkData.some(f => f.name === currentFile.file_path.split('/').pop());
       if (!fileExists) {
         toast.error('File no longer exists in storage');
         return;
@@ -294,12 +311,12 @@ export default function FileOperations({
 
       // Update the file's printed_by and printed_at
       const { error: updateError } = await supabase
-        .from('eblotter_file')
+        .from('extraction')
         .update({
           printed_by: userData2.user_id,
           printed_at: new Date().toISOString()
         })
-        .eq('blotter_id', currentFile.blotter_id);
+        .eq('extraction_id', currentFile.extraction_id);
 
       if (updateError) throw updateError;
 
@@ -310,7 +327,7 @@ export default function FileOperations({
       // Get the signed URL for the file
       const { data: urlData, error: urlError } = await supabase.storage
         .from('files')
-        .createSignedUrl(currentFile.path_file, 60 * 60); // 1 hour expiry
+        .createSignedUrl(currentFile.file_path, 60 * 60); // 1 hour expiry
 
       if (urlError) throw urlError;
 
@@ -331,9 +348,9 @@ export default function FileOperations({
     try {
       const fileToArchive = selectedFile || file;
       const { error } = await supabase
-        .from('eblotter_file')
+        .from('extraction')
         .update({ is_archived: true })
-        .eq('blotter_id', fileToArchive.blotter_id);
+        .eq('extraction_id', fileToArchive.extraction_id);
 
       if (error) throw error;
       toast.success('File archived successfully');
@@ -351,12 +368,19 @@ export default function FileOperations({
       const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
       const case_title = formData.get('case_title') as string;
-      const entry_num = formData.get('entry_num') as string;
-      const date_reported = formData.get('date_reported') as string;
-      const time_reported = formData.get('time_reported') as string;
-      const date_committed = formData.get('date_committed') as string;
-      const time_committed = formData.get('time_committed') as string;
-      const summary = formData.get('summary') as string;
+      const control_num = formData.get('control_num') as string;
+      const complainant = formData.get('complainant') as string;
+      const assisted_by = formData.get('assisted_by') as string;
+      const accompanied_by = formData.get('accompanied_by') as string;
+      const witnesses = formData.get('witnesses') as string;
+      const respondent = formData.get('respondent') as string;
+      const investigator = formData.get('investigator') as string;
+      const contact_num = formData.get('contact_num') as string;
+      const fb_account = formData.get('fb_account') as string;
+      const station_unit = formData.get('station_unit') as string;
+      const date_release = formData.get('date_release') as string;
+      const signatories = formData.get('signatories') as string;
+      const incident_summary = formData.get('incident_summary') as string;
       const uploadedFile = (formData.get('file') as unknown) as globalThis.File | null;
 
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
@@ -371,7 +395,7 @@ export default function FileOperations({
       if (userError) throw userError;
       if (!userData2) throw new Error('User not found');
 
-      let filePath = fileToEdit.path_file;
+      let filePath = fileToEdit.file_path;
       let publicUrl = fileToEdit.public_url;
       
       // Only handle file upload if a new file was actually uploaded
@@ -383,7 +407,7 @@ export default function FileOperations({
         // Delete the old file first
         const { error: deleteError } = await supabase.storage
           .from('files')
-          .remove([fileToEdit.path_file]);
+          .remove([fileToEdit.file_path]);
 
         if (deleteError) throw deleteError;
 
@@ -407,23 +431,30 @@ export default function FileOperations({
 
       // Update the file record
       const { error: updateError } = await supabase
-        .from('eblotter_file')
+        .from('extraction')
         .update({
-          case_title: case_title,
-          entry_num: entry_num,
-          date_reported: date_reported,
-          time_reported: time_reported,
-          date_committed: date_committed,
-          time_committed: time_committed,
-          incident_summary: summary,
+          case_title,
+          control_num,
+          complainant,
+          assisted_by,
+          accompanied_by,
+          witnesses,
+          respondent,
+          investigator,
+          contact_num,
+          fb_account,
+          station_unit,
+          date_release,
+          signatories,
+          incident_summary,
           ...(uploadedFile && uploadedFile instanceof globalThis.File && uploadedFile.size > 0 ? {
-            path_file: filePath,
+            file_path: filePath,
             public_url: publicUrl
           } : {}),
           updated_by: userData2.user_id,
           updated_at: new Date().toISOString()
         })
-        .eq('blotter_id', fileToEdit.blotter_id);
+        .eq('extraction_id', fileToEdit.extraction_id);
 
       if (updateError) throw updateError;
 
@@ -516,7 +547,7 @@ export default function FileOperations({
     if (error) {
       return (
         <div className="w-full h-48 bg-gray-100 flex flex-col items-center justify-center rounded-lg border">
-          {getFileIcon(currentFile.path_file)}
+          {getFileIcon(currentFile.file_path)}
           <span className="mt-2 text-sm text-red-600">Error loading preview</span>
           <span className="text-xs text-gray-500">{ext.toUpperCase()}</span>
         </div>
@@ -526,7 +557,7 @@ export default function FileOperations({
     if (!signedUrl) {
       return (
         <div className="w-full h-48 bg-gray-100 flex flex-col items-center justify-center rounded-lg border">
-          {getFileIcon(currentFile.path_file)}
+          {getFileIcon(currentFile.file_path)}
           <span className="mt-2 text-sm text-gray-600">Preview not available</span>
           <span className="text-xs text-gray-500">{ext.toUpperCase()}</span>
         </div>
@@ -597,7 +628,7 @@ export default function FileOperations({
              setSelectedFile(currentFile);
              setShowPreview(true);
            }}>
-        {getFileIcon(currentFile.path_file)}
+        {getFileIcon(currentFile.file_path)}
         <span className="mt-2 text-sm text-gray-600">Click to preview</span>
         <span className="text-xs text-gray-500">{ext.toUpperCase()}</span>
       </div>
@@ -690,58 +721,21 @@ export default function FileOperations({
                       <Input
                         id="entry_num"
                         name="entry_num"
-                        defaultValue={(selectedFile || file).entry_num}
+                        defaultValue={(selectedFile || file).control_num}
                         required
                         className="border-gray-300 rounded-md"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="date_reported">Date Reported</Label>
-                        <Input
-                          id="date_reported"
-                          name="date_reported"
-                          type="date"
-                          defaultValue={(selectedFile || file).date_reported}
-                          required
-                          className="border-gray-300 rounded-md"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="date_committed">Date Committed</Label>
-                        <Input
-                          id="date_committed"
-                          name="date_committed"
-                          type="date"
-                          defaultValue={(selectedFile || file).date_committed}
-                          required
-                          className="border-gray-300 rounded-md"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="time_reported">Time Reported</Label>
-                        <Input
-                          id="time_reported"
-                          name="time_reported"
-                          type="time"
-                          defaultValue={(selectedFile || file).time_reported}
-                          required
-                          className="border-gray-300 rounded-md"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="time_committed">Time Committed</Label>
-                        <Input
-                          id="time_committed"
-                          name="time_committed"
-                          type="time"
-                          defaultValue={(selectedFile || file).time_committed}
-                          required
-                          className="border-gray-300 rounded-md"
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="date_release">Release Date</Label>
+                      <Input
+                        id="date_release"
+                        name="date_release"
+                        type="date"
+                        defaultValue={(selectedFile || file).date_release}
+                        required
+                        className="border-gray-300 rounded-md"
+                      />
                     </div>
                     <div>
                       <Label htmlFor="investigator">Investigator</Label>
@@ -754,21 +748,11 @@ export default function FileOperations({
                       />
                     </div>
                     <div>
-                      <Label htmlFor="desk_officer">Desk Officer</Label>
-                      <Input
-                        id="desk_officer"
-                        name="desk_officer"
-                        defaultValue={(selectedFile || file).desk_officer}
-                        required
-                        className="border-gray-300 rounded-md"
-                      />
-                    </div>
-                    <div>
                       <Label htmlFor="signatory_name">Signatory Name</Label>
                       <Input
                         id="signatory_name"
                         name="signatory_name"
-                        defaultValue={(selectedFile || file).signatory_name}
+                        defaultValue={(selectedFile || file).signatories}
                         required
                         className="border-gray-300 rounded-md"
                       />
@@ -840,39 +824,21 @@ export default function FileOperations({
                 </div>
                 <div>
                   <h4 className="font-medium text-blue-900 mb-1">Entry Number</h4>
-                  <p className="text-gray-900">{currentFile.entry_num}</p>
+                  <p className="text-gray-900">{currentFile.control_num}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h4 className="font-medium text-blue-900 mb-1">Date Reported</h4>
-                    <p className="text-gray-900">{currentFile.date_reported}</p>
+                    <h4 className="font-medium text-blue-900 mb-1">Release Date</h4>
+                    <p className="text-gray-900">{currentFile.date_release}</p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-blue-900 mb-1">Date Committed</h4>
-                    <p className="text-gray-900">{currentFile.date_committed}</p>
+                    <h4 className="font-medium text-blue-900 mb-1">Investigator</h4>
+                    <p className="text-gray-900">{currentFile.investigator}</p>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-medium text-blue-900 mb-1">Time Reported</h4>
-                    <p className="text-gray-900">{currentFile.time_reported}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-blue-900 mb-1">Time Committed</h4>
-                    <p className="text-gray-900">{currentFile.time_committed}</p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Investigator</h4>
-                  <p className="text-gray-900">{currentFile.investigator}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Desk Officer</h4>
-                  <p className="text-gray-900">{currentFile.desk_officer}</p>
                 </div>
                 <div>
                   <h4 className="font-medium text-blue-900 mb-1">Signatory Name</h4>
-                  <p className="text-gray-900">{currentFile.signatory_name}</p>
+                  <p className="text-gray-900">{currentFile.signatories}</p>
                 </div>
                 <div>
                   <h4 className="font-medium text-blue-900 mb-1">Incident Summary</h4>
@@ -948,7 +914,7 @@ export default function FileOperations({
                     Close
                   </Button>
                 </DialogFooter>
-              </div>
+                </div>
             )}
           </div>
         </DialogContent>
@@ -960,26 +926,24 @@ export default function FileOperations({
       </div>
 
       {/* Download and Print buttons */}
-      <div className="mt-2">
-        <div className="flex gap-2 justify-center">
-          <Button
-            variant="ghost"
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-            onClick={handleFileDownload}
-          >
-            <Download size={16} />
-            Download
-          </Button>
-          <Button
-            variant="ghost"
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-            onClick={handleFilePrint}
-          >
-            <Printer size={16} />
-            Print
-          </Button>
-        </div>
+      <div className="flex gap-2 justify-center">
+        <Button
+          variant="ghost"
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+          onClick={handleFileDownload}
+        >
+          <Download size={16} />
+          Download
+        </Button>
+        <Button
+          variant="ghost"
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+          onClick={handleFilePrint}
+        >
+          <Printer size={16} />
+          Print
+        </Button>
       </div>
     </>
   );
-}
+} 
