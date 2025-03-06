@@ -177,6 +177,7 @@ export default function extractionFile() {
         .insert([
           {
             ...newFile,
+            incident_summary: stripHtml(newFile.incident_summary || ''),
             file_path: filePath,
             public_url: publicUrl,
             is_archived: false,
