@@ -105,9 +105,8 @@ export const fetchArchivedContent = async () => {
         .from('files')
         .select(`
           *,
-          creator:created_by(name),
           updater:updated_by(name),
-          folders!inner(title)
+          folders:folders!folder_id(title)
         `)
         .eq('is_archived', true)
         .not('folder_id', 'in', (foldersData || []).map(f => f.folder_id).length > 0 
@@ -119,7 +118,8 @@ export const fetchArchivedContent = async () => {
         .from('eblotter_file')
         .select(`
           *,
-          updater:updated_by(name)
+          updater:updated_by(name),
+          folders:folders!folder_id(title)
         `)
         .eq('is_archived', true),
       
@@ -128,7 +128,8 @@ export const fetchArchivedContent = async () => {
         .from('extraction')
         .select(`
           *,
-          updater:updated_by(name)
+          updater:updated_by(name),
+          folders:folders!folder_id(title)
         `)
         .eq('is_archived', true),
       
@@ -137,7 +138,8 @@ export const fetchArchivedContent = async () => {
         .from('womenchildren_file')
         .select(`
           *,
-          updater:updated_by(name)
+          updater:updated_by(name),
+          folders:folders!folder_id(title)
         `)
         .eq('is_archived', true)
     ]);
@@ -161,8 +163,8 @@ export const fetchArchivedContent = async () => {
       ...(eblotterFiles || []).map((file: any) => ({
         file_id: file.eblotter_id,
         title: `Blotter #${file.case_number}`,
-        folder_id: null,
-        folder_title: 'E-Blotter',
+        folder_id: file.folder_id,
+        folder_title: file.folders?.title || 'No Folder',
         archived_by: file.updater?.name || file.updated_by,
         archived_at: file.updated_at,
         file_type: 'eblotter' as const
@@ -170,8 +172,8 @@ export const fetchArchivedContent = async () => {
       ...(extractionFiles || []).map((file: any) => ({
         file_id: file.extraction_id,
         title: file.title || `Extraction #${file.extraction_id}`,
-        folder_id: null,
-        folder_title: 'Certificate of Extraction',
+        folder_id: file.folder_id,
+        folder_title: file.folders?.title || 'No Folder',
         archived_by: file.updater?.name || file.updated_by,
         archived_at: file.updated_at,
         file_type: 'extraction' as const
@@ -179,8 +181,8 @@ export const fetchArchivedContent = async () => {
       ...(womenchildrenFiles || []).map((file: any) => ({
         file_id: file.womenchildren_id,
         title: `Case #${file.case_number}`,
-        folder_id: null,
-        folder_title: 'Women and Children Cases',
+        folder_id: file.folder_id,
+        folder_title: file.folders?.title || 'No Folder',
         archived_by: file.updater?.name || file.updated_by,
         archived_at: file.updated_at,
         file_type: 'womenchildren' as const
