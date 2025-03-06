@@ -206,6 +206,7 @@ export default function FolderPage() {
             investigator: investigator,
             desk_officer: desk_officer,
             signatory_name: signatory_name,
+            incident_summary: cleanSummary,
             created_by: userData2.user_id,
             is_archived: false,
             public_url: publicUrl,
