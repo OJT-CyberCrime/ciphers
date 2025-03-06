@@ -323,8 +323,9 @@ export default function FileOperations({
   const handleArchiveFile = async () => {
     try {
       const fileToArchive = selectedFile || file;
+      console.log('Archiving file with ID:', fileToArchive.file_id);
       const { error } = await supabase
-        .from('files')
+        .from('womenchildren_file')
         .update({ is_archived: true })
         .eq('file_id', fileToArchive.file_id);
 
