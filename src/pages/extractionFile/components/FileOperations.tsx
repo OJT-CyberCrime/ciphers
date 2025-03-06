@@ -829,20 +829,12 @@ export default function FileOperations({
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="incident_summary">Incident Summary</Label>
-                      <RichTextEditor
-                        content={(selectedFile || file).incident_summary || ""}
-                        onChange={(content) => {
-                          const form = document.getElementById('editForm') as HTMLFormElement;
-                          let summaryInput = form.querySelector('input[name="incident_summary"]') as HTMLInputElement;
-                          if (!summaryInput) {
-                            summaryInput = document.createElement('input');
-                            summaryInput.type = 'hidden';
-                            summaryInput.name = 'incident_summary';
-                            form.appendChild(summaryInput);
-                          }
-                          // Save the raw HTML content
-                          summaryInput.value = content;
-                        }}
+                      <Textarea
+                        id="incident_summary"
+                        name="incident_summary"
+                        defaultValue={(selectedFile || file).incident_summary}
+                        required
+                        className="h-32 resize-none border-gray-300 rounded-md"
                       />
                     </div>
                     <div className="space-y-2">
@@ -950,10 +942,9 @@ export default function FileOperations({
                     </div>
                     <div className="space-y-2">
                       <Label className="font-medium text-blue-900">Incident Summary</Label>
-                      <div 
-                        className="prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: currentFile.incident_summary }}
-                      />
+                      <div className="p-3 bg-gray-50 rounded-md border border-gray-200 min-h-[8rem] whitespace-pre-wrap">
+                        {currentFile.incident_summary}
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label className="font-medium text-blue-900">File Activity</Label>

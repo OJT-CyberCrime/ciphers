@@ -372,8 +372,9 @@ export default function extractionFile() {
                   </div>
                   <div 
                     className="prose prose-sm max-w-none mb-2 text-gray-600 line-clamp-3 whitespace-pre-line overflow-hidden text-ellipsis"
-                    dangerouslySetInnerHTML={{ __html: file.incident_summary }}
-                  />
+                  >
+                    {file.incident_summary}
+                  </div>
                   {file && file.file_path && (
                     <FileOperations
                       file={file}
