@@ -37,7 +37,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface FileRecord {
   blotter_id: number;
-  case_title: string;
+  title: string;
   entry_num: string;
   date_reported: string;
   time_reported: string;
@@ -154,7 +154,7 @@ export default function FolderPage() {
 
       // Get form data
       const formData = new FormData(formRef);
-      const case_title = formData.get('case_title') as string;
+      const title = formData.get('title') as string;
       const entry_num = formData.get('entry_num') as string;
       const date_reported = formData.get('date_reported') as string;
       const time_reported = formData.get('time_reported') as string;
@@ -196,7 +196,7 @@ export default function FolderPage() {
         .insert([
           {
             folder_id: id,
-            case_title: case_title,
+            title: title,
             entry_num: entry_num,
             date_reported: date_reported,
             time_reported: time_reported,
@@ -317,7 +317,7 @@ export default function FolderPage() {
 
   // Filter files based on search query and type
   const filteredFiles = files.filter(file => {
-    const matchesSearch = file.case_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = file.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          file.incident_summary.toLowerCase().includes(searchQuery.toLowerCase());
     const fileExtension = file.path_file.split('.').pop()?.toLowerCase() || '';
     
@@ -433,7 +433,7 @@ export default function FolderPage() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       {getFileIcon(file.path_file)}
-                      <h3 className="font-medium text-gray-900">{file.case_title}</h3>
+                      <h3 className="font-medium text-gray-900">{file.title}</h3>
                     </div>
                     <button
                       className="p-2 rounded-full hover:bg-gray-200"
@@ -532,10 +532,10 @@ export default function FolderPage() {
             <ScrollArea className="h-[60vh]">
               <div className="space-y-4 px-4">
                 <div className="space-y-2">
-                  <Label htmlFor="case_title">Case Title</Label>
+                  <Label htmlFor="title">Case Title</Label>
                   <Input
-                    id="case_title"
-                    name="case_title"
+                    id="title"
+                    name="title"
                     placeholder="Enter case title"
                     required
                   />

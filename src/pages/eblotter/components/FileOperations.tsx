@@ -26,7 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface FileRecord {
   blotter_id: number;
-  case_title: string;
+  title: string;
   entry_num: string;
   date_reported: string;
   time_reported: string;
@@ -249,7 +249,7 @@ export default function FileOperations({
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = currentFile.case_title + '.' + ext;
+      a.download = currentFile.title + '.' + ext;
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(url);
@@ -350,7 +350,7 @@ export default function FileOperations({
     try {
       const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
-      const case_title = formData.get('case_title') as string;
+      const title = formData.get('title') as string;
       const entry_num = formData.get('entry_num') as string;
       const date_reported = formData.get('date_reported') as string;
       const time_reported = formData.get('time_reported') as string;
@@ -409,7 +409,7 @@ export default function FileOperations({
       const { error: updateError } = await supabase
         .from('eblotter_file')
         .update({
-          case_title: case_title,
+          title: title,
           entry_num: entry_num,
           date_reported: date_reported,
           time_reported: time_reported,
@@ -467,7 +467,7 @@ export default function FileOperations({
         <div className="relative aspect-video">
           <img 
             src={signedUrl} 
-            alt={currentFile.case_title}
+            alt={currentFile.title}
             className="w-full h-full object-contain"
             onError={() => setError('Failed to load image')}
           />
@@ -482,7 +482,7 @@ export default function FileOperations({
           <iframe
             src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true&rm=minimal`}
             className="w-full h-full border-none"
-            title={currentFile.case_title}
+            title={currentFile.title}
             onError={() => setError('Failed to load document preview')}
           />
         </div>
@@ -538,7 +538,7 @@ export default function FileOperations({
         <div className="w-full h-48 bg-gray-100 rounded-lg border overflow-hidden">
           <img 
             src={signedUrl || undefined} 
-            alt={currentFile.case_title}
+            alt={currentFile.title}
             className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer"
             onClick={() => {
               setSelectedFile(currentFile);
@@ -557,9 +557,9 @@ export default function FileOperations({
             <iframe
               src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true&rm=minimal`}
               className="w-full h-[400px] border-none"
-              title={currentFile.case_title}
+              title={currentFile.title}
             />
-          </div>
+          </div>    
           {/* Expand button overlay */}
           <div className="absolute top-4 right-4 z-10">
             <Button
@@ -620,7 +620,7 @@ export default function FileOperations({
           <DialogHeader>
             <div className="flex justify-between items-center">
               <div>
-                <DialogTitle className="text-2xl font-semibold">{currentFile.case_title}</DialogTitle>
+                <DialogTitle className="text-2xl font-semibold">{currentFile.title}</DialogTitle>
                 <p className="text-sm text-gray-500 mt-1">
                   {ext.toUpperCase()} Document • Added by {currentFile.created_by}
                 </p>
@@ -676,11 +676,11 @@ export default function FileOperations({
                 <ScrollArea className="h-[60vh]">
                   <div className="space-y-4 px-4">
                     <div>
-                      <Label htmlFor="case_title">Case Title</Label>
+                      <Label htmlFor="title">Case Title</Label>
                       <Input
-                        id="case_title"
-                        name="case_title"
-                        defaultValue={(selectedFile || file).case_title}
+                        id="title"
+                        name="title"
+                        defaultValue={(selectedFile || file).title}
                         required
                         className="border-gray-300 rounded-md"
                       />
@@ -835,8 +835,8 @@ export default function FileOperations({
             {showFileDialog === 'details' && (
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Name</h4>
-                  <p className="text-gray-900 text-lg font-medium">{currentFile.case_title}</p>
+                  <h4 className="font-medium text-blue-900 mb-1">File Title</h4>
+                  <p className="text-gray-900 text-lg font-medium">{currentFile.title}</p>
                 </div>
                 <div>
                   <h4 className="font-medium text-blue-900 mb-1">Entry Number</h4>
