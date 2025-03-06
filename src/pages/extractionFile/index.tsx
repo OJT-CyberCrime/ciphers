@@ -36,7 +36,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Extraction {
   extraction_id: number;
-  case_title: string;
+  title: string;
   control_num: string;
   complainant: string;
   assisted_by: string;
@@ -109,7 +109,7 @@ export default function extractionFile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingFile, setIsAddingFile] = useState(false);
   const [newFile, setNewFile] = useState<Partial<Extraction>>({
-    case_title: "",
+    title: "",
     control_num: "",
     complainant: "",
     assisted_by: "",
@@ -201,7 +201,7 @@ export default function extractionFile() {
       toast.success("Certificate file added successfully");
       setIsAddingFile(false);
       setNewFile({
-        case_title: "",
+        title: "",
         control_num: "",
         complainant: "",
         assisted_by: "",
@@ -285,7 +285,7 @@ export default function extractionFile() {
 
   // Filter files based on search query
   const filteredFiles = files.filter(file => {
-    const matchesSearch = file.case_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = file.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          file.incident_summary.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
@@ -362,7 +362,7 @@ export default function extractionFile() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       {getFileIcon(file.file_path)}
-                      <h3 className="font-medium text-gray-900">{file.case_title}</h3>
+                      <h3 className="font-medium text-gray-900">{file.title}</h3>
                     </div>
                     <button
                       className="p-2 rounded-full hover:bg-gray-200"
@@ -462,11 +462,11 @@ export default function extractionFile() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="case_title">Case Title</Label>
+                    <Label htmlFor="title">Case Title</Label>
                     <Input
-                      id="case_title"
-                      value={newFile.case_title}
-                      onChange={(e) => setNewFile({ ...newFile, case_title: e.target.value })}
+                      id="title"
+                      value={newFile.title}
+                      onChange={(e) => setNewFile({ ...newFile, title: e.target.value })}
                       required
                     />
                   </div>
@@ -606,7 +606,7 @@ export default function extractionFile() {
                 onClick={() => {
                   setIsAddingFile(false);
                   setNewFile({
-                    case_title: "",
+                    title: "",
                     control_num: "",
                     complainant: "",
                     assisted_by: "",

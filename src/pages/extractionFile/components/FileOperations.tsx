@@ -27,7 +27,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 
 interface Extraction {
   extraction_id: number;
-  case_title: string;
+  title: string;
   control_num: string;
   complainant: string;
   assisted_by: string;
@@ -267,7 +267,7 @@ export default function FileOperations({
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = currentFile.case_title + '.' + ext;
+      a.download = currentFile.title + '.' + ext;
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(url);
@@ -368,7 +368,7 @@ export default function FileOperations({
     try {
       const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
-      const case_title = formData.get('case_title') as string;
+      const title = formData.get('title') as string;
       const control_num = formData.get('control_num') as string;
       const complainant = formData.get('complainant') as string;
       const assisted_by = formData.get('assisted_by') as string;
@@ -434,7 +434,7 @@ export default function FileOperations({
       const { error: updateError } = await supabase
         .from('extraction')
         .update({
-          case_title,
+          title,
           control_num,
           complainant,
           assisted_by,
@@ -499,7 +499,7 @@ export default function FileOperations({
         <div className="relative aspect-video">
           <img 
             src={signedUrl} 
-            alt={currentFile.case_title}
+            alt={currentFile.title}
             className="w-full h-full object-contain"
             onError={() => setError('Failed to load image')}
           />
@@ -514,7 +514,7 @@ export default function FileOperations({
           <iframe
             src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true&rm=minimal`}
             className="w-full h-full border-none"
-            title={currentFile.case_title}
+            title={currentFile.title}
             onError={() => setError('Failed to load document preview')}
           />
         </div>
@@ -570,7 +570,7 @@ export default function FileOperations({
         <div className="w-full h-48 bg-gray-100 rounded-lg border overflow-hidden">
           <img 
             src={signedUrl || undefined} 
-            alt={currentFile.case_title}
+            alt={currentFile.title}
             className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer"
             onClick={() => {
               setSelectedFile(currentFile);
@@ -589,7 +589,7 @@ export default function FileOperations({
             <iframe
               src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true&rm=minimal`}
               className="w-full h-[400px] border-none"
-              title={currentFile.case_title}
+              title={currentFile.title}
             />
           </div>
           {/* Expand button overlay */}
@@ -652,7 +652,7 @@ export default function FileOperations({
           <DialogHeader>
             <div className="flex justify-between items-center">
               <div>
-                <DialogTitle className="text-2xl font-semibold">{currentFile.case_title}</DialogTitle>
+                <DialogTitle className="text-2xl font-semibold">{currentFile.title}</DialogTitle>
                 <p className="text-sm text-gray-500 mt-1">
                   {ext.toUpperCase()} Document • Added by {currentFile.created_by}
                 </p>
@@ -709,11 +709,11 @@ export default function FileOperations({
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="case_title">Case Title</Label>
+                        <Label htmlFor="title">Case Title</Label>
                         <Input
-                          id="case_title"
-                          name="case_title"
-                          defaultValue={(selectedFile || file).case_title}
+                          id="title"
+                          name="title"
+                          defaultValue={(selectedFile || file).title}
                           required
                         />
                       </div>
@@ -888,8 +888,8 @@ export default function FileOperations({
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="font-medium text-blue-900">Case Title</Label>
-                        <p className="text-gray-900">{currentFile.case_title}</p>
+                        <Label className="font-medium text-blue-900">File Title</Label>
+                        <p className="text-gray-900">{currentFile.title}</p>
                       </div>
                       <div className="space-y-2">
                         <Label className="font-medium text-blue-900">Control Number</Label>
