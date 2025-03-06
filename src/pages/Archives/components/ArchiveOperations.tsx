@@ -29,21 +29,12 @@ interface Folder {
 
 interface ArchivedFile {
   file_id: number;
-  folder_id: number | null;
   title: string;
-  created_by: string;
-  created_at: string;
-  is_archived: boolean;
-  folder_title?: string;
-  incident_summary?: string;
-  archived_by?: string;
-  archived_at?: string;
+  folder_id: number | null;
+  folder_title: string;
+  archived_by: string;
+  archived_at: string;
   file_type: 'regular' | 'eblotter' | 'extraction' | 'womenchildren';
-  case_number?: string;
-  complainant_name?: string;
-  respondent_name?: string;
-  incident_type?: string;
-  incident_date?: string;
 }
 
 export const fetchArchivedContent = async () => {
@@ -126,19 +117,28 @@ export const fetchArchivedContent = async () => {
       // E-blotter files
       supabase
         .from('eblotter_file')
-        .select('*')
+        .select(`
+          *,
+          updater:updated_by(name)
+        `)
         .eq('is_archived', true),
       
       // Extraction files
       supabase
         .from('extraction')
-        .select('*')
+        .select(`
+          *,
+          updater:updated_by(name)
+        `)
         .eq('is_archived', true),
       
       // Women and Children files
       supabase
         .from('womenchildren_file')
-        .select('*')
+        .select(`
+          *,
+          updater:updated_by(name)
+        `)
         .eq('is_archived', true)
     ]);
 
@@ -150,45 +150,40 @@ export const fetchArchivedContent = async () => {
     // Transform and combine all files
     const allFiles = [
       ...(regularFiles || []).map((file: any) => ({
-        ...file,
-        created_by: file.creator?.name || file.created_by,
-        updated_by: file.updater?.name || file.updated_by,
-        folder_title: file.folders?.title,
-        file_type: 'incident report'
+        file_id: file.file_id,
+        title: file.title,
+        folder_id: file.folder_id,
+        folder_title: file.folders?.title || 'No Folder',
+        archived_by: file.updater?.name || file.updated_by,
+        archived_at: file.updated_at,
+        file_type: 'regular' as const
       })),
       ...(eblotterFiles || []).map((file: any) => ({
         file_id: file.eblotter_id,
         title: `Blotter #${file.case_number}`,
-        created_by: file.created_by,
-        created_at: file.created_at,
-        is_archived: file.is_archived,
-        case_number: file.case_number,
-        complainant_name: file.complainant_name,
-        respondent_name: file.respondent_name,
-        incident_type: file.incident_type,
-        incident_date: file.incident_date,
-        file_type: 'eblotter'
+        folder_id: null,
+        folder_title: 'E-Blotter',
+        archived_by: file.updater?.name || file.updated_by,
+        archived_at: file.updated_at,
+        file_type: 'eblotter' as const
       })),
       ...(extractionFiles || []).map((file: any) => ({
         file_id: file.extraction_id,
         title: file.title || `Extraction #${file.extraction_id}`,
-        created_by: file.created_by,
-        created_at: file.created_at,
-        is_archived: file.is_archived,
-        file_type: 'extraction'
+        folder_id: null,
+        folder_title: 'Certificate of Extraction',
+        archived_by: file.updater?.name || file.updated_by,
+        archived_at: file.updated_at,
+        file_type: 'extraction' as const
       })),
       ...(womenchildrenFiles || []).map((file: any) => ({
         file_id: file.womenchildren_id,
         title: `Case #${file.case_number}`,
-        created_by: file.created_by,
-        created_at: file.created_at,
-        is_archived: file.is_archived,
-        case_number: file.case_number,
-        complainant_name: file.complainant_name,
-        respondent_name: file.respondent_name,
-        incident_type: file.incident_type,
-        incident_date: file.incident_date,
-        file_type: 'womenchildren'
+        folder_id: null,
+        folder_title: 'Women and Children Cases',
+        archived_by: file.updater?.name || file.updated_by,
+        archived_at: file.updated_at,
+        file_type: 'womenchildren' as const
       }))
     ];
 

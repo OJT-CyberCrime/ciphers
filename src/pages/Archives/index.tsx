@@ -272,13 +272,8 @@ export default function Archives() {
                                         <div>
                                           <h4 className="font-medium text-gray-900">{file.title}</h4>
                                           <p className="text-xs text-gray-500">
-                                            Added by {file.created_by} on {new Date(file.created_at).toLocaleDateString()}
+                                            Archived by <span className="text-blue-600">{file.archived_by}</span> on {new Date(file.archived_at || '').toLocaleDateString()}
                                           </p>
-                                          {file.archived_by && (
-                                            <p className="text-xs text-gray-500">
-                                              Archived by {file.archived_by} on {new Date(file.archived_at || '').toLocaleDateString()}
-                                            </p>
-                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -375,13 +370,8 @@ export default function Archives() {
                                         <div>
                                           <h4 className="font-medium text-gray-900">{file.title}</h4>
                                           <p className="text-xs text-gray-500">
-                                            Added by {file.created_by} on {new Date(file.created_at).toLocaleDateString()}
+                                            Archived by <span className="text-blue-600">{file.archived_by}</span> on {new Date(file.archived_at || '').toLocaleDateString()}
                                           </p>
-                                          {file.archived_by && (
-                                            <p className="text-xs text-gray-500">
-                                              Archived by {file.archived_by} on {new Date(file.archived_at || '').toLocaleDateString()}
-                                            </p>
-                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -586,13 +576,8 @@ export default function Archives() {
                                         <div>
                                           <h4 className="font-medium text-gray-900">{file.title}</h4>
                                           <p className="text-xs text-gray-500">
-                                            Added by {file.created_by} on {new Date(file.created_at).toLocaleDateString()}
+                                            Archived by <span className="text-blue-600">{file.archived_by}</span> on {new Date(file.archived_at || '').toLocaleDateString()}
                                           </p>
-                                          {file.archived_by && (
-                                            <p className="text-xs text-gray-500">
-                                              Archived by {file.archived_by} on {new Date(file.archived_at || '').toLocaleDateString()}
-                                            </p>
-                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -636,34 +621,14 @@ export default function Archives() {
                               {file.title}
                             </span>
                             <Badge variant="outline" className="mt-1">
-                              {file.file_type.charAt(0).toUpperCase() + file.file_type.slice(1)}
+                              {file.folder_title}
                             </Badge>
                           </div>
                         </div>
 
-                        {/* File-specific information */}
                         <div className="mt-3 text-sm text-gray-600 w-full">
-                          {(file.file_type === 'eblotter' || file.file_type === 'womenchildren') && (
-                            <>
-                              <p><strong>Case Number:</strong> {file.case_number}</p>
-                              <p><strong>Complainant:</strong> {file.complainant_name}</p>
-                              <p><strong>Respondent:</strong> {file.respondent_name}</p>
-                              <p><strong>Incident Type:</strong> {file.incident_type}</p>
-                              <p><strong>Incident Date:</strong> {file.incident_date ? new Date(file.incident_date).toLocaleDateString() : 'N/A'}</p>
-                            </>
-                          )}
-                          {file.file_type === 'extraction' && (
-                            <p><strong>Extraction ID:</strong> {file.file_id}</p>
-                          )}
-                          {file.file_type === 'regular' && file.folder_title && (
-                            <p><strong>From Folder:</strong> {file.folder_title}</p>
-                          )}
-                          <p className="mt-2">
-                            <strong>Created:</strong>{' '}
-                            {new Date(file.created_at).toLocaleDateString()}
-                          </p>
-                          <p>
-                            <strong>Created By:</strong> {file.created_by}
+                          <p className="text-sm text-gray-500">
+                            Archived by <span className="text-blue-600">{file.archived_by}</span> on {new Date(file.archived_at || '').toLocaleDateString()}
                           </p>
                         </div>
                       </div>
