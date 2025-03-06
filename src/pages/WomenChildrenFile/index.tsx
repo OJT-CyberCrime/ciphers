@@ -200,7 +200,7 @@ export default function WomenChildrenFile() {
 
       // Fetch the complete file data with user information
       const { data: newFileWithUser, error: fetchError } = await supabase
-        .from('files')
+        .from('womenchildren_file')
         .select(`
           *,
           creator:created_by(name),
@@ -256,19 +256,33 @@ export default function WomenChildrenFile() {
           created_by: folderData.creator?.name || folderData.created_by
         });
 
-        // Fetch extraction files in the folder
+        // Fetch files in the folder
         const { data: filesData, error: filesError } = await supabase
-          .from('womenchildren_file') // Change to the correct table
+          .from('womenchildren_file')
           .select(`
             *,
             creator:created_by(name),
-            updater:updated_by(name)
+            updater:updated_by(name),
+            viewer:viewed_by(name),
+            downloader:downloaded_by(name),
+            printer:printed_by(name)
           `)
-          .eq('folder_id', id);
+          .eq('folder_id', id)
+          .eq('is_archived', false)
+          .order('created_at', { ascending: false });
 
         if (filesError) throw filesError;
 
-        setFiles(filesData);
+        const formattedFiles = filesData.map(file => ({
+          ...file,
+          created_by: file.creator?.name || file.created_by,
+          updated_by: file.updater?.name || file.updated_by,
+          viewed_by: file.viewer?.name || file.viewed_by,
+          downloaded_by: file.downloader?.name || file.downloaded_by,
+          printed_by: file.printer?.name || file.printed_by
+        }));
+
+        setFiles(formattedFiles);
       } catch (error) {
         console.error('Error fetching folder data:', error);
       } finally {
