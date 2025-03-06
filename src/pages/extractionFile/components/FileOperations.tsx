@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface Extraction {
   extraction_id: number;
@@ -703,89 +704,162 @@ export default function FileOperations({
 
           <div className="space-y-4">
             {showFileDialog === 'edit' && (
-              <form onSubmit={handleEditFile}>
-                <ScrollArea className="h-[60vh]">
-                  <div className="space-y-4 px-4">
-                    <div>
-                      <Label htmlFor="case_title">Case Title</Label>
-                      <Input
-                        id="case_title"
-                        name="case_title"
-                        defaultValue={(selectedFile || file).case_title}
-                        required
-                        className="border-gray-300 rounded-md"
-                      />
+              <form onSubmit={handleEditFile} id="editForm">
+                <ScrollArea className="h-[60vh] pr-4">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="case_title">Case Title</Label>
+                        <Input
+                          id="case_title"
+                          name="case_title"
+                          defaultValue={(selectedFile || file).case_title}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="control_num">Control Number</Label>
+                        <Input
+                          id="control_num"
+                          name="control_num"
+                          defaultValue={(selectedFile || file).control_num}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="complainant">Complainant</Label>
+                        <Input
+                          id="complainant"
+                          name="complainant"
+                          defaultValue={(selectedFile || file).complainant}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="assisted_by">Assisted By</Label>
+                        <Input
+                          id="assisted_by"
+                          name="assisted_by"
+                          defaultValue={(selectedFile || file).assisted_by}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="accompanied_by">Accompanied By</Label>
+                        <Input
+                          id="accompanied_by"
+                          name="accompanied_by"
+                          defaultValue={(selectedFile || file).accompanied_by}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="witnesses">Witnesses</Label>
+                        <Input
+                          id="witnesses"
+                          name="witnesses"
+                          defaultValue={(selectedFile || file).witnesses}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="respondent">Respondent</Label>
+                        <Input
+                          id="respondent"
+                          name="respondent"
+                          defaultValue={(selectedFile || file).respondent}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="investigator">Investigator</Label>
+                        <Input
+                          id="investigator"
+                          name="investigator"
+                          defaultValue={(selectedFile || file).investigator}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="contact_num">Contact Number</Label>
+                        <Input
+                          id="contact_num"
+                          name="contact_num"
+                          defaultValue={(selectedFile || file).contact_num}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="fb_account">Facebook Account</Label>
+                        <Input
+                          id="fb_account"
+                          name="fb_account"
+                          defaultValue={(selectedFile || file).fb_account}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="station_unit">Station/Unit</Label>
+                        <Input
+                          id="station_unit"
+                          name="station_unit"
+                          defaultValue={(selectedFile || file).station_unit}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="date_release">Date of Release</Label>
+                        <Input
+                          id="date_release"
+                          name="date_release"
+                          type="date"
+                          defaultValue={(selectedFile || file).date_release}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signatories">Signatories</Label>
+                        <Input
+                          id="signatories"
+                          name="signatories"
+                          defaultValue={(selectedFile || file).signatories}
+                          required
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="entry_num">Entry Number</Label>
-                      <Input
-                        id="entry_num"
-                        name="entry_num"
-                        defaultValue={(selectedFile || file).control_num}
-                        required
-                        className="border-gray-300 rounded-md"
+                    <div className="space-y-2">
+                      <Label htmlFor="incident_summary">Incident Summary</Label>
+                      <RichTextEditor
+                        content={(selectedFile || file).incident_summary || ""}
+                        onChange={(content) => {
+                          const form = document.getElementById('editForm') as HTMLFormElement;
+                          let summaryInput = form.querySelector('input[name="incident_summary"]') as HTMLInputElement;
+                          if (!summaryInput) {
+                            summaryInput = document.createElement('input');
+                            summaryInput.type = 'hidden';
+                            summaryInput.name = 'incident_summary';
+                            form.appendChild(summaryInput);
+                          }
+                          // Save the raw HTML content
+                          summaryInput.value = content;
+                        }}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="date_release">Release Date</Label>
-                      <Input
-                        id="date_release"
-                        name="date_release"
-                        type="date"
-                        defaultValue={(selectedFile || file).date_release}
-                        required
-                        className="border-gray-300 rounded-md"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="investigator">Investigator</Label>
-                      <Input
-                        id="investigator"
-                        name="investigator"
-                        defaultValue={(selectedFile || file).investigator}
-                        required
-                        className="border-gray-300 rounded-md"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="signatory_name">Signatory Name</Label>
-                      <Input
-                        id="signatory_name"
-                        name="signatory_name"
-                        defaultValue={(selectedFile || file).signatories}
-                        required
-                        className="border-gray-300 rounded-md"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="summary">Incident Summary</Label>
-                      <Textarea
-                        id="summary"
-                        name="summary"
-                        defaultValue={(selectedFile || file).incident_summary}
-                        required
-                        className="h-32 resize-none border-gray-300 rounded-md"
-                      />
-                    </div>
-                    <div>
                       <Label htmlFor="file">Update File (Optional)</Label>
                       <Input
                         id="file"
                         name="file"
                         type="file"
-                        className="border-gray-300 rounded-md"
                       />
-                      <p className="text-sm text-gray-500">
-                        Leave empty to keep the current file
-                      </p>
                     </div>
                   </div>
                 </ScrollArea>
-                <DialogFooter className="mt-4 flex justify-end">
-                  <Button type="button" variant="outline" onClick={() => setShowFileDialog(null)} className="mr-2">
+                <DialogFooter className="mt-4">
+                  <Button type="button" variant="outline" onClick={() => setShowFileDialog(null)}>
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-blue-600 text-white hover:bg-blue-700">
+                  <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
                     Save Changes
                   </Button>
                 </DialogFooter>
@@ -818,91 +892,124 @@ export default function FileOperations({
 
             {showFileDialog === 'details' && (
               <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Name</h4>
-                  <p className="text-gray-900 text-lg font-medium">{currentFile.case_title}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Entry Number</h4>
-                  <p className="text-gray-900">{currentFile.control_num}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-medium text-blue-900 mb-1">Release Date</h4>
-                    <p className="text-gray-900">{currentFile.date_release}</p>
+                <ScrollArea className="h-[60vh] pr-4">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="font-medium text-blue-900">Case Title</Label>
+                        <p className="text-gray-900">{currentFile.case_title}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-blue-900">Control Number</Label>
+                        <p className="text-gray-900">{currentFile.control_num}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-blue-900">Complainant</Label>
+                        <p className="text-gray-900">{currentFile.complainant}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-blue-900">Assisted By</Label>
+                        <p className="text-gray-900">{currentFile.assisted_by}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-blue-900">Accompanied By</Label>
+                        <p className="text-gray-900">{currentFile.accompanied_by}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-blue-900">Witnesses</Label>
+                        <p className="text-gray-900">{currentFile.witnesses}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-blue-900">Respondent</Label>
+                        <p className="text-gray-900">{currentFile.respondent}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-blue-900">Investigator</Label>
+                        <p className="text-gray-900">{currentFile.investigator}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-blue-900">Contact Number</Label>
+                        <p className="text-gray-900">{currentFile.contact_num}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-blue-900">Facebook Account</Label>
+                        <p className="text-gray-900">{currentFile.fb_account}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-blue-900">Station/Unit</Label>
+                        <p className="text-gray-900">{currentFile.station_unit}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-blue-900">Date of Release</Label>
+                        <p className="text-gray-900">{currentFile.date_release}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium text-blue-900">Signatories</Label>
+                        <p className="text-gray-900">{currentFile.signatories}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-blue-900">Incident Summary</Label>
+                      <div 
+                        className="prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{ __html: currentFile.incident_summary }}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-medium text-blue-900">File Activity</Label>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-gray-600">
+                            Created: <span className="text-gray-900">
+                              {new Date(currentFile.created_at).toLocaleString()} by{" "}
+                              <span className="text-blue-900">{currentFile.created_by}</span>
+                            </span>
+                          </p>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-gray-600">
+                            Last updated: {currentFile.updated_at ? (
+                              <span className="text-gray-900">
+                                {new Date(currentFile.updated_at).toLocaleString()} by{" "}
+                                <span className="text-blue-900">{currentFile.updated_by}</span>
+                              </span>
+                            ) : 'Never'}
+                          </p>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-gray-600">
+                            Last viewed: {currentFile.viewed_at ? (
+                              <span className="text-gray-900">
+                                {new Date(currentFile.viewed_at).toLocaleString()} by{" "}
+                                <span className="text-blue-900">{currentFile.viewed_by}</span>
+                              </span>
+                            ) : 'Never'}
+                          </p>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-gray-600">
+                            Last downloaded: {currentFile.downloaded_at ? (
+                              <span className="text-gray-900">
+                                {new Date(currentFile.downloaded_at).toLocaleString()} by{" "}
+                                <span className="text-blue-900">{currentFile.downloaded_by}</span>
+                              </span>
+                            ) : 'Never'}
+                          </p>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-gray-600">
+                            Last printed: {currentFile.printed_at ? (
+                              <span className="text-gray-900">
+                                {new Date(currentFile.printed_at).toLocaleString()} by{" "}
+                                <span className="text-blue-900">{currentFile.printed_by}</span>
+                              </span>
+                            ) : 'Never'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-medium text-blue-900 mb-1">Investigator</h4>
-                    <p className="text-gray-900">{currentFile.investigator}</p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Signatory Name</h4>
-                  <p className="text-gray-900">{currentFile.signatories}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Incident Summary</h4>
-                  <Textarea
-                    id="summary"
-                    name="summary"
-                    defaultValue={currentFile.incident_summary}
-                    readOnly
-                    className="h-32 resize-none border-gray-300 rounded-md"
-                  />
-                </div>
-                <div>
-                  <h4 className="font-medium text-blue-900 mb-1">File Activity</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-600">
-                        Created: <span>
-                          {new Date(currentFile.created_at).toLocaleString()} by{" "}
-                          <span className="text-blue-900">{currentFile.created_by}</span>
-                        </span>
-                      </p>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-600">
-                        Last updated: {currentFile.updated_at ? (
-                          <span>
-                            {new Date(currentFile.updated_at).toLocaleString()} by{" "}
-                            <span className="text-blue-900">{currentFile.updated_by}</span>
-                          </span>
-                        ) : 'Never'}
-                      </p>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-600">
-                        Last viewed: {currentFile.viewed_at ? (
-                          <span>
-                            {new Date(currentFile.viewed_at).toLocaleString()} by{" "}
-                            <span className="text-blue-900">{currentFile.viewed_by}</span>
-                          </span>
-                        ) : 'Never'}
-                      </p>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-600">
-                        Last downloaded: {currentFile.downloaded_at ? (
-                          <span>
-                            {new Date(currentFile.downloaded_at).toLocaleString()} by{" "}
-                            <span className="text-blue-900">{currentFile.downloaded_by}</span>
-                          </span>
-                        ) : 'Never'}
-                      </p>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-600">
-                        Last printed: {currentFile.printed_at ? (
-                          <span>
-                            {new Date(currentFile.printed_at).toLocaleString()} by{" "}
-                            <span className="text-blue-900">{currentFile.printed_by}</span>
-                          </span>
-                        ) : 'Never'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                </ScrollArea>
                 <DialogFooter className="flex justify-end">
                   <Button
                     className="bg-blue-600 text-white hover:bg-blue-700"
@@ -914,7 +1021,7 @@ export default function FileOperations({
                     Close
                   </Button>
                 </DialogFooter>
-                </div>
+              </div>
             )}
           </div>
         </DialogContent>
