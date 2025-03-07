@@ -161,8 +161,8 @@ export const fetchArchivedContent = async () => {
         file_type: 'regular' as const
       })),
       ...(eblotterFiles || []).map((file: any) => ({
-        file_id: file.eblotter_id,
-        title: `Blotter #${file.case_number}`,
+        file_id: file.blotter_id,
+        title: file.title,
         folder_id: file.folder_id,
         folder_title: file.folders?.title || 'No Folder',
         archived_by: file.updater?.name || file.updated_by,
@@ -171,7 +171,7 @@ export const fetchArchivedContent = async () => {
       })),
       ...(extractionFiles || []).map((file: any) => ({
         file_id: file.extraction_id,
-        title: file.title || `Extraction #${file.extraction_id}`,
+        title: file.title,
         folder_id: file.folder_id,
         folder_title: file.folders?.title || 'No Folder',
         archived_by: file.updater?.name || file.updated_by,
@@ -179,8 +179,8 @@ export const fetchArchivedContent = async () => {
         file_type: 'extraction' as const
       })),
       ...(womenchildrenFiles || []).map((file: any) => ({
-        file_id: file.womenchildren_id,
-        title: `Case #${file.case_number}`,
+        file_id: file.file_id,
+        title: file.title,
         folder_id: file.folder_id,
         folder_title: file.folders?.title || 'No Folder',
         archived_by: file.updater?.name || file.updated_by,
@@ -225,7 +225,7 @@ export const handleRestoreFile = async (file: ArchivedFile) => {
         ({ error } = await supabase
           .from('eblotter_file')
           .update({ is_archived: false })
-          .eq('eblotter_id', file.file_id));
+          .eq('blotter_id', file.file_id));
         break;
 
       case 'extraction':
@@ -239,7 +239,7 @@ export const handleRestoreFile = async (file: ArchivedFile) => {
         ({ error } = await supabase
           .from('womenchildren_file')
           .update({ is_archived: false })
-          .eq('womenchildren_id', file.file_id));
+          .eq('file_id', file.file_id));
         break;
 
       case 'regular':
