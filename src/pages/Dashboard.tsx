@@ -17,6 +17,7 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
+  Cell,
 } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import {
@@ -29,6 +30,13 @@ import {
 } from "@/components/ui/pagination";
 import { supabase } from "@/utils/supa";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Sample data
 const complaintData = [
@@ -80,6 +88,11 @@ interface RecentFile {
   created_at: string;
 }
 
+interface CategoryCount {
+  name: string;
+  value: number;
+}
+
 const crimeCategoryData = [
   { name: "Theft", value: 400 },
   { name: "Assault", value: 300 },
@@ -108,7 +121,78 @@ export default function Dashboard() {
   const [currentPage, setCurrentPage] = useState(0);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [categoryData, setCategoryData] = useState<CategoryCount[]>([]);
   const itemsPerPage = 3;
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  // Helper function to format the selected month
+  const formatSelectedMonth = (dateString: string) => {
+    const [year, month] = dateString.split('-').map(Number);
+    return new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+  };
+
+  // Function to get month options (last 12 months)
+  const getMonthOptions = () => {
+    const options = [];
+    const today = new Date();
+    
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const label = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+      options.push({ value, label });
+    }
+    
+    return options;
+  };
+
+  // Fetch category usage data
+  useEffect(() => {
+    const fetchCategoryData = async () => {
+      try {
+        // Parse selected month
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const startOfMonth = new Date(year, month - 1, 1).toISOString();
+        const endOfMonth = new Date(year, month, 0).toISOString();
+
+        // Get all categories with their counts from folder_categories for the selected month
+        const { data: categoryUsage, error } = await supabase
+          .from('categories')
+          .select(`
+            category_id,
+            title,
+            folder_categories!inner(
+              category_id,
+              folders!inner(created_at)
+            )
+          `)
+          .gte('folder_categories.folders.created_at', startOfMonth)
+          .lte('folder_categories.folders.created_at', endOfMonth)
+          .order('title');
+
+        if (error) throw error;
+
+        // Transform the data to count occurrences
+        const categoryCounts = (categoryUsage || []).map(category => ({
+          name: category.title,
+          value: category.folder_categories?.length || 0
+        }));
+
+        // Sort by usage count (descending)
+        const sortedCategories = categoryCounts.sort((a, b) => b.value - a.value);
+
+        setCategoryData(sortedCategories);
+      } catch (error) {
+        console.error('Error fetching category data:', error);
+        setCategoryData([]);
+      }
+    };
+
+    fetchCategoryData();
+  }, [selectedMonth]); // Add selectedMonth as dependency
 
   // Fetch recent files from all categories
   useEffect(() => {
@@ -370,35 +454,79 @@ export default function Dashboard() {
         </CardFooter>
       </Card>
 
-      {/* Crime Categories Pie Chart Card */}
+      {/* Category Distribution Card */}
       <Card className="p-2 shadow-md col-span-2 lg:col-span-1 h-80">
         <CardHeader className="font-semibold text-md text-center text-blue-900">
-          Crime Categories
+          <div className="flex flex-col items-center gap-2">
+            <span>Category Distribution</span>
+            <Select
+              value={selectedMonth}
+              onValueChange={setSelectedMonth}
+            >
+              <SelectTrigger className="w-[180px] h-8 text-sm">
+                <SelectValue placeholder="Select month">
+                  {formatSelectedMonth(selectedMonth)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {getMonthOptions().map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
-        <CardContent className="h-48">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart className="text-xs">
-              <Pie
-                data={crimeCategoryData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={50}
-                innerRadius={20}
-                fill="#3b82f6"
-                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-              />
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+        <CardContent className="h-44 overflow-hidden">
+          {categoryData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart className="text-xs" margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                <Pie
+                  data={categoryData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={Math.min(60, (categoryData.length > 8 ? 50 : 60))}
+                  innerRadius={Math.min(30, (categoryData.length > 8 ? 25 : 30))}
+                  fill="#3b82f6"
+                  label={({ name, value }) => 
+                    categoryData.length > 8 ? `${name.substring(0, 10)}${name.length > 10 ? '..' : ''} (${value})` : `${name} (${value})`
+                  }
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={`hsl(${index * (360 / categoryData.length)}, 70%, 50%)`}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value: number, name: string) => [
+                    `${value} folders`,
+                    `Category: ${name}`
+                  ]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-500">
+              No category data available for {formatSelectedMonth(selectedMonth)}
+            </div>
+          )}
         </CardContent>
         <CardFooter className="flex-col gap-1 text-sm">
           <div className="flex items-center gap-2 font-medium leading-none">
-            Most reported crime: Theft
+            {categoryData.length > 0 && (
+              <>
+                Most used category: <span className="text-blue-600">{categoryData[0]?.name}</span> 
+                <span className="text-gray-500">({categoryData[0]?.value} folders)</span>
+              </>
+            )}
           </div>
           <div className="leading-none text-muted-foreground">
-            Showing data for the last month
+            Showing all categories used in selected month
           </div>
         </CardFooter>
       </Card>
