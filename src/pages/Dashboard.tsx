@@ -504,8 +504,8 @@ export default function Dashboard() {
                 </Pie>
                 <Tooltip 
                   formatter={(value: number, name: string) => [
-                    `${value} folders`,
-                    `Category: ${name}`
+                    `${value}`,
+                    `${name}`
                   ]}
                 />
               </PieChart>
@@ -524,9 +524,6 @@ export default function Dashboard() {
                 <span className="text-gray-500">({categoryData[0]?.value} folders)</span>
               </>
             )}
-          </div>
-          <div className="leading-none text-muted-foreground">
-            Showing all categories used in selected month
           </div>
         </CardFooter>
       </Card>
