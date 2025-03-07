@@ -605,50 +605,212 @@ export default function Archives() {
           {/* Archived Files Section */}
           <div className="mb-8">
             <h2 className="text-xl font-medium mb-4">Archived Files</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredFiles.map((file) => (
-                <ContextMenu key={`${file.file_type}-${file.file_id}`}>
-                  <ContextMenuTrigger>
-                    <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
-                      <div className="flex flex-col items-start p-5">
-                        <div className="flex items-center gap-x-3 w-full">
-                          <FileText
-                            style={{ width: "40px", height: "40px" }}
-                            className="text-gray-600"
-                          />
-                          <div className="flex-1">
-                            <span className="font-poppins font-medium text-lg text-gray-900 text-left block">
-                              {file.title}
-                            </span>
-                            <Badge variant="outline" className="mt-1">
-                              {file.folder_title}
-                            </Badge>
-                          </div>
-                        </div>
 
-                        <div className="mt-3 text-sm text-gray-600 w-full">
-                          <p className="text-sm text-gray-500">
-                            Archived by <span className="text-blue-600">{file.archived_by}</span> on {new Date(file.archived_at || '').toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-              <ContextMenuItem
-                      onClick={() => setRestoreDialog({
-                        type: 'file',
-                        item: file,
-                        fromArchivedFolder: false
-                      })}
-                    >
-                      <Undo className="mr-2 h-4 w-4" />
-                      Restore
-              </ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>
-        ))}
-      </div>
+            {/* Regular Files */}
+            {filteredFiles.filter(file => file.file_type === 'regular').length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-3 text-gray-700">Incident Reports</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {filteredFiles
+                    .filter(file => file.file_type === 'regular')
+                    .map((file) => (
+                      <ContextMenu key={`${file.file_type}-${file.file_id}`}>
+                        <ContextMenuTrigger>
+                          <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                            <div className="flex flex-col items-start p-5">
+                              <div className="flex items-center gap-x-3 w-full">
+                                <FileText
+                                  style={{ width: "40px", height: "40px" }}
+                                  className="text-gray-600"
+                                />
+                                <div className="flex-1">
+                                  <span className="font-poppins font-medium text-lg text-gray-900 text-left block">
+                                    {file.title}
+                                  </span>
+                                  <Badge variant="outline" className="mt-1">
+                                    {file.folder_title}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="mt-3 text-sm text-gray-600 w-full">
+                                <p className="text-sm text-gray-500">
+                                  Archived by <span className="text-blue-600">{file.archived_by}</span> on {new Date(file.archived_at || '').toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem onClick={() => setRestoreDialog({
+                            type: 'file',
+                            item: file,
+                            fromArchivedFolder: false
+                          })}>
+                            <Undo className="mr-2 h-4 w-4" />
+                            Restore
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Women and Children Files */}
+            {filteredFiles.filter(file => file.file_type === 'womenchildren').length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-3 text-gray-700">Women and Children Cases</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {filteredFiles
+                    .filter(file => file.file_type === 'womenchildren')
+                    .map((file) => (
+                      <ContextMenu key={`${file.file_type}-${file.file_id}`}>
+                        <ContextMenuTrigger>
+                          <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                            <div className="flex flex-col items-start p-5">
+                              <div className="flex items-center gap-x-3 w-full">
+                                <FileText
+                                  style={{ width: "40px", height: "40px" }}
+                                  className="text-gray-600"
+                                />
+                                <div className="flex-1">
+                                  <span className="font-poppins font-medium text-lg text-gray-900 text-left block">
+                                    {file.title}
+                                  </span>
+                                  <Badge variant="outline" className="mt-1">
+                                    {file.folder_title}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="mt-3 text-sm text-gray-600 w-full">
+                                <p className="text-sm text-gray-500">
+                                  Archived by <span className="text-blue-600">{file.archived_by}</span> on {new Date(file.archived_at || '').toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem onClick={() => setRestoreDialog({
+                            type: 'file',
+                            item: file,
+                            fromArchivedFolder: false
+                          })}>
+                            <Undo className="mr-2 h-4 w-4" />
+                            Restore
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* E-Blotter Files */}
+            {filteredFiles.filter(file => file.file_type === 'eblotter').length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-3 text-gray-700">E-Blotter Files</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {filteredFiles
+                    .filter(file => file.file_type === 'eblotter')
+                    .map((file) => (
+                      <ContextMenu key={`${file.file_type}-${file.file_id}`}>
+                        <ContextMenuTrigger>
+                          <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                            <div className="flex flex-col items-start p-5">
+                              <div className="flex items-center gap-x-3 w-full">
+                                <FileText
+                                  style={{ width: "40px", height: "40px" }}
+                                  className="text-gray-600"
+                                />
+                                <div className="flex-1">
+                                  <span className="font-poppins font-medium text-lg text-gray-900 text-left block">
+                                    {file.title}
+                                  </span>
+                                  <Badge variant="outline" className="mt-1">
+                                    {file.folder_title}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="mt-3 text-sm text-gray-600 w-full">
+                                <p className="text-sm text-gray-500">
+                                  Archived by <span className="text-blue-600">{file.archived_by}</span> on {new Date(file.archived_at || '').toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem onClick={() => setRestoreDialog({
+                            type: 'file',
+                            item: file,
+                            fromArchivedFolder: false
+                          })}>
+                            <Undo className="mr-2 h-4 w-4" />
+                            Restore
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Extraction Files */}
+            {filteredFiles.filter(file => file.file_type === 'extraction').length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-3 text-gray-700">Certificates of Extraction</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {filteredFiles
+                    .filter(file => file.file_type === 'extraction')
+                    .map((file) => (
+                      <ContextMenu key={`${file.file_type}-${file.file_id}`}>
+                        <ContextMenuTrigger>
+                          <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                            <div className="flex flex-col items-start p-5">
+                              <div className="flex items-center gap-x-3 w-full">
+                                <FileText
+                                  style={{ width: "40px", height: "40px" }}
+                                  className="text-gray-600"
+                                />
+                                <div className="flex-1">
+                                  <span className="font-poppins font-medium text-lg text-gray-900 text-left block">
+                                    {file.title}
+                                  </span>
+                                  <Badge variant="outline" className="mt-1">
+                                    {file.folder_title}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="mt-3 text-sm text-gray-600 w-full">
+                                <p className="text-sm text-gray-500">
+                                  Archived by <span className="text-blue-600">{file.archived_by}</span> on {new Date(file.archived_at || '').toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem onClick={() => setRestoreDialog({
+                            type: 'file',
+                            item: file,
+                            fromArchivedFolder: false
+                          })}>
+                            <Undo className="mr-2 h-4 w-4" />
+                            Restore
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {filteredFiles.length === 0 && (
+              <div className="text-center text-gray-500 py-8">
+                No archived files found
+              </div>
+            )}
           </div>
 
           {filteredFolders.length === 0 && filteredFiles.length === 0 && (
