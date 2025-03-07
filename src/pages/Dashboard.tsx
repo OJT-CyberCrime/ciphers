@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -27,6 +27,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { supabase } from "@/utils/supa";
+import { Button } from "@/components/ui/button";
 
 // Sample data
 const complaintData = [
@@ -45,16 +47,38 @@ const officerData = [
   { officer: "Officer C", filesUploaded: 30 },
 ];
 
-const recentFiles = [
-  { fileName: "File1.pdf", uploadedBy: "Officer A", fileType: "PDF", uploadTime: "2023-10-01 10:00 AM" },
-  { fileName: "File2.pdf", uploadedBy: "Officer B", fileType: "PDF", uploadTime: "2023-10-01 11:00 AM" },
-  { fileName: "File3.pdf", uploadedBy: "Officer C", fileType: "PDF", uploadTime: "2023-10-01 12:00 PM" },
-  { fileName: "File4.pdf", uploadedBy: "Officer D", fileType: "PDF", uploadTime: "2023-10-01 01:00 PM" },
-  { fileName: "File5.pdf", uploadedBy: "Officer E", fileType: "PDF", uploadTime: "2023-10-01 02:00 PM" },
-  { fileName: "File6.pdf", uploadedBy: "Officer F", fileType: "PDF", uploadTime: "2023-10-01 03:00 PM" },
-  { fileName: "File7.pdf", uploadedBy: "Officer G", fileType: "PDF", uploadTime: "2023-10-01 04:00 PM" },
-  { fileName: "File8.pdf", uploadedBy: "Officer H", fileType: "PDF", uploadTime: "2023-10-01 05:00 PM" },
-];
+interface BaseFile {
+  title: string;
+  created_by: string;
+  created_at: string;
+  creator?: {
+    name: string;
+  } | null;
+}
+
+interface RegularFile extends BaseFile {
+  file_id: number;
+}
+
+interface EblotterFile extends BaseFile {
+  blotter_id: number;
+}
+
+interface WomenChildrenFile extends BaseFile {
+  file_id: number;
+}
+
+interface ExtractionFile extends BaseFile {
+  extraction_id: number;
+}
+
+interface RecentFile {
+  id: number;
+  title: string;
+  uploaded_by: string;
+  file_type: 'regular' | 'eblotter' | 'womenchildren' | 'extraction';
+  created_at: string;
+}
 
 const crimeCategoryData = [
   { name: "Theft", value: 400 },
@@ -82,7 +106,145 @@ const totalComplaints = totalComplaintsData.reduce(
 export default function Dashboard() {
   const [selectedData, setSelectedData] = useState("complaints");
   const [currentPage, setCurrentPage] = useState(0);
+  const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const itemsPerPage = 3;
+
+  // Fetch recent files from all categories
+  useEffect(() => {
+    const fetchRecentFiles = async () => {
+      try {
+        setIsLoading(true);
+        
+        const [regularFiles, eblotterFiles, womenchildrenFiles, extractionFiles] = await Promise.all([
+          // Regular files
+          supabase
+            .from('files')
+            .select(`
+              file_id,
+              title,
+              created_by,
+              created_at,
+              creator:created_by(name)
+            `)
+            .order('created_at', { ascending: false })
+            .limit(5)
+            .then(({ data, error }) => {
+              if (error) throw error;
+              return (data || []).map(file => ({
+                ...file,
+                creator: file.creator ? { name: file.creator[0]?.name } : null
+              })) as RegularFile[];
+            }),
+          
+          // E-blotter files
+          supabase
+            .from('eblotter_file')
+            .select(`
+              blotter_id,
+              title,
+              created_by,
+              created_at,
+              creator:created_by(name)
+            `)
+            .order('created_at', { ascending: false })
+            .limit(5)
+            .then(({ data, error }) => {
+              if (error) throw error;
+              return (data || []).map(file => ({
+                ...file,
+                creator: file.creator ? { name: file.creator[0]?.name } : null
+              })) as EblotterFile[];
+            }),
+          
+          // Women and children files
+          supabase
+            .from('womenchildren_file')
+            .select(`
+              file_id,
+              title,
+              created_by,
+              created_at,
+              creator:created_by(name)
+            `)
+            .order('created_at', { ascending: false })
+            .limit(5)
+            .then(({ data, error }) => {
+              if (error) throw error;
+              return (data || []).map(file => ({
+                ...file,
+                creator: file.creator ? { name: file.creator[0]?.name } : null
+              })) as WomenChildrenFile[];
+            }),
+          
+          // Extraction files
+          supabase
+            .from('extraction')
+            .select(`
+              extraction_id,
+              title,
+              created_by,
+              created_at,
+              creator:created_by(name)
+            `)
+            .order('created_at', { ascending: false })
+            .limit(5)
+            .then(({ data, error }) => {
+              if (error) throw error;
+              return (data || []).map(file => ({
+                ...file,
+                creator: file.creator ? { name: file.creator[0]?.name } : null
+              })) as ExtractionFile[];
+            })
+        ]);
+
+        // Combine and format all files
+        const allFiles = [
+          ...regularFiles.map(file => ({
+            id: file.file_id,
+            title: file.title,
+            uploaded_by: file.creator?.name || file.created_by,
+            created_at: file.created_at,
+            file_type: 'regular' as const
+          })),
+          ...eblotterFiles.map(file => ({
+            id: file.blotter_id,
+            title: file.title,
+            uploaded_by: file.creator?.name || file.created_by,
+            created_at: file.created_at,
+            file_type: 'eblotter' as const
+          })),
+          ...womenchildrenFiles.map(file => ({
+            id: file.file_id,
+            title: file.title,
+            uploaded_by: file.creator?.name || file.created_by,
+            created_at: file.created_at,
+            file_type: 'womenchildren' as const
+          })),
+          ...extractionFiles.map(file => ({
+            id: file.extraction_id,
+            title: file.title,
+            uploaded_by: file.creator?.name || file.created_by,
+            created_at: file.created_at,
+            file_type: 'extraction' as const
+          }))
+        ];
+
+        // Sort by created_at and take the most recent 10
+        const sortedFiles = allFiles.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ).slice(0, 10);
+
+        setRecentFiles(sortedFiles);
+      } catch (error) {
+        console.error('Error fetching recent files:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRecentFiles();
+  }, []);
 
   const handleDataChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedData(event.target.value);
@@ -98,6 +260,22 @@ export default function Dashboard() {
     currentPage * itemsPerPage,
     (currentPage + 1) * itemsPerPage
   );
+
+  // Function to get file type display name
+  const getFileTypeDisplay = (type: string) => {
+    switch (type) {
+      case 'regular':
+        return 'Incident Report';
+      case 'eblotter':
+        return 'E-Blotter';
+      case 'womenchildren':
+        return 'Women & Children';
+      case 'extraction':
+        return 'Extraction';
+      default:
+        return type;
+    }
+  };
 
   return (
     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-poppins">
@@ -232,28 +410,72 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent className="h-52 overflow-auto">
           <div className="w-full h-full">
-            <table className="min-w-full border-collapse">
-              <thead className="sticky top-0 bg-white z-10 shadow">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs border-b">File</th>
-                  <th className="px-4 py-2 text-left text-xs border-b">Uploaded By</th>
-                  <th className="px-4 py-2 text-left text-xs border-b">File Type</th>
-                  <th className="px-4 py-2 text-left text-xs border-b">Upload Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentItems.map((file, index) => (
-                  <tr key={index} className="hover:bg-gray-100">
-                    <td className="border px-4 py-2 text-xs">{file.fileName}</td>
-                    <td className="border px-4 py-2 text-xs">{file.uploadedBy}</td>
-                    <td className="border px-4 py-2 text-xs">{file.fileType || 'N/A'}</td>
-                    <td className="border px-4 py-2 text-xs">{file.uploadTime || 'N/A'}</td>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
+              </div>
+            ) : (
+              <table className="min-w-full border-collapse">
+                <thead className="sticky top-0 bg-white z-10 shadow">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs border-b">File</th>
+                    <th className="px-4 py-2 text-left text-xs border-b">Uploaded By</th>
+                    <th className="px-4 py-2 text-left text-xs border-b">File Type</th>
+                    <th className="px-4 py-2 text-left text-xs border-b">Upload Time</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {currentItems.map((file) => (
+                    <tr key={`${file.file_type}-${file.id}`} className="hover:bg-gray-100">
+                      <td className="border px-4 py-2 text-xs">{file.title}</td>
+                      <td className="border px-4 py-2 text-xs">{file.uploaded_by}</td>
+                      <td className="border px-4 py-2 text-xs">{getFileTypeDisplay(file.file_type)}</td>
+                      <td className="border px-4 py-2 text-xs">
+                        {new Date(file.created_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </CardContent>
+        <CardFooter className="flex justify-center mt-2">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                  disabled={currentPage === 0}
+                >
+                  <PaginationPrevious className="h-4 w-4" />
+                </Button>
+              </PaginationItem>
+              {Array.from({ length: pageCount }, (_, i) => (
+                <PaginationItem key={i}>
+                  <PaginationLink
+                    onClick={() => setCurrentPage(i)}
+                    isActive={currentPage === i}
+                  >
+                    {i + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(prev => Math.min(pageCount - 1, prev + 1))}
+                  disabled={currentPage === pageCount - 1}
+                >
+                  <PaginationNext className="h-4 w-4" />
+                </Button>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </CardFooter>
       </Card>
     </div>
   );
