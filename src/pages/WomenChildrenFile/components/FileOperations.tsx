@@ -170,7 +170,7 @@ export default function FileOperations({
 
       // Update the file's viewed_by and viewed_at
       const { error: updateError } = await supabase
-        .from('files')
+        .from('womenchildren_file')
         .update({
           viewed_by: userData2.user_id,
           viewed_at: new Date().toISOString()
@@ -218,7 +218,7 @@ export default function FileOperations({
 
       // Update the file's downloaded_by and downloaded_at
       const { error: updateError } = await supabase
-        .from('files')
+        .from('womenchildren_file')
         .update({
           downloaded_by: userData2.user_id,
           downloaded_at: new Date().toISOString()
@@ -287,7 +287,7 @@ export default function FileOperations({
 
       // Update the file's printed_by and printed_at
       const { error: updateError } = await supabase
-        .from('files')
+        .from('womenchildren_file')
         .update({
           printed_by: userData2.user_id,
           printed_at: new Date().toISOString()
@@ -323,10 +323,27 @@ export default function FileOperations({
   const handleArchiveFile = async () => {
     try {
       const fileToArchive = selectedFile || file;
-      console.log('Archiving file with ID:', fileToArchive.file_id);
+      
+      // Get user data from cookies
+      const userData = JSON.parse(Cookies.get('user_data') || '{}');
+      
+      // Get the user's ID from the users table using their email
+      const { data: userData2, error: userError } = await supabase
+        .from('users')
+        .select('user_id')
+        .eq('email', userData.email)
+        .single();
+
+      if (userError) throw userError;
+      if (!userData2) throw new Error('User not found');
+
       const { error } = await supabase
         .from('womenchildren_file')
-        .update({ is_archived: true })
+        .update({ 
+          is_archived: true,
+          updated_by: userData2.user_id,
+          updated_at: new Date().toISOString()
+        })
         .eq('file_id', fileToArchive.file_id);
 
       if (error) throw error;
@@ -398,7 +415,7 @@ export default function FileOperations({
 
       // Update the file record
       const { error: updateError } = await supabase
-        .from('files')
+        .from('womenchildren_file')
         .update({
           title,
           investigator,
