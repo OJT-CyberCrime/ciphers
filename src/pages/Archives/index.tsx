@@ -798,11 +798,11 @@ export default function Archives() {
                           })}>
                             <Undo className="mr-2 h-4 w-4" />
                             Restore
-                          </ContextMenuItem>
-                        </ContextMenuContent>
-                      </ContextMenu>
-                    ))}
-                </div>
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
+        ))}
+      </div>
               </div>
             )}
 
