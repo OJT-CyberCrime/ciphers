@@ -348,9 +348,27 @@ export default function FileOperations({
   const handleArchiveFile = async () => {
     try {
       const fileToArchive = selectedFile || file;
+      
+      // Get user data from cookies
+      const userData = JSON.parse(Cookies.get('user_data') || '{}');
+      
+      // Get the user's ID from the users table using their email
+      const { data: userData2, error: userError } = await supabase
+        .from('users')
+        .select('user_id')
+        .eq('email', userData.email)
+        .single();
+
+      if (userError) throw userError;
+      if (!userData2) throw new Error('User not found');
+
       const { error } = await supabase
         .from('extraction')
-        .update({ is_archived: true })
+        .update({ 
+          is_archived: true,
+          updated_by: userData2.user_id,
+          updated_at: new Date().toISOString()
+        })
         .eq('extraction_id', fileToArchive.extraction_id);
 
       if (error) throw error;
