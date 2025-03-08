@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardDescription,
   CardFooter,
+  CardTitle,
 } from "@/components/ui/card";
 import {
   LineChart,
@@ -38,16 +39,52 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Sample data
-const complaintData = [
-  { day: "Mon", complaints: 10 },
-  { day: "Tue", complaints: 15 },
-  { day: "Wed", complaints: 5 },
-  { day: "Thu", complaints: 20 },
-  { day: "Fri", complaints: 8 },
-  { day: "Sat", complaints: 12 },
-  { day: "Sun", complaints: 7 },
+// Sample data for different file types
+const regularFilesData = [
+  { day: "Mon", total: 8 },
+  { day: "Tue", total: 12 },
+  { day: "Wed", total: 7 },
+  { day: "Thu", total: 15 },
+  { day: "Fri", total: 10 },
+  { day: "Sat", total: 5 },
+  { day: "Sun", total: 3 },
 ];
+
+const eblotterFilesData = [
+  { day: "Mon", total: 5 },
+  { day: "Tue", total: 8 },
+  { day: "Wed", total: 12 },
+  { day: "Thu", total: 15 },
+  { day: "Fri", total: 10 },
+  { day: "Sat", total: 20 },
+  { day: "Sun", total: 25 },
+];
+
+const womenChildrenFilesData = [
+  { day: "Mon", total: 3 },
+  { day: "Tue", total: 7 },
+  { day: "Wed", total: 9 },
+  { day: "Thu", total: 12 },
+  { day: "Fri", total: 8 },
+  { day: "Sat", total: 6 },
+  { day: "Sun", total: 4 },
+];
+
+const extractionFilesData = [
+  { day: "Mon", total: 6 },
+  { day: "Tue", total: 9 },
+  { day: "Wed", total: 11 },
+  { day: "Thu", total: 8 },
+  { day: "Fri", total: 14 },
+  { day: "Sat", total: 7 },
+  { day: "Sun", total: 5 },
+];
+
+// Calculate totals for each file type
+const totalRegularFiles = regularFilesData.reduce((acc, curr) => acc + curr.total, 0);
+const totalEblotterFiles = eblotterFilesData.reduce((acc, curr) => acc + curr.total, 0);
+const totalWomenChildrenFiles = womenChildrenFilesData.reduce((acc, curr) => acc + curr.total, 0);
+const totalExtractionFiles = extractionFilesData.reduce((acc, curr) => acc + curr.total, 0);
 
 const officerData = [
   { officer: "Officer A", filesUploaded: 50 },
@@ -93,33 +130,19 @@ interface CategoryCount {
   value: number;
 }
 
-const crimeCategoryData = [
-  { name: "Theft", value: 400 },
-  { name: "Assault", value: 300 },
-  { name: "Burglary", value: 200 },
-  { name: "Fraud", value: 100 },
-  { name: "Vandalism", value: 50 },
-];
-
-const totalComplaintsData = [
-  { day: "Mon", total: 5 },
-  { day: "Tue", total: 8 },
-  { day: "Wed", total: 12 },
-  { day: "Thu", total: 15 },
-  { day: "Fri", total: 10 },
-  { day: "Sat", total: 20 },
-  { day: "Sun", total: 25 },
-];
-
-const totalComplaints = totalComplaintsData.reduce(
-  (acc, curr) => acc + curr.total,
-  0
-);
-
 export default function Dashboard() {
-  const [selectedData, setSelectedData] = useState("complaints");
+  const [selectedData, setSelectedData] = useState("regularFiles");
   const [currentPage, setCurrentPage] = useState(0);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
+  const [regularFilesData, setRegularFilesData] = useState([] as { day: string; total: number }[]);
+  const [eblotterFilesData, setEblotterFilesData] = useState([] as { day: string; total: number }[]);
+  const [womenChildrenFilesData, setWomenChildrenFilesData] = useState([] as { day: string; total: number }[]);
+  const [extractionFilesData, setExtractionFilesData] = useState([] as { day: string; total: number }[]);
+  const [officerData, setOfficerData] = useState([] as { officer: string; filesUploaded: number }[]);
+  const [totalRegularFiles, setTotalRegularFiles] = useState(0);
+  const [totalEblotterFiles, setTotalEblotterFiles] = useState(0);
+  const [totalWomenChildrenFiles, setTotalWomenChildrenFiles] = useState(0);
+  const [totalExtractionFiles, setTotalExtractionFiles] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [categoryData, setCategoryData] = useState<CategoryCount[]>([]);
   const itemsPerPage = 3;
@@ -148,6 +171,120 @@ export default function Dashboard() {
     
     return options;
   };
+
+  // Helper function to get day of week from date
+  const getDayOfWeek = (dateString: string) => {
+    const date = new Date(dateString);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return days[date.getDay()];
+  };
+  
+  // Helper function to group files by day of week
+  const groupFilesByDay = (files: any[]) => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const counts = days.map(day => ({ day, total: 0 }));
+    
+    files.forEach(file => {
+      const day = getDayOfWeek(file.created_at);
+      const index = days.indexOf(day);
+      if (index !== -1) {
+        counts[index].total++;
+      }
+    });
+    
+    return counts;
+  };
+
+  // Fetch data for all file types
+  useEffect(() => {
+    const fetchFileData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch regular files
+        const { data: regularFiles, error: regularError } = await supabase
+          .from('files')
+          .select('*, creator:created_by(name)')
+          .eq('is_archived', false);
+          
+        if (regularError) throw regularError;
+        
+        // Fetch eblotter files
+        const { data: eblotterFiles, error: eblotterError } = await supabase
+          .from('eblotter_file')
+          .select('*, creator:created_by(name)')
+          .eq('is_archived', false);
+          
+        if (eblotterError) throw eblotterError;
+        
+        // Fetch women/children files
+        const { data: womenChildrenFiles, error: womenChildrenError } = await supabase
+          .from('womenchildren_file')
+          .select('*, creator:created_by(name)')
+          .eq('is_archived', false);
+          
+        if (womenChildrenError) throw womenChildrenError;
+        
+        // Fetch extraction files
+        const { data: extractionFiles, error: extractionError } = await supabase
+          .from('extraction')
+          .select('*, creator:created_by(name)')
+          .eq('is_archived', false);
+          
+        if (extractionError) throw extractionError;
+        
+        // Group files by day of week
+        const regularByDay = groupFilesByDay(regularFiles || []);
+        const eblotterByDay = groupFilesByDay(eblotterFiles || []);
+        const womenChildrenByDay = groupFilesByDay(womenChildrenFiles || []);
+        const extractionByDay = groupFilesByDay(extractionFiles || []);
+        
+        // Set state
+        setRegularFilesData(regularByDay);
+        setEblotterFilesData(eblotterByDay);
+        setWomenChildrenFilesData(womenChildrenByDay);
+        setExtractionFilesData(extractionByDay);
+        
+        // Calculate totals
+        setTotalRegularFiles((regularFiles || []).length);
+        setTotalEblotterFiles((eblotterFiles || []).length);
+        setTotalWomenChildrenFiles((womenChildrenFiles || []).length);
+        setTotalExtractionFiles((extractionFiles || []).length);
+        
+        // Combine all files for officer data calculation
+        const allFiles = [
+          ...(regularFiles || []),
+          ...(eblotterFiles || []),
+          ...(womenChildrenFiles || []),
+          ...(extractionFiles || [])
+        ];
+        
+        // Group files by creator
+        const creatorMap = new Map();
+        allFiles.forEach(file => {
+          const creatorName = file.creator?.name || 'Unknown';
+          if (creatorMap.has(creatorName)) {
+            creatorMap.set(creatorName, creatorMap.get(creatorName) + 1);
+          } else {
+            creatorMap.set(creatorName, 1);
+          }
+        });
+        
+        // Convert map to array and sort by number of files (descending)
+        const officerUploads = Array.from(creatorMap.entries())
+          .map(([officer, filesUploaded]) => ({ officer, filesUploaded }))
+          .sort((a, b) => b.filesUploaded - a.filesUploaded)
+          .slice(0, 10); // Get top 10 officers
+        
+        setOfficerData(officerUploads);
+      } catch (error) {
+        console.error('Error fetching file data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchFileData();
+  }, []);
 
   // Fetch category usage data
   useEffect(() => {
@@ -348,7 +485,7 @@ export default function Dashboard() {
   // Function to get file type display name
   const getFileTypeDisplay = (type: string) => {
     switch (type) {
-      case 'regular':
+      case 'Incident Report':
         return 'Incident Report';
       case 'eblotter':
         return 'E-Blotter';
@@ -361,6 +498,27 @@ export default function Dashboard() {
     }
   };
 
+  // Get the appropriate data and total based on the selected data type
+  const getSelectedData = () => {
+    switch (selectedData) {
+      case "regularFiles":
+        return { data: regularFilesData, total: totalRegularFiles };
+      case "eblotterFiles":
+        return { data: eblotterFilesData, total: totalEblotterFiles };
+      case "womenChildrenFiles":
+        return { data: womenChildrenFilesData, total: totalWomenChildrenFiles };
+      case "extractionFiles":
+        return { data: extractionFilesData, total: totalExtractionFiles };
+      case "officerUploads":
+        return { 
+          data: officerData, 
+          total: officerData.reduce((acc, curr) => acc + curr.filesUploaded, 0) 
+        };
+      default:
+        return { data: regularFilesData, total: totalRegularFiles };
+    }
+  };
+
   return (
     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-poppins">
       <h1 className="text-2xl font-medium mb-4 text-blue-900 col-span-3">
@@ -369,87 +527,123 @@ export default function Dashboard() {
 
       {/* Complaints Uploaded Over Time Card */}
       <Card className="p-2 shadow-md col-span-1 lg:col-span-1 h-80">
-        <CardHeader className="font-semibold flex-grow text-center text-md text-blue-900">
-          Data Visualization
-          <CardDescription className="font-normal text-black">
-            {/* Dropdown to select data type */}
-            <div className="mb-2 flex justify-center items-center">
-              <label htmlFor="data-select" className="mr-2 text-sm">
-                Select Data Type:
-              </label>
-              <select
-                id="data-select"
-                value={selectedData}
-                onChange={handleDataChange}
-                className="p-1 border rounded text-sm"
-              >
-                <option value="complaints" className="text-sm">
-                  Complaints
-                </option>
-                <option value="officerUploads" className="text-sm">
-                  Officer Uploads
-                </option>
-              </select>
+        <CardHeader>
+          <CardTitle className="text-lg">
+            {selectedData === "officerUploads" 
+              ? "Officer Upload Stats" 
+              : selectedData === "Incident Report" 
+                ? "Incident Report" 
+                : selectedData === "eblotterFiles" 
+                  ? "E-Blotter Files" 
+                  : selectedData === "womenChildrenFiles" 
+                    ? "Women & Children Files" 
+                    : "Extraction Files"}
+          </CardTitle>
+          <CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                {selectedData === "officerUploads" 
+                  ? "Files uploaded by officers" 
+                  : "Weekly file statistics"}
+              </div>
+              <div className="flex items-center">
+                <label htmlFor="data-select" className="mr-2 text-sm">
+                  Select Data Type:
+                </label>
+                <select
+                  id="data-select"
+                  value={selectedData}
+                  onChange={handleDataChange}
+                  className="p-1 border rounded text-sm"
+                >
+                  <option value="Incident Report" className="text-sm">
+                    Incident Report
+                  </option>
+                  <option value="eblotterFiles" className="text-sm">
+                    E-Blotter Files
+                  </option>
+                  <option value="womenChildrenFiles" className="text-sm">
+                    Women & Children Files
+                  </option>
+                  <option value="extractionFiles" className="text-sm">
+                    Extraction Files
+                  </option>
+                  <option value="officerUploads" className="text-sm">
+                    Officer Uploads
+                  </option>
+                </select>
+              </div>
             </div>
           </CardDescription>
         </CardHeader>
         <CardContent className="h-36">
-          <ResponsiveContainer width="100%" height="100%">
-            {selectedData === "complaints" ? (
-              <LineChart data={complaintData}>
-                <XAxis dataKey="day" stroke="#3b82f6" />
-                <YAxis stroke="#3b82f6" />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="complaints"
-                  stroke="#3b82f6"
-                  strokeWidth={3}
-                  dot={{ stroke: "#3b82f6", strokeWidth: 2 }}
-                />
-              </LineChart>
-            ) : (
-              <BarChart data={officerData}>
-                <XAxis dataKey="officer" stroke="#3b82f6" />
-                <YAxis stroke="#3b82f6" />
-                <Tooltip />
-                <Bar
-                  dataKey="filesUploaded"
-                  fill="#3b82f6"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            )}
-          </ResponsiveContainer>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              {selectedData === "officerUploads" ? (
+                <BarChart data={officerData}>
+                  <XAxis dataKey="officer" stroke="#3b82f6" />
+                  <YAxis stroke="#3b82f6" />
+                  <Tooltip />
+                  <Bar
+                    dataKey="filesUploaded"
+                    fill="#3b82f6"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              ) : (
+                <LineChart data={getSelectedData().data}>
+                  <XAxis dataKey="day" stroke="#3b82f6" />
+                  <YAxis stroke="#3b82f6" />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="total"
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    dot={{ stroke: "#3b82f6", strokeWidth: 2 }}
+                  />
+                </LineChart>
+              )}
+            </ResponsiveContainer>
+          )}
         </CardContent>
-        <CardFooter className="flex-col gap-2 text-sm">
-          <div className="flex items-center gap-2 font-medium leading-none">
-            <TrendingUp className="h-4 w-4 text-green-500" />
-            Trending up by 5.2% this month
+        <CardFooter className="flex justify-between text-sm text-muted-foreground">
+          <div>
+            {isLoading ? (
+              <span>Loading...</span>
+            ) : (
+              <span>Total: {getSelectedData().total}</span>
+            )}
           </div>
-          <div className="leading-none text-muted-foreground">
-            Showing total complaints for the last 6 months
-          </div>
+          <div>Updated just now</div>
         </CardFooter>
       </Card>
 
-      {/* Total Complaints Today Card */}
+      {/* Total Files Card */}
       <Card className="p-2 shadow-md col-span-1 h-80">
         <CardHeader className="font-semibold mb-2 text-center text-md text-blue-900">
-          Total Complaints Today
+          Total Files
         </CardHeader>
         <CardContent className="flex justify-center items-center h-32">
           <span className="text-7xl font-bold">
-            {totalComplaints.toLocaleString()}
+            {isLoading ? (
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
+            ) : (
+              (totalRegularFiles + totalEblotterFiles + totalWomenChildrenFiles + totalExtractionFiles).toLocaleString()
+            )}
           </span>
         </CardContent>
         <CardFooter className="flex-col gap-2 text-sm">
           <div className="flex items-center gap-2 font-medium leading-none">
-            <TrendingDown className="h-4 w-4 text-green-500" />
-            Trending down by 2.1% this month
+            <TrendingUp className="h-4 w-4 text-green-500" />
+            All files in the system
           </div>
           <div className="leading-none text-muted-foreground">
-            Showing total complaints for the last week
+            Updated just now
           </div>
         </CardFooter>
       </Card>
