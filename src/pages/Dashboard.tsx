@@ -521,30 +521,24 @@ export default function Dashboard() {
         Dashboard
       </h1>
 
-      {/* Complaints Uploaded Over Time Card */}
+      {/* File Statistics Card */}
       <Card className="p-2 shadow-md col-span-1 lg:col-span-1 h-80">
         <CardHeader>
           <CardTitle className="text-lg">
-            {selectedData === "officerUploads" 
-              ? "Officer Upload Stats" 
-              : selectedData === "Incident Report" 
-                ? "Incident Report" 
-                : selectedData === "eblotterFiles" 
-                  ? "E-Blotter Files" 
-                  : selectedData === "womenChildrenFiles" 
-                    ? "Women & Children Files" 
-                    : "Extraction Files"}
+            {selectedData === "Incident Report" 
+              ? "Incident Report" 
+              : selectedData === "eblotterFiles" 
+                ? "E-Blotter Files" 
+                : selectedData === "womenChildrenFiles" 
+                  ? "Women & Children Files" 
+                  : "Extraction Files"}
           </CardTitle>
           <CardDescription>
             <div className="flex items-center justify-between">
-              <div>
-                {selectedData === "officerUploads" 
-                  ? "Files uploaded by officers" 
-                  : "Weekly file statistics"}
-              </div>
+              <div>Weekly file statistics</div>
               <div className="flex items-center">
                 <label htmlFor="data-select" className="mr-2 text-sm">
-                  Select Data Type:
+                  Select Type:
                 </label>
                 <select
                   id="data-select"
@@ -564,9 +558,6 @@ export default function Dashboard() {
                   <option value="extractionFiles" className="text-sm">
                     Extraction Files
                   </option>
-                  <option value="officerUploads" className="text-sm">
-                    Officer Uploads
-                  </option>
                 </select>
               </div>
             </div>
@@ -579,31 +570,18 @@ export default function Dashboard() {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              {selectedData === "officerUploads" ? (
-                <BarChart data={officerData}>
-                  <XAxis dataKey="officer" stroke="#3b82f6" />
-                  <YAxis stroke="#3b82f6" />
-                  <Tooltip />
-                  <Bar
-                    dataKey="filesUploaded"
-                    fill="#3b82f6"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              ) : (
-                <LineChart data={getSelectedData().data}>
-                  <XAxis dataKey="day" stroke="#3b82f6" />
-                  <YAxis stroke="#3b82f6" />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="total"
-                    stroke="#3b82f6"
-                    strokeWidth={3}
-                    dot={{ stroke: "#3b82f6", strokeWidth: 2 }}
-                  />
-                </LineChart>
-              )}
+              <LineChart data={getSelectedData().data}>
+                <XAxis dataKey="day" stroke="#3b82f6" />
+                <YAxis stroke="#3b82f6" />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#3b82f6"
+                  strokeWidth={3}
+                  dot={{ stroke: "#3b82f6", strokeWidth: 2 }}
+                />
+              </LineChart>
             </ResponsiveContainer>
           )}
         </CardContent>
@@ -613,6 +591,44 @@ export default function Dashboard() {
               <span>Loading...</span>
             ) : (
               <span>Total: {getSelectedData().total}</span>
+            )}
+          </div>
+          <div>Updated just now</div>
+        </CardFooter>
+      </Card>
+
+      {/* Officer Upload Stats Card */}
+      <Card className="p-2 shadow-md col-span-1 lg:col-span-1 h-80">
+        <CardHeader>
+          <CardTitle className="text-lg">Officer Upload Statistics</CardTitle>
+          <CardDescription>Files uploaded by officers this week</CardDescription>
+        </CardHeader>
+        <CardContent className="h-36">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={officerData}>
+                <XAxis dataKey="officer" stroke="#3b82f6" />
+                <YAxis stroke="#3b82f6" />
+                <Tooltip />
+                <Bar
+                  dataKey="filesUploaded"
+                  fill="#3b82f6"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-between text-sm text-muted-foreground">
+          <div>
+            {isLoading ? (
+              <span>Loading...</span>
+            ) : (
+              <span>Total Uploads: {officerData.reduce((acc, curr) => acc + curr.filesUploaded, 0)}</span>
             )}
           </div>
           <div>Updated just now</div>
