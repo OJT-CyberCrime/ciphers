@@ -146,6 +146,13 @@ interface FileWithUser {
   };
 }
 
+interface FileCreator {
+  created_by: string;
+  creator: {
+    name: string;
+  } | null;
+}
+
 export default function Dashboard() {
   const [selectedData, setSelectedData] = useState("regularFiles");
   const [currentPage, setCurrentPage] = useState(0);
@@ -163,6 +170,10 @@ export default function Dashboard() {
   const [categoryData, setCategoryData] = useState<CategoryCount[]>([]);
   const itemsPerPage = 3;
   const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [selectedOfficerMonth, setSelectedOfficerMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
@@ -463,6 +474,71 @@ export default function Dashboard() {
     fetchRecentFiles();
   }, []);
 
+  // Add new useEffect for officer data with month filtering
+  useEffect(() => {
+    const fetchOfficerData = async () => {
+      try {
+        const [year, month] = selectedOfficerMonth.split('-').map(Number);
+        const startOfMonth = new Date(year, month - 1, 1).toISOString();
+        const endOfMonth = new Date(year, month, 0).toISOString();
+
+        // Fetch all files created in the selected month
+        const [regularFiles, eblotterFiles, womenchildrenFiles, extractionFiles] = await Promise.all([
+          supabase
+            .from('files')
+            .select('created_by, creator:users!created_by(name)')
+            .gte('created_at', startOfMonth)
+            .lte('created_at', endOfMonth)
+            .then(({ data }) => (data || []) as unknown as FileCreator[]),
+          supabase
+            .from('eblotter_file')
+            .select('created_by, creator:users!created_by(name)')
+            .gte('created_at', startOfMonth)
+            .lte('created_at', endOfMonth)
+            .then(({ data }) => (data || []) as unknown as FileCreator[]),
+          supabase
+            .from('womenchildren_file')
+            .select('created_by, creator:users!created_by(name)')
+            .gte('created_at', startOfMonth)
+            .lte('created_at', endOfMonth)
+            .then(({ data }) => (data || []) as unknown as FileCreator[]),
+          supabase
+            .from('extraction')
+            .select('created_by, creator:users!created_by(name)')
+            .gte('created_at', startOfMonth)
+            .lte('created_at', endOfMonth)
+            .then(({ data }) => (data || []) as unknown as FileCreator[])
+        ]);
+
+        // Combine all files and count by officer
+        const allFiles = [
+          ...regularFiles,
+          ...eblotterFiles,
+          ...womenchildrenFiles,
+          ...extractionFiles
+        ];
+
+        const officerCounts = new Map<string, number>();
+        
+        allFiles.forEach(file => {
+          const officerName = file.creator?.name || 'Unknown';
+          officerCounts.set(officerName, (officerCounts.get(officerName) || 0) + 1);
+        });
+
+        // Convert to array and sort by number of files
+        const sortedOfficers = Array.from(officerCounts.entries())
+          .map(([officer, filesUploaded]) => ({ officer, filesUploaded }))
+          .sort((a, b) => b.filesUploaded - a.filesUploaded);
+
+        setOfficerData(sortedOfficers);
+      } catch (error) {
+        console.error('Error fetching officer data:', error);
+      }
+    };
+
+    fetchOfficerData();
+  }, [selectedOfficerMonth]);
+
   const handleDataChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedData(event.target.value);
   };
@@ -601,7 +677,26 @@ export default function Dashboard() {
       <Card className="p-2 shadow-md col-span-1 lg:col-span-1 h-80">
         <CardHeader>
           <CardTitle className="text-lg">Officer Upload Statistics</CardTitle>
-          <CardDescription>Files uploaded by officers this week</CardDescription>
+          <CardDescription className="flex flex-col gap-2">
+            <span>Files uploaded by officers</span>
+            <Select
+              value={selectedOfficerMonth}
+              onValueChange={setSelectedOfficerMonth}
+            >
+              <SelectTrigger className="w-[180px] h-8 text-sm">
+                <SelectValue placeholder="Select month">
+                  {formatSelectedMonth(selectedOfficerMonth)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {getMonthOptions().map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardDescription>
         </CardHeader>
         <CardContent className="h-36">
           {isLoading ? (
