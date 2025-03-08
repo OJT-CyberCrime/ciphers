@@ -177,6 +177,10 @@ export default function Dashboard() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+  const [selectedTotalMonth, setSelectedTotalMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   // Helper function to format the selected month
   const formatSelectedMonth = (dateString: string) => {
@@ -539,6 +543,49 @@ export default function Dashboard() {
     fetchOfficerData();
   }, [selectedOfficerMonth]);
 
+  // Add new useEffect for monthly totals
+  useEffect(() => {
+    const fetchMonthlyTotals = async () => {
+      try {
+        const [year, month] = selectedTotalMonth.split('-').map(Number);
+        const startOfMonth = new Date(year, month - 1, 1).toISOString();
+        const endOfMonth = new Date(year, month, 0).toISOString();
+
+        const [regularFiles, eblotterFiles, womenchildrenFiles, extractionFiles] = await Promise.all([
+          supabase
+            .from('files')
+            .select('file_id', { count: 'exact' })
+            .gte('created_at', startOfMonth)
+            .lte('created_at', endOfMonth),
+          supabase
+            .from('eblotter_file')
+            .select('blotter_id', { count: 'exact' })
+            .gte('created_at', startOfMonth)
+            .lte('created_at', endOfMonth),
+          supabase
+            .from('womenchildren_file')
+            .select('file_id', { count: 'exact' })
+            .gte('created_at', startOfMonth)
+            .lte('created_at', endOfMonth),
+          supabase
+            .from('extraction')
+            .select('extraction_id', { count: 'exact' })
+            .gte('created_at', startOfMonth)
+            .lte('created_at', endOfMonth)
+        ]);
+
+        setTotalRegularFiles(regularFiles.count || 0);
+        setTotalEblotterFiles(eblotterFiles.count || 0);
+        setTotalWomenChildrenFiles(womenchildrenFiles.count || 0);
+        setTotalExtractionFiles(extractionFiles.count || 0);
+      } catch (error) {
+        console.error('Error fetching monthly totals:', error);
+      }
+    };
+
+    fetchMonthlyTotals();
+  }, [selectedTotalMonth]);
+
   const handleDataChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedData(event.target.value);
   };
@@ -732,26 +779,64 @@ export default function Dashboard() {
 
       {/* Total Files Card */}
       <Card className="p-2 shadow-md col-span-1 h-80">
-        <CardHeader className="font-semibold mb-2 text-center text-md text-blue-900">
-          Total Files
+        <CardHeader className="font-semibold text-center text-md text-blue-900">
+          <div className="flex flex-col items-center gap-2">
+            <span>Total Files</span>
+            <Select
+              value={selectedTotalMonth}
+              onValueChange={setSelectedTotalMonth}
+            >
+              <SelectTrigger className="w-[180px] h-8 text-sm">
+                <SelectValue placeholder="Select month">
+                  {formatSelectedMonth(selectedTotalMonth)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {getMonthOptions().map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
-        <CardContent className="flex justify-center items-center h-32">
-          <span className="text-7xl font-bold">
-            {isLoading ? (
+        <CardContent className="flex flex-col gap-4 py-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
-            ) : (
-              (totalRegularFiles + totalEblotterFiles + totalWomenChildrenFiles + totalExtractionFiles).toLocaleString()
-            )}
-          </span>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col items-center p-2 bg-blue-50 rounded-lg">
+                  <span className="text-sm text-blue-900 font-medium">Incident Reports</span>
+                  <span className="text-2xl font-bold text-blue-900">{totalRegularFiles}</span>
+                </div>
+                <div className="flex flex-col items-center p-2 bg-green-50 rounded-lg">
+                  <span className="text-sm text-green-900 font-medium">E-Blotter</span>
+                  <span className="text-2xl font-bold text-green-900">{totalEblotterFiles}</span>
+                </div>
+                <div className="flex flex-col items-center p-2 bg-purple-50 rounded-lg">
+                  <span className="text-sm text-purple-900 font-medium">Women & Children</span>
+                  <span className="text-2xl font-bold text-purple-900">{totalWomenChildrenFiles}</span>
+                </div>
+                <div className="flex flex-col items-center p-2 bg-orange-50 rounded-lg">
+                  <span className="text-sm text-orange-900 font-medium">Extraction</span>
+                  <span className="text-2xl font-bold text-orange-900">{totalExtractionFiles}</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-center border-t pt-4">
+                <span className="text-sm text-gray-600">Total Files</span>
+                <span className="text-3xl font-bold text-gray-900">
+                  {(totalRegularFiles + totalEblotterFiles + totalWomenChildrenFiles + totalExtractionFiles).toLocaleString()}
+                </span>
+              </div>
+            </>
+          )}
         </CardContent>
-        <CardFooter className="flex-col gap-2 text-sm">
-          <div className="flex items-center gap-2 font-medium leading-none">
-            <TrendingUp className="h-4 w-4 text-green-500" />
-            All files in the system
-          </div>
-          <div className="leading-none text-muted-foreground">
-            Updated just now
-          </div>
+        <CardFooter className="flex justify-center text-sm text-muted-foreground">
+          <div>Updated just now</div>
         </CardFooter>
       </Card>
 
