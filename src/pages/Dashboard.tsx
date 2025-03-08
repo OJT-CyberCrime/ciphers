@@ -121,13 +121,29 @@ interface RecentFile {
   id: number;
   title: string;
   uploaded_by: string;
-  file_type: 'regular' | 'eblotter' | 'womenchildren' | 'extraction';
+  file_type: 'Incident report' | 'eblotter' | 'womenchildren' | 'extraction';
   created_at: string;
 }
 
 interface CategoryCount {
   name: string;
   value: number;
+}
+
+interface UserInfo {
+  name: string;
+}
+
+interface FileWithUser {
+  file_id?: number;
+  blotter_id?: number;
+  extraction_id?: number;
+  title: string;
+  created_by: string;
+  created_at: string;
+  creator?: {
+    name: string;
+  };
 }
 
 export default function Dashboard() {
@@ -346,16 +362,19 @@ export default function Dashboard() {
               title,
               created_by,
               created_at,
-              creator:created_by(name)
+              creator:users!created_by(name)
             `)
             .order('created_at', { ascending: false })
             .limit(5)
             .then(({ data, error }) => {
               if (error) throw error;
-              return (data || []).map(file => ({
-                ...file,
-                creator: file.creator ? { name: file.creator[0]?.name } : null
-              })) as RegularFile[];
+              return ((data || []) as unknown as FileWithUser[]).map(file => ({
+                id: file.file_id!,
+                title: file.title,
+                uploaded_by: file.creator?.name || 'Unknown',
+                created_at: file.created_at,
+                file_type: 'Incident report' as const
+              }));
             }),
           
           // E-blotter files
@@ -366,16 +385,19 @@ export default function Dashboard() {
               title,
               created_by,
               created_at,
-              creator:created_by(name)
+              creator:users!created_by(name)
             `)
             .order('created_at', { ascending: false })
             .limit(5)
             .then(({ data, error }) => {
               if (error) throw error;
-              return (data || []).map(file => ({
-                ...file,
-                creator: file.creator ? { name: file.creator[0]?.name } : null
-              })) as EblotterFile[];
+              return ((data || []) as unknown as FileWithUser[]).map(file => ({
+                id: file.blotter_id!,
+                title: file.title,
+                uploaded_by: file.creator?.name || 'Unknown',
+                created_at: file.created_at,
+                file_type: 'eblotter' as const
+              }));
             }),
           
           // Women and children files
@@ -386,16 +408,19 @@ export default function Dashboard() {
               title,
               created_by,
               created_at,
-              creator:created_by(name)
+              creator:users!created_by(name)
             `)
             .order('created_at', { ascending: false })
             .limit(5)
             .then(({ data, error }) => {
               if (error) throw error;
-              return (data || []).map(file => ({
-                ...file,
-                creator: file.creator ? { name: file.creator[0]?.name } : null
-              })) as WomenChildrenFile[];
+              return ((data || []) as unknown as FileWithUser[]).map(file => ({
+                id: file.file_id!,
+                title: file.title,
+                uploaded_by: file.creator?.name || 'Unknown',
+                created_at: file.created_at,
+                file_type: 'womenchildren' as const
+              }));
             }),
           
           // Extraction files
@@ -406,55 +431,26 @@ export default function Dashboard() {
               title,
               created_by,
               created_at,
-              creator:created_by(name)
+              creator:users!created_by(name)
             `)
             .order('created_at', { ascending: false })
             .limit(5)
             .then(({ data, error }) => {
               if (error) throw error;
-              return (data || []).map(file => ({
-                ...file,
-                creator: file.creator ? { name: file.creator[0]?.name } : null
-              })) as ExtractionFile[];
+              return ((data || []) as unknown as FileWithUser[]).map(file => ({
+                id: file.extraction_id!,
+                title: file.title,
+                uploaded_by: file.creator?.name || 'Unknown',
+                created_at: file.created_at,
+                file_type: 'extraction' as const
+              }));
             })
         ]);
 
-        // Combine and format all files
-        const allFiles = [
-          ...regularFiles.map(file => ({
-            id: file.file_id,
-            title: file.title,
-            uploaded_by: file.creator?.name || file.created_by,
-            created_at: file.created_at,
-            file_type: 'regular' as const
-          })),
-          ...eblotterFiles.map(file => ({
-            id: file.blotter_id,
-            title: file.title,
-            uploaded_by: file.creator?.name || file.created_by,
-            created_at: file.created_at,
-            file_type: 'eblotter' as const
-          })),
-          ...womenchildrenFiles.map(file => ({
-            id: file.file_id,
-            title: file.title,
-            uploaded_by: file.creator?.name || file.created_by,
-            created_at: file.created_at,
-            file_type: 'womenchildren' as const
-          })),
-          ...extractionFiles.map(file => ({
-            id: file.extraction_id,
-            title: file.title,
-            uploaded_by: file.creator?.name || file.created_by,
-            created_at: file.created_at,
-            file_type: 'extraction' as const
-          }))
-        ];
-
-        // Sort by created_at and take the most recent 10
-        const sortedFiles = allFiles.sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        ).slice(0, 10);
+        // Combine and sort all files
+        const sortedFiles = [...regularFiles, ...eblotterFiles, ...womenchildrenFiles, ...extractionFiles]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 10);
 
         setRecentFiles(sortedFiles);
       } catch (error) {
