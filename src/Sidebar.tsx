@@ -42,17 +42,17 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
   };
 
   return (
-    <aside className="fixed top-0 left-0 h-screen w-64 bg-white shadow-md p-5 flex flex-col z-50">
+    <aside className="fixed top-0 left-0 h-screen w-64 bg-white shadow-sm p-5 flex flex-col z-50">
       <ScrollArea className="h-full">
         <div className="flex flex-col items-center">
           <img
             src="/assets/RACU.png"
             alt="RACU Logo"
-            className="w-20 h-20 mb-2 mt-5"
+            className="w-20 h-20 mb-10 mt-5 object-contain"
           />
-          <h1 className="text-xl font-bold mb-8 font-poppins text-center text-blue-900">
-            CIPHERS
-          </h1>
+          {/* <h1 className="text-2xl font-bold text-blue-900 font-poppins mb-10">
+            CRIMS
+          </h1> */}
         </div>
         <nav className="space-y-4 font-poppins text-sm">
           <SidebarLink to="/dashboard" icon={<Home size={20} />} label="Dashboard" />

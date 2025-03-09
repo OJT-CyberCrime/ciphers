@@ -72,14 +72,14 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 overflow-hidden">
+    <div className="min-h-screen bg-gray-50 overflow-hidden">
       <Router>
-        <div className={`flex ${isLoggedIn ? "ml-64" : ""}`}>
+        <div className={`flex ${isLoggedIn ? "ml-64" : "ml-0"}`}>
           {/* Sidebar appears only if logged in */}
           {isLoggedIn && <Sidebar setIsLoggedIn={setIsLoggedIn} />}
 
           {/* Main Content */}
-          <main className="flex-1 p-6">
+          <main className={`flex-1 ${isLoggedIn ? "p-6" : ""}`}>
             <Routes>
               <Route path="/login" element={
                 isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login setIsLoggedIn={setIsLoggedIn} />

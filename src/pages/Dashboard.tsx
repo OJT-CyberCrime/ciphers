@@ -81,10 +81,22 @@ const extractionFilesData = [
 ];
 
 // Calculate totals for each file type
-const totalRegularFiles = regularFilesData.reduce((acc, curr) => acc + curr.total, 0);
-const totalEblotterFiles = eblotterFilesData.reduce((acc, curr) => acc + curr.total, 0);
-const totalWomenChildrenFiles = womenChildrenFilesData.reduce((acc, curr) => acc + curr.total, 0);
-const totalExtractionFiles = extractionFilesData.reduce((acc, curr) => acc + curr.total, 0);
+const totalRegularFiles = regularFilesData.reduce(
+  (acc, curr) => acc + curr.total,
+  0
+);
+const totalEblotterFiles = eblotterFilesData.reduce(
+  (acc, curr) => acc + curr.total,
+  0
+);
+const totalWomenChildrenFiles = womenChildrenFilesData.reduce(
+  (acc, curr) => acc + curr.total,
+  0
+);
+const totalExtractionFiles = extractionFilesData.reduce(
+  (acc, curr) => acc + curr.total,
+  0
+);
 
 const officerData = [
   { officer: "Officer A", filesUploaded: 50 },
@@ -121,7 +133,7 @@ interface RecentFile {
   id: number;
   title: string;
   uploaded_by: string;
-  file_type: 'Incident report' | 'eblotter' | 'womenchildren' | 'extraction';
+  file_type: "Incident report" | "eblotter" | "womenchildren" | "extraction";
   created_at: string;
 }
 
@@ -157,11 +169,21 @@ export default function Dashboard() {
   const [selectedData, setSelectedData] = useState("regularFiles");
   const [currentPage, setCurrentPage] = useState(0);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
-  const [regularFilesData, setRegularFilesData] = useState([] as { day: string; total: number }[]);
-  const [eblotterFilesData, setEblotterFilesData] = useState([] as { day: string; total: number }[]);
-  const [womenChildrenFilesData, setWomenChildrenFilesData] = useState([] as { day: string; total: number }[]);
-  const [extractionFilesData, setExtractionFilesData] = useState([] as { day: string; total: number }[]);
-  const [officerData, setOfficerData] = useState([] as { officer: string; filesUploaded: number }[]);
+  const [regularFilesData, setRegularFilesData] = useState(
+    [] as { day: string; total: number }[]
+  );
+  const [eblotterFilesData, setEblotterFilesData] = useState(
+    [] as { day: string; total: number }[]
+  );
+  const [womenChildrenFilesData, setWomenChildrenFilesData] = useState(
+    [] as { day: string; total: number }[]
+  );
+  const [extractionFilesData, setExtractionFilesData] = useState(
+    [] as { day: string; total: number }[]
+  );
+  const [officerData, setOfficerData] = useState(
+    [] as { officer: string; filesUploaded: number }[]
+  );
   const [totalRegularFiles, setTotalRegularFiles] = useState(0);
   const [totalEblotterFiles, setTotalEblotterFiles] = useState(0);
   const [totalWomenChildrenFiles, setTotalWomenChildrenFiles] = useState(0);
@@ -171,58 +193,75 @@ export default function Dashboard() {
   const itemsPerPage = 3;
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}`;
   });
   const [selectedOfficerMonth, setSelectedOfficerMonth] = useState(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}`;
   });
   const [selectedTotalMonth, setSelectedTotalMonth] = useState(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}`;
   });
 
   // Helper function to format the selected month
   const formatSelectedMonth = (dateString: string) => {
-    const [year, month] = dateString.split('-').map(Number);
-    return new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+    const [year, month] = dateString.split("-").map(Number);
+    return new Date(year, month - 1).toLocaleString("default", {
+      month: "long",
+      year: "numeric",
+    });
   };
 
   // Function to get month options (last 12 months)
   const getMonthOptions = () => {
     const options = [];
     const today = new Date();
-    
+
     for (let i = 0; i < 12; i++) {
       const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const label = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+      const value = `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}`;
+      const label = date.toLocaleString("default", {
+        month: "long",
+        year: "numeric",
+      });
       options.push({ value, label });
     }
-    
+
     return options;
   };
 
   // Helper function to get day of week from date
   const getDayOfWeek = (dateString: string) => {
     const date = new Date(dateString);
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     return days[date.getDay()];
   };
-  
+
   // Helper function to group files by day of week
   const groupFilesByDay = (files: any[]) => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const counts = days.map(day => ({ day, total: 0 }));
-    
-    files.forEach(file => {
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const counts = days.map((day) => ({ day, total: 0 }));
+
+    files.forEach((file) => {
       const day = getDayOfWeek(file.created_at);
       const index = days.indexOf(day);
       if (index !== -1) {
         counts[index].total++;
       }
     });
-    
+
     return counts;
   };
 
@@ -233,87 +272,88 @@ export default function Dashboard() {
       try {
         // Fetch regular files
         const { data: regularFiles, error: regularError } = await supabase
-          .from('files')
-          .select('*, creator:created_by(name)')
-          .eq('is_archived', false);
-          
+          .from("files")
+          .select("*, creator:created_by(name)")
+          .eq("is_archived", false);
+
         if (regularError) throw regularError;
-        
+
         // Fetch eblotter files
         const { data: eblotterFiles, error: eblotterError } = await supabase
-          .from('eblotter_file')
-          .select('*, creator:created_by(name)')
-          .eq('is_archived', false);
-          
+          .from("eblotter_file")
+          .select("*, creator:created_by(name)")
+          .eq("is_archived", false);
+
         if (eblotterError) throw eblotterError;
-        
+
         // Fetch women/children files
-        const { data: womenChildrenFiles, error: womenChildrenError } = await supabase
-          .from('womenchildren_file')
-          .select('*, creator:created_by(name)')
-          .eq('is_archived', false);
-          
+        const { data: womenChildrenFiles, error: womenChildrenError } =
+          await supabase
+            .from("womenchildren_file")
+            .select("*, creator:created_by(name)")
+            .eq("is_archived", false);
+
         if (womenChildrenError) throw womenChildrenError;
-        
+
         // Fetch extraction files
         const { data: extractionFiles, error: extractionError } = await supabase
-          .from('extraction')
-          .select('*, creator:created_by(name)')
-          .eq('is_archived', false);
-          
+          .from("extraction")
+          .select("*, creator:created_by(name)")
+          .eq("is_archived", false);
+
         if (extractionError) throw extractionError;
-        
+
         // Group files by day of week
         const regularByDay = groupFilesByDay(regularFiles || []);
         const eblotterByDay = groupFilesByDay(eblotterFiles || []);
         const womenChildrenByDay = groupFilesByDay(womenChildrenFiles || []);
         const extractionByDay = groupFilesByDay(extractionFiles || []);
-        
+
         // Set state
         setRegularFilesData(regularByDay);
         setEblotterFilesData(eblotterByDay);
         setWomenChildrenFilesData(womenChildrenByDay);
         setExtractionFilesData(extractionByDay);
-        
+
         // Calculate totals
         setTotalRegularFiles((regularFiles || []).length);
         setTotalEblotterFiles((eblotterFiles || []).length);
         setTotalWomenChildrenFiles((womenChildrenFiles || []).length);
         setTotalExtractionFiles((extractionFiles || []).length);
-        
+
         // Combine all files for officer data calculation
         const allFiles = [
           ...(regularFiles || []),
           ...(eblotterFiles || []),
           ...(womenChildrenFiles || []),
-          ...(extractionFiles || [])
+          ...(extractionFiles || []),
         ];
-        
+
         // Group files by creator
         const creatorMap = new Map();
-        allFiles.forEach(file => {
-          const creatorName = file.creator?.name || 'Unknown';
+        allFiles.forEach((file) => {
+          const creatorName = file.creator?.name || "Unknown";
           if (creatorMap.has(creatorName)) {
             creatorMap.set(creatorName, creatorMap.get(creatorName) + 1);
           } else {
             creatorMap.set(creatorName, 1);
           }
         });
-        
+
         // Convert map to array and sort by number of files (descending)
         const officerUploads = Array.from(creatorMap.entries())
           .map(([officer, filesUploaded]) => ({ officer, filesUploaded }))
           .sort((a, b) => b.filesUploaded - a.filesUploaded)
           .slice(0, 10); // Get top 10 officers
-        
+
         setOfficerData(officerUploads);
       } catch (error) {
-        console.error('Error fetching file data:', error);
+        console.error("Error fetching file data:", error);
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     fetchFileData();
   }, []);
 
@@ -322,39 +362,43 @@ export default function Dashboard() {
     const fetchCategoryData = async () => {
       try {
         // Parse selected month
-        const [year, month] = selectedMonth.split('-').map(Number);
+        const [year, month] = selectedMonth.split("-").map(Number);
         const startOfMonth = new Date(year, month - 1, 1).toISOString();
         const endOfMonth = new Date(year, month, 0).toISOString();
 
         // Get all categories with their counts from folder_categories for the selected month
         const { data: categoryUsage, error } = await supabase
-          .from('categories')
-          .select(`
+          .from("categories")
+          .select(
+            `
             category_id,
             title,
             folder_categories!inner(
               category_id,
               folders!inner(created_at)
             )
-          `)
-          .gte('folder_categories.folders.created_at', startOfMonth)
-          .lte('folder_categories.folders.created_at', endOfMonth)
-          .order('title');
+          `
+          )
+          .gte("folder_categories.folders.created_at", startOfMonth)
+          .lte("folder_categories.folders.created_at", endOfMonth)
+          .order("title");
 
         if (error) throw error;
 
         // Transform the data to count occurrences
-        const categoryCounts = (categoryUsage || []).map(category => ({
+        const categoryCounts = (categoryUsage || []).map((category) => ({
           name: category.title,
-          value: category.folder_categories?.length || 0
+          value: category.folder_categories?.length || 0,
         }));
 
         // Sort by usage count (descending)
-        const sortedCategories = categoryCounts.sort((a, b) => b.value - a.value);
+        const sortedCategories = categoryCounts.sort(
+          (a, b) => b.value - a.value
+        );
 
         setCategoryData(sortedCategories);
       } catch (error) {
-        console.error('Error fetching category data:', error);
+        console.error("Error fetching category data:", error);
         setCategoryData([]);
       }
     };
@@ -367,109 +411,139 @@ export default function Dashboard() {
     const fetchRecentFiles = async () => {
       try {
         setIsLoading(true);
-        
-        const [regularFiles, eblotterFiles, womenchildrenFiles, extractionFiles] = await Promise.all([
+
+        const [
+          regularFiles,
+          eblotterFiles,
+          womenchildrenFiles,
+          extractionFiles,
+        ] = await Promise.all([
           // Regular files
           supabase
-            .from('files')
-            .select(`
+            .from("files")
+            .select(
+              `
               file_id,
               title,
               created_by,
               created_at,
               creator:users!created_by(name)
-            `)
-            .order('created_at', { ascending: false })
+            `
+            )
+            .order("created_at", { ascending: false })
             .limit(5)
             .then(({ data, error }) => {
               if (error) throw error;
-              return ((data || []) as unknown as FileWithUser[]).map(file => ({
-                id: file.file_id!,
-                title: file.title,
-                uploaded_by: file.creator?.name || 'Unknown',
-                created_at: file.created_at,
-                file_type: 'Incident report' as const
-              }));
+              return ((data || []) as unknown as FileWithUser[]).map(
+                (file) => ({
+                  id: file.file_id!,
+                  title: file.title,
+                  uploaded_by: file.creator?.name || "Unknown",
+                  created_at: file.created_at,
+                  file_type: "Incident report" as const,
+                })
+              );
             }),
-          
+
           // E-blotter files
           supabase
-            .from('eblotter_file')
-            .select(`
+            .from("eblotter_file")
+            .select(
+              `
               blotter_id,
               title,
               created_by,
               created_at,
               creator:users!created_by(name)
-            `)
-            .order('created_at', { ascending: false })
+            `
+            )
+            .order("created_at", { ascending: false })
             .limit(5)
             .then(({ data, error }) => {
               if (error) throw error;
-              return ((data || []) as unknown as FileWithUser[]).map(file => ({
-                id: file.blotter_id!,
-                title: file.title,
-                uploaded_by: file.creator?.name || 'Unknown',
-                created_at: file.created_at,
-                file_type: 'eblotter' as const
-              }));
+              return ((data || []) as unknown as FileWithUser[]).map(
+                (file) => ({
+                  id: file.blotter_id!,
+                  title: file.title,
+                  uploaded_by: file.creator?.name || "Unknown",
+                  created_at: file.created_at,
+                  file_type: "eblotter" as const,
+                })
+              );
             }),
-          
+
           // Women and children files
           supabase
-            .from('womenchildren_file')
-            .select(`
+            .from("womenchildren_file")
+            .select(
+              `
               file_id,
               title,
               created_by,
               created_at,
               creator:users!created_by(name)
-            `)
-            .order('created_at', { ascending: false })
+            `
+            )
+            .order("created_at", { ascending: false })
             .limit(5)
             .then(({ data, error }) => {
               if (error) throw error;
-              return ((data || []) as unknown as FileWithUser[]).map(file => ({
-                id: file.file_id!,
-                title: file.title,
-                uploaded_by: file.creator?.name || 'Unknown',
-                created_at: file.created_at,
-                file_type: 'womenchildren' as const
-              }));
+              return ((data || []) as unknown as FileWithUser[]).map(
+                (file) => ({
+                  id: file.file_id!,
+                  title: file.title,
+                  uploaded_by: file.creator?.name || "Unknown",
+                  created_at: file.created_at,
+                  file_type: "womenchildren" as const,
+                })
+              );
             }),
-          
+
           // Extraction files
           supabase
-            .from('extraction')
-            .select(`
+            .from("extraction")
+            .select(
+              `
               extraction_id,
               title,
               created_by,
               created_at,
               creator:users!created_by(name)
-            `)
-            .order('created_at', { ascending: false })
+            `
+            )
+            .order("created_at", { ascending: false })
             .limit(5)
             .then(({ data, error }) => {
               if (error) throw error;
-              return ((data || []) as unknown as FileWithUser[]).map(file => ({
-                id: file.extraction_id!,
-                title: file.title,
-                uploaded_by: file.creator?.name || 'Unknown',
-                created_at: file.created_at,
-                file_type: 'extraction' as const
-              }));
-            })
+              return ((data || []) as unknown as FileWithUser[]).map(
+                (file) => ({
+                  id: file.extraction_id!,
+                  title: file.title,
+                  uploaded_by: file.creator?.name || "Unknown",
+                  created_at: file.created_at,
+                  file_type: "extraction" as const,
+                })
+              );
+            }),
         ]);
 
         // Combine and sort all files
-        const sortedFiles = [...regularFiles, ...eblotterFiles, ...womenchildrenFiles, ...extractionFiles]
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        const sortedFiles = [
+          ...regularFiles,
+          ...eblotterFiles,
+          ...womenchildrenFiles,
+          ...extractionFiles,
+        ]
+          .sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() -
+              new Date(a.created_at).getTime()
+          )
           .slice(0, 10);
 
         setRecentFiles(sortedFiles);
       } catch (error) {
-        console.error('Error fetching recent files:', error);
+        console.error("Error fetching recent files:", error);
       } finally {
         setIsLoading(false);
       }
@@ -482,36 +556,41 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchOfficerData = async () => {
       try {
-        const [year, month] = selectedOfficerMonth.split('-').map(Number);
+        const [year, month] = selectedOfficerMonth.split("-").map(Number);
         const startOfMonth = new Date(year, month - 1, 1).toISOString();
         const endOfMonth = new Date(year, month, 0).toISOString();
 
         // Fetch all files created in the selected month
-        const [regularFiles, eblotterFiles, womenchildrenFiles, extractionFiles] = await Promise.all([
+        const [
+          regularFiles,
+          eblotterFiles,
+          womenchildrenFiles,
+          extractionFiles,
+        ] = await Promise.all([
           supabase
-            .from('files')
-            .select('created_by, creator:users!created_by(name)')
-            .gte('created_at', startOfMonth)
-            .lte('created_at', endOfMonth)
+            .from("files")
+            .select("created_by, creator:users!created_by(name)")
+            .gte("created_at", startOfMonth)
+            .lte("created_at", endOfMonth)
             .then(({ data }) => (data || []) as unknown as FileCreator[]),
           supabase
-            .from('eblotter_file')
-            .select('created_by, creator:users!created_by(name)')
-            .gte('created_at', startOfMonth)
-            .lte('created_at', endOfMonth)
+            .from("eblotter_file")
+            .select("created_by, creator:users!created_by(name)")
+            .gte("created_at", startOfMonth)
+            .lte("created_at", endOfMonth)
             .then(({ data }) => (data || []) as unknown as FileCreator[]),
           supabase
-            .from('womenchildren_file')
-            .select('created_by, creator:users!created_by(name)')
-            .gte('created_at', startOfMonth)
-            .lte('created_at', endOfMonth)
+            .from("womenchildren_file")
+            .select("created_by, creator:users!created_by(name)")
+            .gte("created_at", startOfMonth)
+            .lte("created_at", endOfMonth)
             .then(({ data }) => (data || []) as unknown as FileCreator[]),
           supabase
-            .from('extraction')
-            .select('created_by, creator:users!created_by(name)')
-            .gte('created_at', startOfMonth)
-            .lte('created_at', endOfMonth)
-            .then(({ data }) => (data || []) as unknown as FileCreator[])
+            .from("extraction")
+            .select("created_by, creator:users!created_by(name)")
+            .gte("created_at", startOfMonth)
+            .lte("created_at", endOfMonth)
+            .then(({ data }) => (data || []) as unknown as FileCreator[]),
         ]);
 
         // Combine all files and count by officer
@@ -519,14 +598,17 @@ export default function Dashboard() {
           ...regularFiles,
           ...eblotterFiles,
           ...womenchildrenFiles,
-          ...extractionFiles
+          ...extractionFiles,
         ];
 
         const officerCounts = new Map<string, number>();
-        
-        allFiles.forEach(file => {
-          const officerName = file.creator?.name || 'Unknown';
-          officerCounts.set(officerName, (officerCounts.get(officerName) || 0) + 1);
+
+        allFiles.forEach((file) => {
+          const officerName = file.creator?.name || "Unknown";
+          officerCounts.set(
+            officerName,
+            (officerCounts.get(officerName) || 0) + 1
+          );
         });
 
         // Convert to array and sort by number of files
@@ -536,7 +618,7 @@ export default function Dashboard() {
 
         setOfficerData(sortedOfficers);
       } catch (error) {
-        console.error('Error fetching officer data:', error);
+        console.error("Error fetching officer data:", error);
       }
     };
 
@@ -547,31 +629,36 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchMonthlyTotals = async () => {
       try {
-        const [year, month] = selectedTotalMonth.split('-').map(Number);
+        const [year, month] = selectedTotalMonth.split("-").map(Number);
         const startOfMonth = new Date(year, month - 1, 1).toISOString();
         const endOfMonth = new Date(year, month, 0).toISOString();
 
-        const [regularFiles, eblotterFiles, womenchildrenFiles, extractionFiles] = await Promise.all([
+        const [
+          regularFiles,
+          eblotterFiles,
+          womenchildrenFiles,
+          extractionFiles,
+        ] = await Promise.all([
           supabase
-            .from('files')
-            .select('file_id', { count: 'exact' })
-            .gte('created_at', startOfMonth)
-            .lte('created_at', endOfMonth),
+            .from("files")
+            .select("file_id", { count: "exact" })
+            .gte("created_at", startOfMonth)
+            .lte("created_at", endOfMonth),
           supabase
-            .from('eblotter_file')
-            .select('blotter_id', { count: 'exact' })
-            .gte('created_at', startOfMonth)
-            .lte('created_at', endOfMonth),
+            .from("eblotter_file")
+            .select("blotter_id", { count: "exact" })
+            .gte("created_at", startOfMonth)
+            .lte("created_at", endOfMonth),
           supabase
-            .from('womenchildren_file')
-            .select('file_id', { count: 'exact' })
-            .gte('created_at', startOfMonth)
-            .lte('created_at', endOfMonth),
+            .from("womenchildren_file")
+            .select("file_id", { count: "exact" })
+            .gte("created_at", startOfMonth)
+            .lte("created_at", endOfMonth),
           supabase
-            .from('extraction')
-            .select('extraction_id', { count: 'exact' })
-            .gte('created_at', startOfMonth)
-            .lte('created_at', endOfMonth)
+            .from("extraction")
+            .select("extraction_id", { count: "exact" })
+            .gte("created_at", startOfMonth)
+            .lte("created_at", endOfMonth),
         ]);
 
         setTotalRegularFiles(regularFiles.count || 0);
@@ -579,7 +666,7 @@ export default function Dashboard() {
         setTotalWomenChildrenFiles(womenchildrenFiles.count || 0);
         setTotalExtractionFiles(extractionFiles.count || 0);
       } catch (error) {
-        console.error('Error fetching monthly totals:', error);
+        console.error("Error fetching monthly totals:", error);
       }
     };
 
@@ -604,14 +691,14 @@ export default function Dashboard() {
   // Function to get file type display name
   const getFileTypeDisplay = (type: string) => {
     switch (type) {
-      case 'Incident Report':
-        return 'Incident Report';
-      case 'eblotter':
-        return 'E-Blotter';
-      case 'womenchildren':
-        return 'Women & Children';
-      case 'extraction':
-        return 'Extraction';
+      case "Incident Report":
+        return "Incident Report";
+      case "eblotter":
+        return "E-Blotter";
+      case "womenchildren":
+        return "Women & Children";
+      case "extraction":
+        return "Extraction";
       default:
         return type;
     }
@@ -629,9 +716,9 @@ export default function Dashboard() {
       case "extractionFiles":
         return { data: extractionFilesData, total: totalExtractionFiles };
       case "officerUploads":
-        return { 
-          data: officerData, 
-          total: officerData.reduce((acc, curr) => acc + curr.filesUploaded, 0) 
+        return {
+          data: officerData,
+          total: officerData.reduce((acc, curr) => acc + curr.filesUploaded, 0),
         };
       default:
         return { data: regularFilesData, total: totalRegularFiles };
@@ -644,17 +731,93 @@ export default function Dashboard() {
         Dashboard
       </h1>
 
+      {/* Total Files Section */}
+      <div className="flex gap-4 col-span-3 md:col-span-2 lg:col-span-4">
+        {/* Total Files Card */}
+        <div className="flex-1 p-2 border border-gray-300 rounded-lg col-span-1 md:col-span-2 bg-white">
+          <div className="font-semibold text-center text-md text-blue-900">
+            <div className="flex flex-col items-center gap-2">
+              <span>Total Files</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-4 py-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col items-center border-t pt-4">
+                  {/* <span className="text-sm text-gray-600">Total Files</span> */}
+                  <span className="text-6xl font-bold text-gray-900">
+                    {(
+                      totalRegularFiles +
+                      totalEblotterFiles +
+                      totalWomenChildrenFiles +
+                      totalExtractionFiles
+                    ).toLocaleString()}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+          {/* <div className="flex justify-center text-sm text-muted-foreground">
+            <div>Updated just now</div>
+          </div> */}  
+        </div>
+
+        {/* Files Info Section (2 Rows) */}
+        <div className="flex-1 grid grid-rows-2 gap-4">
+          <div className="flex gap-4">
+            <div className="flex-1 flex flex-col items-center p-2 bg-white border border-gray-300 rounded-lg">
+              <span className="text-sm text-blue-900 font-medium">
+                Incident Reports
+              </span>
+              <span className="text-5xl font-bold text-blue-900">
+                {totalRegularFiles}
+              </span>
+            </div>
+            <div className="flex-1 flex flex-col items-center p-2 border border-gray-300 bg-white rounded-lg">
+              <span className="text-sm text-green-900 font-medium">
+                E-Blotter
+              </span>
+              <span className="text-5xl font-bold text-green-900">
+                {totalEblotterFiles}
+              </span>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <div className="flex-1 flex flex-col items-center p-2 bg-white border border-gray-300 rounded-lg">
+              <span className="text-sm text-purple-900 font-medium">
+                Women & Children
+              </span>
+              <span className="text-5xl font-bold text-purple-900">
+                {totalWomenChildrenFiles}
+              </span>
+            </div>
+            <div className="flex-1 flex flex-col items-center p-2 bg-white border border-gray-300 rounded-lg">
+              <span className="text-sm text-orange-900 font-medium">
+                Extraction
+              </span>
+              <span className="text-5xl font-bold text-orange-900">
+                {totalExtractionFiles}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* File Statistics Card */}
       <Card className="p-2 shadow-md col-span-1 lg:col-span-1 h-80">
         <CardHeader>
           <CardTitle className="text-lg">
-            {selectedData === "Incident Report" 
-              ? "Incident Report" 
-              : selectedData === "eblotterFiles" 
-                ? "E-Blotter Files" 
-                : selectedData === "womenChildrenFiles" 
-                  ? "Women & Children Files" 
-                  : "Extraction Files"}
+            {selectedData === "Incident Report"
+              ? "Incident Report"
+              : selectedData === "eblotterFiles"
+              ? "E-Blotter Files"
+              : selectedData === "womenChildrenFiles"
+              ? "Women & Children Files"
+              : "Extraction Files"}
           </CardTitle>
           <CardDescription>
             <div className="flex items-center justify-between">
@@ -736,7 +899,7 @@ export default function Dashboard() {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {getMonthOptions().map(option => (
+                {getMonthOptions().map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -770,14 +933,17 @@ export default function Dashboard() {
             {isLoading ? (
               <span>Loading...</span>
             ) : (
-              <span>Total Uploads: {officerData.reduce((acc, curr) => acc + curr.filesUploaded, 0)}</span>
+              <span>
+                Total Uploads:{" "}
+                {officerData.reduce((acc, curr) => acc + curr.filesUploaded, 0)}
+              </span>
             )}
           </div>
           <div>Updated just now</div>
         </CardFooter>
       </Card>
 
-      {/* Total Files Card */}
+      {/* Total Files Card
       <Card className="p-2 shadow-md col-span-1 h-80">
         <CardHeader className="font-semibold text-center text-md text-blue-900">
           <div className="flex flex-col items-center gap-2">
@@ -838,24 +1004,21 @@ export default function Dashboard() {
         <CardFooter className="flex justify-center text-sm text-muted-foreground">
           <div>Updated just now</div>
         </CardFooter>
-      </Card>
+      </Card> */}
 
       {/* Category Distribution Card */}
       <Card className="p-2 shadow-md col-span-2 lg:col-span-1 h-80">
         <CardHeader className="font-semibold text-md text-center text-blue-900">
           <div className="flex flex-col items-center gap-2">
             <span>Category Distribution</span>
-            <Select
-              value={selectedMonth}
-              onValueChange={setSelectedMonth}
-            >
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-[180px] h-8 text-sm">
                 <SelectValue placeholder="Select month">
                   {formatSelectedMonth(selectedMonth)}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {getMonthOptions().map(option => (
+                {getMonthOptions().map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -867,38 +1030,48 @@ export default function Dashboard() {
         <CardContent className="h-44 overflow-hidden">
           {categoryData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart className="text-xs" margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+              <PieChart
+                className="text-xs"
+                margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
+              >
                 <Pie
                   data={categoryData}
                   dataKey="value"
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius={Math.min(60, (categoryData.length > 8 ? 50 : 60))}
-                  innerRadius={Math.min(30, (categoryData.length > 8 ? 25 : 30))}
+                  outerRadius={Math.min(60, categoryData.length > 8 ? 50 : 60)}
+                  innerRadius={Math.min(30, categoryData.length > 8 ? 25 : 30)}
                   fill="#3b82f6"
-                  label={({ name, value }) => 
-                    categoryData.length > 8 ? `${name.substring(0, 10)}${name.length > 10 ? '..' : ''} (${value})` : `${name} (${value})`
+                  label={({ name, value }) =>
+                    categoryData.length > 8
+                      ? `${name.substring(0, 10)}${
+                          name.length > 10 ? ".." : ""
+                        } (${value})`
+                      : `${name} (${value})`
                   }
                 >
                   {categoryData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={`hsl(${index * (360 / categoryData.length)}, 70%, 50%)`}
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={`hsl(${
+                        index * (360 / categoryData.length)
+                      }, 70%, 50%)`}
                     />
                   ))}
                 </Pie>
-                <Tooltip 
+                <Tooltip
                   formatter={(value: number, name: string) => [
                     `${value}`,
-                    `${name}`
+                    `${name}`,
                   ]}
                 />
               </PieChart>
             </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
-              No category data available for {formatSelectedMonth(selectedMonth)}
+              No category data available for{" "}
+              {formatSelectedMonth(selectedMonth)}
             </div>
           )}
         </CardContent>
@@ -906,8 +1079,11 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 font-medium leading-none">
             {categoryData.length > 0 && (
               <>
-                Most used category: <span className="text-blue-600">{categoryData[0]?.name}</span> 
-                <span className="text-gray-500">({categoryData[0]?.value} folders)</span>
+                Most used category:{" "}
+                <span className="text-blue-600">{categoryData[0]?.name}</span>
+                <span className="text-gray-500">
+                  ({categoryData[0]?.value} folders)
+                </span>
               </>
             )}
           </div>
@@ -929,18 +1105,33 @@ export default function Dashboard() {
               <table className="min-w-full border-collapse">
                 <thead className="sticky top-0 bg-white z-10 shadow">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs border-b">File</th>
-                    <th className="px-4 py-2 text-left text-xs border-b">Uploaded By</th>
-                    <th className="px-4 py-2 text-left text-xs border-b">File Type</th>
-                    <th className="px-4 py-2 text-left text-xs border-b">Upload Time</th>
+                    <th className="px-4 py-2 text-left text-xs border-b">
+                      File
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs border-b">
+                      Uploaded By
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs border-b">
+                      File Type
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs border-b">
+                      Upload Time
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {currentItems.map((file) => (
-                    <tr key={`${file.file_type}-${file.id}`} className="hover:bg-gray-100">
+                    <tr
+                      key={`${file.file_type}-${file.id}`}
+                      className="hover:bg-gray-100"
+                    >
                       <td className="border px-4 py-2 text-xs">{file.title}</td>
-                      <td className="border px-4 py-2 text-xs">{file.uploaded_by}</td>
-                      <td className="border px-4 py-2 text-xs">{getFileTypeDisplay(file.file_type)}</td>
+                      <td className="border px-4 py-2 text-xs">
+                        {file.uploaded_by}
+                      </td>
+                      <td className="border px-4 py-2 text-xs">
+                        {getFileTypeDisplay(file.file_type)}
+                      </td>
                       <td className="border px-4 py-2 text-xs">
                         {new Date(file.created_at).toLocaleString()}
                       </td>
@@ -958,7 +1149,9 @@ export default function Dashboard() {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(0, prev - 1))
+                  }
                   disabled={currentPage === 0}
                 >
                   <PaginationPrevious className="h-4 w-4" />
@@ -978,7 +1171,9 @@ export default function Dashboard() {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setCurrentPage(prev => Math.min(pageCount - 1, prev + 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(pageCount - 1, prev + 1))
+                  }
                   disabled={currentPage === pageCount - 1}
                 >
                   <PaginationNext className="h-4 w-4" />
