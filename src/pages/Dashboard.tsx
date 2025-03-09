@@ -19,8 +19,9 @@ import {
   PieChart,
   Pie,
   Cell,
+  AreaChart,
+  Area,
 } from "recharts";
-import { TrendingUp, TrendingDown } from "lucide-react";
 import {
   Pagination,
   PaginationContent,
@@ -38,6 +39,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Avatar } from "@/components/ui/avatar";
+import { Users, Archive, Files, FileTextIcon, FileCheck } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Sample data for different file types
 const regularFilesData = [
@@ -727,90 +731,100 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-poppins">
-      <h1 className="text-2xl font-medium mb-4 text-blue-900 col-span-3">
-        Dashboard
-      </h1>
+      <h1 className="text-2xl font-medium mb-4 text-blue-900">Dashboard</h1>
 
       {/* Total Files Section */}
-      <div className="flex gap-4 col-span-3 md:col-span-2 lg:col-span-4">
-        {/* Total Files Card */}
-        <div className="flex-1 p-2 border border-gray-300 rounded-lg col-span-1 md:col-span-2 bg-white">
-          <div className="font-semibold text-center text-md text-blue-900">
-            <div className="flex flex-col items-center gap-2">
-              <span>Total Files</span>
-            </div>
-          </div>
-          <div className="flex flex-col gap-4 py-4">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
+      <div className="flex-1 gap-2 grid-cols-5 lg:col-span-3">
+        <div className="grid grid-cols-5 gap-2">
+          {/* Total Files */}
+          <Card className="border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center">
+            <CardHeader className="flex flex-row items-center justify-between text-gray-900 font-medium pb-2">
+              <div className="flex items-center gap-2">
+                <Files className="w-4 h-4 text-gray-500" />
+                <CardTitle className="text-sm font-medium text-gray-700">
+                  Total Files Uploaded
+                </CardTitle>
               </div>
-            ) : (
-              <>
-                <div className="flex flex-col items-center border-t pt-4">
-                  {/* <span className="text-sm text-gray-600">Total Files</span> */}
-                  <span className="text-6xl font-bold text-gray-900">
-                    {(
-                      totalRegularFiles +
-                      totalEblotterFiles +
-                      totalWomenChildrenFiles +
-                      totalExtractionFiles
-                    ).toLocaleString()}
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
-          {/* <div className="flex justify-center text-sm text-muted-foreground">
-            <div>Updated just now</div>
-          </div> */}  
-        </div>
+            </CardHeader>
+            <CardContent className="text-4xl font-bold text-gray-900 text-center">
+              {(
+                totalRegularFiles +
+                totalEblotterFiles +
+                totalWomenChildrenFiles +
+                totalExtractionFiles
+              ).toLocaleString()}
+            </CardContent>
+          </Card>
 
-        {/* Files Info Section (2 Rows) */}
-        <div className="flex-1 grid grid-rows-2 gap-4">
-          <div className="flex gap-4">
-            <div className="flex-1 flex flex-col items-center p-2 bg-white border border-gray-300 rounded-lg">
-              <span className="text-sm text-blue-900 font-medium">
-                Incident Reports
-              </span>
-              <span className="text-5xl font-bold text-blue-900">
-                {totalRegularFiles}
-              </span>
-            </div>
-            <div className="flex-1 flex flex-col items-center p-2 border border-gray-300 bg-white rounded-lg">
-              <span className="text-sm text-green-900 font-medium">
-                E-Blotter
-              </span>
-              <span className="text-5xl font-bold text-green-900">
-                {totalEblotterFiles}
-              </span>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <div className="flex-1 flex flex-col items-center p-2 bg-white border border-gray-300 rounded-lg">
-              <span className="text-sm text-purple-900 font-medium">
-                Women & Children
-              </span>
-              <span className="text-5xl font-bold text-purple-900">
-                {totalWomenChildrenFiles}
-              </span>
-            </div>
-            <div className="flex-1 flex flex-col items-center p-2 bg-white border border-gray-300 rounded-lg">
-              <span className="text-sm text-orange-900 font-medium">
-                Extraction
-              </span>
-              <span className="text-5xl font-bold text-orange-900">
-                {totalExtractionFiles}
-              </span>
-            </div>
-          </div>
+          {/* Incident Reports */}
+          <Card className="border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center">
+            <CardHeader className="flex flex-row items-center justify-between text-gray-900 font-medium pb-2">
+              <div className="flex items-center gap-2">
+                <FileTextIcon className="w-5 h-5 text-blue-600" />
+                <CardTitle className="text-sm font-medium text-gray-700">
+                  Incident Reports
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="text-4xl font-bold text-gray-900 text-center">
+              {totalRegularFiles}
+            </CardContent>
+          </Card>
+
+          {/* E-Blotter */}
+          <Card className="border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center">
+            <CardHeader className="flex flex-row items-center justify-between text-gray-900 font-medium pb-2">
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-5 h-5 text-green-600" />
+                <CardTitle className="text-sm font-medium text-gray-700">
+                  Blotter Reports
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="text-4xl font-bold text-gray-900 text-center">
+              {totalEblotterFiles}
+            </CardContent>
+          </Card>
+
+          {/* Women & Children */}
+          <Card className="border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center">
+            <CardHeader className="flex flex-row items-center justify-between text-gray-900 font-medium pb-2">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-purple-600" />
+                <CardTitle className="text-sm font-medium text-gray-700">
+                  Women & Children
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="text-4xl font-bold text-gray-900 text-center">
+              {totalWomenChildrenFiles}
+            </CardContent>
+          </Card>
+
+          {/* Extraction */}
+          <Card className="border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center">
+            <CardHeader className="flex flex-row items-center justify-between text-gray-900 font-medium pb-2">
+              <div className="flex items-center gap-2">
+                <Archive className="w-5 h-5 text-orange-600" />
+                <CardTitle className="text-sm font-medium text-gray-700">
+                  Extraction
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="text-4xl font-bold text-gray-900 text-center">
+              {totalExtractionFiles}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
       {/* File Statistics Card */}
-      <Card className="p-2 shadow-md col-span-1 lg:col-span-1 h-80">
-        <CardHeader>
-          <CardTitle className="text-lg">
+      <Card className="p-3 shadow-md col-span-2 lg:col-span-1 h-80 rounded-lg bg-white">
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg font-semibold text-gray-900">
+            Daily Files Statistics
+          </CardTitle>
+          <CardDescription className="text-sm text-gray-600">
             {selectedData === "Incident Report"
               ? "Incident Report"
               : selectedData === "eblotterFiles"
@@ -818,201 +832,98 @@ export default function Dashboard() {
               : selectedData === "womenChildrenFiles"
               ? "Women & Children Files"
               : "Extraction Files"}
-          </CardTitle>
-          <CardDescription>
-            <div className="flex items-center justify-between">
-              <div>Weekly file statistics</div>
-              <div className="flex items-center">
-                <label htmlFor="data-select" className="mr-2 text-sm">
-                  Select Type:
-                </label>
-                <select
-                  id="data-select"
-                  value={selectedData}
-                  onChange={handleDataChange}
-                  className="p-1 border rounded text-sm"
-                >
-                  <option value="Incident Report" className="text-sm">
-                    Incident Report
-                  </option>
-                  <option value="eblotterFiles" className="text-sm">
-                    E-Blotter Files
-                  </option>
-                  <option value="womenChildrenFiles" className="text-sm">
-                    Women & Children Files
-                  </option>
-                  <option value="extractionFiles" className="text-sm">
-                    Extraction Files
-                  </option>
-                </select>
-              </div>
-            </div>
           </CardDescription>
+          <div className="flex items-center justify-between mt-3">
+            <label
+              htmlFor="data-select"
+              className="mr-2 text-xs font-medium text-gray-700"
+            >
+              Select File Type:
+            </label>
+            <select
+              id="data-select"
+              value={selectedData}
+              onChange={handleDataChange}
+              className="p-1 font-poppins border rounded-lg text-xs"
+            >
+              <option value="Incident Report">Incident Report</option>
+              <option value="eblotterFiles">E-Blotter Files</option>
+              <option value="womenChildrenFiles">Women & Children Files</option>
+              <option value="extractionFiles">Extraction Files</option>
+            </select>
+          </div>
         </CardHeader>
-        <CardContent className="h-36">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
-            </div>
+
+        <CardContent className="h-36 p-2 flex items-center justify-center">
+          {isLoading || !getSelectedData().data.length ? (
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-900"></div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={getSelectedData().data}>
-                <XAxis dataKey="day" stroke="#3b82f6" />
-                <YAxis stroke="#3b82f6" />
+            <ResponsiveContainer width="100%" height="100%" aspect={2.5}>
+              <AreaChart
+                data={getSelectedData().data}
+                margin={{
+                  top: 10,
+                  right: 50,
+                  left: 0,
+                  bottom: 0,
+                }}
+                key={JSON.stringify(getSelectedData().data)}
+              >
+                {/* X-Axis for days */}
+                <XAxis
+                  dataKey="day"
+                  stroke="#2563eb"
+                  tickFormatter={(tick) => tick}
+                  className="text-sm"
+                />
+
+                {/* Y-Axis with whole number values */}
+                <YAxis
+                  stroke="#2563eb"
+                  tickFormatter={(tick) => `${Math.floor(tick)}`}
+                  domain={["auto", "auto"]}
+                  allowDecimals={false}
+                  className="text-sm"
+                />
+
                 <Tooltip />
-                <Line
+
+                {/* Area chart with updated color for a more cohesive look */}
+                <Area
                   type="monotone"
                   dataKey="total"
-                  stroke="#3b82f6"
-                  strokeWidth={3}
-                  dot={{ stroke: "#3b82f6", strokeWidth: 2 }}
+                  stroke="#1d4ed8" // Updated line color to a darker blue
+                  fill="#2563eb" // Updated fill color to a lighter blue
+                  fillOpacity={0.3} // Make the fill semi-transparent
+                  animationDuration={1500} // Set animation duration
+                  animationEasing="ease-in-out" // Set animation easing to smoothen transition
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between text-sm text-muted-foreground">
-          <div>
-            {isLoading ? (
-              <span>Loading...</span>
-            ) : (
-              <span>Total: {getSelectedData().total}</span>
-            )}
-          </div>
-          <div>Updated just now</div>
+
+        <CardFooter className=" text-sm text-gray-600 p-3 text-center">
+          {isLoading ? (
+            <span>Loading...</span>
+          ) : (
+            <span>Total: {getSelectedData().total}</span>
+          )}
         </CardFooter>
       </Card>
-
-      {/* Officer Upload Stats Card */}
-      <Card className="p-2 shadow-md col-span-1 lg:col-span-1 h-80">
-        <CardHeader>
-          <CardTitle className="text-lg">Officer Upload Statistics</CardTitle>
-          <CardDescription className="flex flex-col gap-2">
-            <span>Files uploaded by officers</span>
-            <Select
-              value={selectedOfficerMonth}
-              onValueChange={setSelectedOfficerMonth}
-            >
-              <SelectTrigger className="w-[180px] h-8 text-sm">
-                <SelectValue placeholder="Select month">
-                  {formatSelectedMonth(selectedOfficerMonth)}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {getMonthOptions().map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="h-36">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={officerData}>
-                <XAxis dataKey="officer" stroke="#3b82f6" />
-                <YAxis stroke="#3b82f6" />
-                <Tooltip />
-                <Bar
-                  dataKey="filesUploaded"
-                  fill="#3b82f6"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-        <CardFooter className="flex justify-between text-sm text-muted-foreground">
-          <div>
-            {isLoading ? (
-              <span>Loading...</span>
-            ) : (
-              <span>
-                Total Uploads:{" "}
-                {officerData.reduce((acc, curr) => acc + curr.filesUploaded, 0)}
-              </span>
-            )}
-          </div>
-          <div>Updated just now</div>
-        </CardFooter>
-      </Card>
-
-      {/* Total Files Card
-      <Card className="p-2 shadow-md col-span-1 h-80">
-        <CardHeader className="font-semibold text-center text-md text-blue-900">
-          <div className="flex flex-col items-center gap-2">
-            <span>Total Files</span>
-            <Select
-              value={selectedTotalMonth}
-              onValueChange={setSelectedTotalMonth}
-            >
-              <SelectTrigger className="w-[180px] h-8 text-sm">
-                <SelectValue placeholder="Select month">
-                  {formatSelectedMonth(selectedTotalMonth)}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {getMonthOptions().map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4 py-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col items-center p-2 bg-blue-50 rounded-lg">
-                  <span className="text-sm text-blue-900 font-medium">Incident Reports</span>
-                  <span className="text-2xl font-bold text-blue-900">{totalRegularFiles}</span>
-                </div>
-                <div className="flex flex-col items-center p-2 bg-green-50 rounded-lg">
-                  <span className="text-sm text-green-900 font-medium">E-Blotter</span>
-                  <span className="text-2xl font-bold text-green-900">{totalEblotterFiles}</span>
-                </div>
-                <div className="flex flex-col items-center p-2 bg-purple-50 rounded-lg">
-                  <span className="text-sm text-purple-900 font-medium">Women & Children</span>
-                  <span className="text-2xl font-bold text-purple-900">{totalWomenChildrenFiles}</span>
-                </div>
-                <div className="flex flex-col items-center p-2 bg-orange-50 rounded-lg">
-                  <span className="text-sm text-orange-900 font-medium">Extraction</span>
-                  <span className="text-2xl font-bold text-orange-900">{totalExtractionFiles}</span>
-                </div>
-              </div>
-              <div className="flex flex-col items-center border-t pt-4">
-                <span className="text-sm text-gray-600">Total Files</span>
-                <span className="text-3xl font-bold text-gray-900">
-                  {(totalRegularFiles + totalEblotterFiles + totalWomenChildrenFiles + totalExtractionFiles).toLocaleString()}
-                </span>
-              </div>
-            </>
-          )}
-        </CardContent>
-        <CardFooter className="flex justify-center text-sm text-muted-foreground">
-          <div>Updated just now</div>
-        </CardFooter>
-      </Card> */}
 
       {/* Category Distribution Card */}
-      <Card className="p-2 shadow-md col-span-2 lg:col-span-1 h-80">
-        <CardHeader className="font-semibold text-md text-center text-blue-900">
-          <div className="flex flex-col items-center gap-2">
-            <span>Category Distribution</span>
+      <Card className="p-3 shadow-md col-span-2 lg:col-span-1 h-80 rounded-lg bg-white">
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg font-semibold text-gray-900">
+            Crime Category Distribution
+          </CardTitle>
+          <div className="flex items-center mt-3 justify-between w-full">
+            <label className="text-xs font-medium text-gray-700 mr-2">
+              Select Month:
+            </label>
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-[180px] h-8 text-sm">
+              <SelectTrigger className="w-[180px] h-7 text-xs m-1">
                 <SelectValue placeholder="Select month">
                   {formatSelectedMonth(selectedMonth)}
                 </SelectValue>
@@ -1027,9 +938,10 @@ export default function Dashboard() {
             </Select>
           </div>
         </CardHeader>
+
         <CardContent className="h-44 overflow-hidden">
           {categoryData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" aspect={2}>
               <PieChart
                 className="text-xs"
                 margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
@@ -1042,7 +954,7 @@ export default function Dashboard() {
                   cy="50%"
                   outerRadius={Math.min(60, categoryData.length > 8 ? 50 : 60)}
                   innerRadius={Math.min(30, categoryData.length > 8 ? 25 : 30)}
-                  fill="#3b82f6"
+                  fill="#3b82f6" // Default blue color for the pie chart
                   label={({ name, value }) =>
                     categoryData.length > 8
                       ? `${name.substring(0, 10)}${
@@ -1050,13 +962,19 @@ export default function Dashboard() {
                         } (${value})`
                       : `${name} (${value})`
                   }
+                  onClick={(data) => {
+                    // Handle pie chart slice click
+                    alert(`Category: ${data.name} - Value: ${data.value}`);
+                  }}
                 >
                   {categoryData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={`hsl(${
-                        index * (360 / categoryData.length)
-                      }, 70%, 50%)`}
+                      fill={`${
+                        index % 2 === 0
+                          ? "#3b82f6" // Light blue
+                          : "#2563eb" // Darker blue
+                      }`}
                     />
                   ))}
                 </Pie>
@@ -1075,26 +993,114 @@ export default function Dashboard() {
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex-col gap-1 text-sm">
-          <div className="flex items-center gap-2 font-medium leading-none">
+
+        <CardFooter className="flex-col gap-1 text-xs text-gray-600 p-3 text-center">
+          <div className="flex items-center gap-2 leading-none">
             {categoryData.length > 0 && (
               <>
-                Most used category:{" "}
-                <span className="text-blue-600">{categoryData[0]?.name}</span>
-                <span className="text-gray-500">
-                  ({categoryData[0]?.value} folders)
-                </span>
+                Most used category: <span>{categoryData[0]?.name}</span>
+                <span>({categoryData[0]?.value} folders)</span>
               </>
             )}
           </div>
         </CardFooter>
       </Card>
 
-      {/* Recent Files Upload Card */}
-      <Card className="p-2 shadow-md col-span-2 lg:col-span-3 h-64">
-        <CardHeader className="font-semibold text-md text-blue-900">
-          Recent Files Upload
+      {/* Officer Upload Stats Card */}
+      <Card className="p-3 shadow-md col-span-2 lg:col-span-1 h-80 rounded-lg bg-white">
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg font-semibold text-gray-900">
+            Officer Upload Statistics
+          </CardTitle>
+          <CardDescription className="text-sm text-gray-600">
+            Files uploaded by officers
+          </CardDescription>
+          <div className="flex items-center mt-3">
+            <label className="text-xs font-medium text-gray-700 mr-2 w-[500px]">
+              Select Month:
+            </label>
+            <Select
+              value={selectedOfficerMonth}
+              onValueChange={setSelectedOfficerMonth}
+            >
+              <SelectTrigger className="h-7 text-xs border m-1 rounded-lg shadow-none">
+                <SelectValue placeholder="Select month">
+                  {isLoading ? (
+                    <Skeleton className="h-5 w-32" />
+                  ) : (
+                    formatSelectedMonth(selectedOfficerMonth)
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {getMonthOptions().map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="text-xs"
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
+
+        <CardContent className="flex-grow overflow-y-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <Skeleton className="h-8 w-8" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {officerData.map((officer) => (
+                <div
+                  key={officer.officer}
+                  className="flex items-center justify-between p-2 border-b border-gray-200"
+                >
+                  <div className="flex items-center">
+                    {/* Assuming officer.avatar is a valid URL */}
+                    <img
+                      src="/assets/RACU.png"
+                      alt={officer.officer}
+                      className="h-8 w-8 rounded-full mr-4"
+                    />
+                    <span className="text-sm font-medium text-gray-900">
+                      {officer.officer}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {officer.filesUploaded} files uploaded
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex justify-between items-center text-sm text-muted-foreground pt-4">
+          <div>
+            {isLoading ? (
+              <Skeleton className="h-5 w-32" />
+            ) : (
+              <span>
+                Total Uploads:{" "}
+                {officerData.reduce((acc, curr) => acc + curr.filesUploaded, 0)}
+              </span>
+            )}
+          </div>
+        </CardFooter>
+      </Card>
+
+      {/* Recent Files Upload Card */}
+      <Card className="p-3 shadow-md col-span-2 lg:col-span-3 h-80">
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg font-semibold text-gray-900">
+            Recent Files Upload
+          </CardTitle>
+        </CardHeader>
+
         <CardContent className="h-52 overflow-auto">
           <div className="w-full h-full">
             {isLoading ? (
@@ -1102,19 +1108,15 @@ export default function Dashboard() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
               </div>
             ) : (
-              <table className="min-w-full border-collapse">
-                <thead className="sticky top-0 bg-white z-10 shadow">
+              <table className="min-w-full border-collapse table-auto text-xs">
+                <thead className="bg-blue-100 text-blue-900">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs border-b">
-                      File
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs border-b">
+                    <th className="px-6 py-3 text-left border-b">File</th>
+                    <th className="px-6 py-3 text-left border-b">
                       Uploaded By
                     </th>
-                    <th className="px-4 py-2 text-left text-xs border-b">
-                      File Type
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs border-b">
+                    <th className="px-6 py-3 text-left border-b">File Type</th>
+                    <th className="px-6 py-3 text-left border-b">
                       Upload Time
                     </th>
                   </tr>
@@ -1123,17 +1125,37 @@ export default function Dashboard() {
                   {currentItems.map((file) => (
                     <tr
                       key={`${file.file_type}-${file.id}`}
-                      className="hover:bg-gray-100"
+                      className="hover:bg-blue-50 transition-colors duration-200"
                     >
-                      <td className="border px-4 py-2 text-xs">{file.title}</td>
-                      <td className="border px-4 py-2 text-xs">
-                        {file.uploaded_by}
+                      <td className="px-6 py-2 border-b">{file.title}</td>
+
+                      {/* Uploaded By Column with Avatar (with fallback image) */}
+                      <td className="px-6 py-2 border-b flex items-center space-x-2">
+                        {/* Check if officer image exists, otherwise fallback to default image */}
+                        <img
+                          src="/assets/RACU.png" // Use the fallback image if uploaded_by_image is not provided
+                          alt={file.uploaded_by}
+                          className="h-8 w-8 rounded-full"
+                        />
+                        <span>{file.uploaded_by}</span>
                       </td>
-                      <td className="border px-4 py-2 text-xs">
+
+                      <td className="px-6 py-2 border-b">
                         {getFileTypeDisplay(file.file_type)}
                       </td>
-                      <td className="border px-4 py-2 text-xs">
-                        {new Date(file.created_at).toLocaleString()}
+                      <td className="px-6 py-2 border-b">
+                        {new Date(file.created_at).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        })}{" "}
+                        -{" "}
+                        {new Date(file.created_at).toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                          timeZone: "Asia/Taipei", // Taiwan timezone
+                        })}
                       </td>
                     </tr>
                   ))}
@@ -1142,42 +1164,47 @@ export default function Dashboard() {
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-center mt-2">
+
+        <CardFooter>
           <Pagination>
-            <PaginationContent>
+            <PaginationContent className="flex items-center space-x-2">
+              {/* Previous Pagination Link */}
               <PaginationItem>
-                <Button
-                  variant="outline"
-                  size="icon"
+                <PaginationLink
                   onClick={() =>
                     setCurrentPage((prev) => Math.max(0, prev - 1))
                   }
-                  disabled={currentPage === 0}
+                  aria-disabled={currentPage === 0}
+                  className="text-xs mr-7"
                 >
-                  <PaginationPrevious className="h-4 w-4" />
-                </Button>
+                  <PaginationPrevious />
+                </PaginationLink>
               </PaginationItem>
+
+              {/* Page Number Pagination Links */}
               {Array.from({ length: pageCount }, (_, i) => (
                 <PaginationItem key={i}>
                   <PaginationLink
                     onClick={() => setCurrentPage(i)}
                     isActive={currentPage === i}
+                    className="text-xs"
                   >
                     {i + 1}
                   </PaginationLink>
                 </PaginationItem>
               ))}
+
+              {/* Next Pagination Link */}
               <PaginationItem>
-                <Button
-                  variant="outline"
-                  size="icon"
+                <PaginationLink
                   onClick={() =>
                     setCurrentPage((prev) => Math.min(pageCount - 1, prev + 1))
                   }
-                  disabled={currentPage === pageCount - 1}
+                  aria-disabled={currentPage === pageCount - 1}
+                  className="text-xs mx-3"
                 >
-                  <PaginationNext className="h-4 w-4" />
-                </Button>
+                  <PaginationNext />
+                </PaginationLink>
               </PaginationItem>
             </PaginationContent>
           </Pagination>
