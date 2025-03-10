@@ -169,35 +169,25 @@ interface FileCreator {
   } | null;
 }
 
-interface SupabaseFileResponse {
-  created_at: string;
-  creator: Array<{ name: string }>;
-}
-
-interface FileWithCreator {
-  created_at: string;
-  creator: {
-    name: string;
-  } | null;
-  type: string;
-}
-
 export default function Dashboard() {
   const [selectedData, setSelectedData] = useState("regularFiles");
   const [currentPage, setCurrentPage] = useState(0);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
-
-  // Initialize empty data for the graph
-  const getEmptyData = () => {
-    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    return days.map((day) => ({ day, total: 0 }));
-  };
-
-  const [regularFilesData, setRegularFilesData] = useState(getEmptyData());
-  const [eblotterFilesData, setEblotterFilesData] = useState(getEmptyData());
-  const [womenChildrenFilesData, setWomenChildrenFilesData] = useState(getEmptyData());
-  const [extractionFilesData, setExtractionFilesData] = useState(getEmptyData());
-  const [officerData, setOfficerData] = useState<{ officer: string; filesUploaded: number }[]>([]);
+  const [regularFilesData, setRegularFilesData] = useState(
+    [] as { day: string; total: number }[]
+  );
+  const [eblotterFilesData, setEblotterFilesData] = useState(
+    [] as { day: string; total: number }[]
+  );
+  const [womenChildrenFilesData, setWomenChildrenFilesData] = useState(
+    [] as { day: string; total: number }[]
+  );
+  const [extractionFilesData, setExtractionFilesData] = useState(
+    [] as { day: string; total: number }[]
+  );
+  const [officerData, setOfficerData] = useState(
+    [] as { officer: string; filesUploaded: number }[]
+  );
   const [totalRegularFiles, setTotalRegularFiles] = useState(0);
   const [totalEblotterFiles, setTotalEblotterFiles] = useState(0);
   const [totalWomenChildrenFiles, setTotalWomenChildrenFiles] = useState(0);
@@ -263,151 +253,123 @@ export default function Dashboard() {
     return days[date.getDay()];
   };
 
-  // Helper function to group files by day of week
-  const groupFilesByDay = (files: any[]) => {
-    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const counts = days.map((day) => ({ day, total: 0 }));
-
-    files.forEach((file) => {
-      const day = getDayOfWeek(file.created_at);
-      const index = days.indexOf(day);
-      if (index !== -1) {
-        counts[index].total++;
-      }
-    });
-
-    return counts;
+  // Helper function to get the start and end of current week
+  const getCurrentWeekDates = () => {
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const diff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1); // Adjust when Sunday
+    const startOfWeek = new Date(now.setDate(diff));
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    return {
+      start: startOfWeek.toISOString(),
+      end: endOfWeek.toISOString()
+    };
   };
 
-  // Fetch data for all file types
+  // Fetch file data for the chart
   useEffect(() => {
     const fetchFileData = async () => {
       try {
         setIsLoading(true);
+        const { start, end } = getCurrentWeekDates();
 
-        // Get current week's start (Monday) and end (Sunday)
-        const now = new Date();
-        const currentDay = now.getDay();
-        const startDay = new Date(now);
-        startDay.setDate(now.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
-        startDay.setHours(0, 0, 0, 0);
-
-        const endDay = new Date(now);
-        endDay.setHours(23, 59, 59, 999);
-
-        const startDate = startDay.toISOString();
-        const endDate = endDay.toISOString();
-
-        // Fetch files created in the current week
-        const [regularFiles, eblotterFiles, womenchildrenFiles, extractionFiles] = await Promise.all([
+        // Fetch weekly data for the graph
+        const [weeklyRegular, weeklyEblotter, weeklyWomenChildren, weeklyExtraction] = await Promise.all([
           supabase
             .from('files')
-            .select('created_at, creator:created_by(name)')
-            .gte('created_at', startDate)
-            .lte('created_at', endDate),
+            .select('created_at')
+            .gte('created_at', start)
+            .lte('created_at', end)
+            .not('is_archived', 'eq', true),
           supabase
             .from('eblotter_file')
-            .select('created_at, creator:created_by(name)')
-            .gte('created_at', startDate)
-            .lte('created_at', endDate),
+            .select('created_at')
+            .gte('created_at', start)
+            .lte('created_at', end)
+            .not('is_archived', 'eq', true),
           supabase
             .from('womenchildren_file')
-            .select('created_at, creator:created_by(name)')
-            .gte('created_at', startDate)
-            .lte('created_at', endDate),
+            .select('created_at')
+            .gte('created_at', start)
+            .lte('created_at', end)
+            .not('is_archived', 'eq', true),
           supabase
             .from('extraction')
-            .select('created_at, creator:created_by(name)')
-            .gte('created_at', startDate)
-            .lte('created_at', endDate)
+            .select('created_at')
+            .gte('created_at', start)
+            .lte('created_at', end)
+            .not('is_archived', 'eq', true)
         ]);
 
-        if (regularFiles.error) throw regularFiles.error;
-        if (eblotterFiles.error) throw eblotterFiles.error;
-        if (womenchildrenFiles.error) throw womenchildrenFiles.error;
-        if (extractionFiles.error) throw extractionFiles.error;
+        // Fetch total counts (all-time)
+        const [totalRegular, totalEblotter, totalWomenChildren, totalExtraction] = await Promise.all([
+          supabase
+            .from('files')
+            .select('file_id', { count: 'exact' })
+            .not('is_archived', 'eq', true),
+          supabase
+            .from('eblotter_file')
+            .select('blotter_id', { count: 'exact' })
+            .not('is_archived', 'eq', true),
+          supabase
+            .from('womenchildren_file')
+            .select('file_id', { count: 'exact' })
+            .not('is_archived', 'eq', true),
+          supabase
+            .from('extraction')
+            .select('extraction_id', { count: 'exact' })
+            .not('is_archived', 'eq', true)
+        ]);
 
-        // Combine all files with their respective types
-        const regularFilesWithType = (regularFiles.data || []).map((file: SupabaseFileResponse) => ({
-          created_at: file.created_at,
-          creator: file.creator && file.creator.length > 0 ? { name: file.creator[0].name } : null,
-          type: 'Incident report'
-        } as FileWithCreator));
+        // Process the weekly data for the graph
+        const regularFilesData = groupFilesByDay(weeklyRegular.data || []);
+        const eblotterFilesData = groupFilesByDay(weeklyEblotter.data || []);
+        const womenChildrenFilesData = groupFilesByDay(weeklyWomenChildren.data || []);
+        const extractionFilesData = groupFilesByDay(weeklyExtraction.data || []);
 
-        const eblotterFilesWithType = (eblotterFiles.data || []).map((file: SupabaseFileResponse) => ({
-          created_at: file.created_at,
-          creator: file.creator && file.creator.length > 0 ? { name: file.creator[0].name } : null,
-          type: 'eblotter'
-        } as FileWithCreator));
+        // Set the graph data
+        setRegularFilesData(regularFilesData);
+        setEblotterFilesData(eblotterFilesData);
+        setWomenChildrenFilesData(womenChildrenFilesData);
+        setExtractionFilesData(extractionFilesData);
 
-        const womenChildrenFilesWithType = (womenchildrenFiles.data || []).map((file: SupabaseFileResponse) => ({
-          created_at: file.created_at,
-          creator: file.creator && file.creator.length > 0 ? { name: file.creator[0].name } : null,
-          type: 'womenchildren'
-        } as FileWithCreator));
+        // Set the total counts (all-time)
+        setTotalRegularFiles(totalRegular.count || 0);
+        setTotalEblotterFiles(totalEblotter.count || 0);
+        setTotalWomenChildrenFiles(totalWomenChildren.count || 0);
+        setTotalExtractionFiles(totalExtraction.count || 0);
 
-        const extractionFilesWithType = (extractionFiles.data || []).map((file: SupabaseFileResponse) => ({
-          created_at: file.created_at,
-          creator: file.creator && file.creator.length > 0 ? { name: file.creator[0].name } : null,
-          type: 'extraction'
-        } as FileWithCreator));
-
-        // Group files by day for each type
-        setRegularFilesData(groupFilesByDay(regularFilesWithType));
-        setEblotterFilesData(groupFilesByDay(eblotterFilesWithType));
-        setWomenChildrenFilesData(groupFilesByDay(womenChildrenFilesWithType));
-        setExtractionFilesData(groupFilesByDay(extractionFilesWithType));
-
-        // Calculate totals
-        setTotalRegularFiles(regularFilesWithType.length);
-        setTotalEblotterFiles(eblotterFilesWithType.length);
-        setTotalWomenChildrenFiles(womenChildrenFilesWithType.length);
-        setTotalExtractionFiles(extractionFilesWithType.length);
-
-        // Combine all files for officer statistics
-        const allFiles = [
-          ...regularFilesWithType,
-          ...eblotterFilesWithType,
-          ...womenChildrenFilesWithType,
-          ...extractionFilesWithType
-        ];
-
-        // Group files by creator for officer statistics
-        const creatorMap = new Map();
-        allFiles.forEach((file) => {
-          const creatorName = file.creator?.name || "Unknown";
-          if (creatorMap.has(creatorName)) {
-            creatorMap.set(creatorName, creatorMap.get(creatorName) + 1);
-          } else {
-            creatorMap.set(creatorName, 1);
-          }
-        });
-
-        // Convert to array and sort by number of uploads
-        const officerUploads = Array.from(creatorMap.entries())
-          .map(([name, count]) => ({ officer: name, filesUploaded: count }))
-          .sort((a, b) => b.filesUploaded - a.filesUploaded);
-
-        setOfficerData(officerUploads);
       } catch (error) {
         console.error('Error fetching file data:', error);
-        // Set empty data in case of error
-        setRegularFilesData(getEmptyData());
-        setEblotterFilesData(getEmptyData());
-        setWomenChildrenFilesData(getEmptyData());
-        setExtractionFilesData(getEmptyData());
-        setTotalRegularFiles(0);
-        setTotalEblotterFiles(0);
-        setTotalWomenChildrenFiles(0);
-        setTotalExtractionFiles(0);
-        setOfficerData([]);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchFileData();
-  }, []);
+  }, [selectedData]);
+
+  // Helper function to group files by day of the week
+  const groupFilesByDay = (files: any[]) => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const groupedData = new Array(7).fill(0);
+
+    files.forEach(file => {
+      const date = new Date(file.created_at);
+      const dayIndex = (date.getDay() + 6) % 7; // Convert Sunday = 0 to Monday = 0
+      groupedData[dayIndex]++;
+    });
+
+    return days.map((day, index) => ({
+      day,
+      total: groupedData[index]
+    }));
+  };
 
   // Fetch category usage data
   useEffect(() => {
