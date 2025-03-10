@@ -913,11 +913,15 @@ export default function Dashboard() {
           )}
         </CardContent>
 
-        <CardFooter className=" text-sm text-gray-600 p-3 text-center">
+        <CardFooter className="text-sm text-gray-600 p-3 text-center">
           {isLoading ? (
             <span>Loading...</span>
           ) : (
-            <span>Total: {getSelectedData().total}</span>
+            <span>Total this week: {
+              selectedData === 'officerUploads' 
+                ? getSelectedData().data.reduce((sum, item) => sum + (item as { filesUploaded: number }).filesUploaded, 0)
+                : getSelectedData().data.reduce((sum, item) => sum + (item as { total: number }).total, 0)
+            }</span>
           )}
         </CardFooter>
       </Card>
