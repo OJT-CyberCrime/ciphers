@@ -169,25 +169,35 @@ interface FileCreator {
   } | null;
 }
 
+interface SupabaseFileResponse {
+  created_at: string;
+  creator: Array<{ name: string }>;
+}
+
+interface FileWithCreator {
+  created_at: string;
+  creator: {
+    name: string;
+  } | null;
+  type: string;
+}
+
 export default function Dashboard() {
   const [selectedData, setSelectedData] = useState("regularFiles");
   const [currentPage, setCurrentPage] = useState(0);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
-  const [regularFilesData, setRegularFilesData] = useState(
-    [] as { day: string; total: number }[]
-  );
-  const [eblotterFilesData, setEblotterFilesData] = useState(
-    [] as { day: string; total: number }[]
-  );
-  const [womenChildrenFilesData, setWomenChildrenFilesData] = useState(
-    [] as { day: string; total: number }[]
-  );
-  const [extractionFilesData, setExtractionFilesData] = useState(
-    [] as { day: string; total: number }[]
-  );
-  const [officerData, setOfficerData] = useState(
-    [] as { officer: string; filesUploaded: number }[]
-  );
+
+  // Initialize empty data for the graph
+  const getEmptyData = () => {
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    return days.map((day) => ({ day, total: 0 }));
+  };
+
+  const [regularFilesData, setRegularFilesData] = useState(getEmptyData());
+  const [eblotterFilesData, setEblotterFilesData] = useState(getEmptyData());
+  const [womenChildrenFilesData, setWomenChildrenFilesData] = useState(getEmptyData());
+  const [extractionFilesData, setExtractionFilesData] = useState(getEmptyData());
+  const [officerData, setOfficerData] = useState<{ officer: string; filesUploaded: number }[]>([]);
   const [totalRegularFiles, setTotalRegularFiles] = useState(0);
   const [totalEblotterFiles, setTotalEblotterFiles] = useState(0);
   const [totalWomenChildrenFiles, setTotalWomenChildrenFiles] = useState(0);
@@ -272,68 +282,97 @@ export default function Dashboard() {
   // Fetch data for all file types
   useEffect(() => {
     const fetchFileData = async () => {
-      setIsLoading(true);
       try {
-        // Fetch regular files
-        const { data: regularFiles, error: regularError } = await supabase
-          .from("files")
-          .select("*, creator:created_by(name)")
-          .eq("is_archived", false);
+        setIsLoading(true);
 
-        if (regularError) throw regularError;
+        // Get current week's start (Monday) and end (Sunday)
+        const now = new Date();
+        const currentDay = now.getDay();
+        const startDay = new Date(now);
+        startDay.setDate(now.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
+        startDay.setHours(0, 0, 0, 0);
 
-        // Fetch eblotter files
-        const { data: eblotterFiles, error: eblotterError } = await supabase
-          .from("eblotter_file")
-          .select("*, creator:created_by(name)")
-          .eq("is_archived", false);
+        const endDay = new Date(now);
+        endDay.setHours(23, 59, 59, 999);
 
-        if (eblotterError) throw eblotterError;
+        const startDate = startDay.toISOString();
+        const endDate = endDay.toISOString();
 
-        // Fetch women/children files
-        const { data: womenChildrenFiles, error: womenChildrenError } =
-          await supabase
-            .from("womenchildren_file")
-            .select("*, creator:created_by(name)")
-            .eq("is_archived", false);
+        // Fetch files created in the current week
+        const [regularFiles, eblotterFiles, womenchildrenFiles, extractionFiles] = await Promise.all([
+          supabase
+            .from('files')
+            .select('created_at, creator:created_by(name)')
+            .gte('created_at', startDate)
+            .lte('created_at', endDate),
+          supabase
+            .from('eblotter_file')
+            .select('created_at, creator:created_by(name)')
+            .gte('created_at', startDate)
+            .lte('created_at', endDate),
+          supabase
+            .from('womenchildren_file')
+            .select('created_at, creator:created_by(name)')
+            .gte('created_at', startDate)
+            .lte('created_at', endDate),
+          supabase
+            .from('extraction')
+            .select('created_at, creator:created_by(name)')
+            .gte('created_at', startDate)
+            .lte('created_at', endDate)
+        ]);
 
-        if (womenChildrenError) throw womenChildrenError;
+        if (regularFiles.error) throw regularFiles.error;
+        if (eblotterFiles.error) throw eblotterFiles.error;
+        if (womenchildrenFiles.error) throw womenchildrenFiles.error;
+        if (extractionFiles.error) throw extractionFiles.error;
 
-        // Fetch extraction files
-        const { data: extractionFiles, error: extractionError } = await supabase
-          .from("extraction")
-          .select("*, creator:created_by(name)")
-          .eq("is_archived", false);
+        // Combine all files with their respective types
+        const regularFilesWithType = (regularFiles.data || []).map((file: SupabaseFileResponse) => ({
+          created_at: file.created_at,
+          creator: file.creator && file.creator.length > 0 ? { name: file.creator[0].name } : null,
+          type: 'Incident report'
+        } as FileWithCreator));
 
-        if (extractionError) throw extractionError;
+        const eblotterFilesWithType = (eblotterFiles.data || []).map((file: SupabaseFileResponse) => ({
+          created_at: file.created_at,
+          creator: file.creator && file.creator.length > 0 ? { name: file.creator[0].name } : null,
+          type: 'eblotter'
+        } as FileWithCreator));
 
-        // Group files by day of week
-        const regularByDay = groupFilesByDay(regularFiles || []);
-        const eblotterByDay = groupFilesByDay(eblotterFiles || []);
-        const womenChildrenByDay = groupFilesByDay(womenChildrenFiles || []);
-        const extractionByDay = groupFilesByDay(extractionFiles || []);
+        const womenChildrenFilesWithType = (womenchildrenFiles.data || []).map((file: SupabaseFileResponse) => ({
+          created_at: file.created_at,
+          creator: file.creator && file.creator.length > 0 ? { name: file.creator[0].name } : null,
+          type: 'womenchildren'
+        } as FileWithCreator));
 
-        // Set state
-        setRegularFilesData(regularByDay);
-        setEblotterFilesData(eblotterByDay);
-        setWomenChildrenFilesData(womenChildrenByDay);
-        setExtractionFilesData(extractionByDay);
+        const extractionFilesWithType = (extractionFiles.data || []).map((file: SupabaseFileResponse) => ({
+          created_at: file.created_at,
+          creator: file.creator && file.creator.length > 0 ? { name: file.creator[0].name } : null,
+          type: 'extraction'
+        } as FileWithCreator));
+
+        // Group files by day for each type
+        setRegularFilesData(groupFilesByDay(regularFilesWithType));
+        setEblotterFilesData(groupFilesByDay(eblotterFilesWithType));
+        setWomenChildrenFilesData(groupFilesByDay(womenChildrenFilesWithType));
+        setExtractionFilesData(groupFilesByDay(extractionFilesWithType));
 
         // Calculate totals
-        setTotalRegularFiles((regularFiles || []).length);
-        setTotalEblotterFiles((eblotterFiles || []).length);
-        setTotalWomenChildrenFiles((womenChildrenFiles || []).length);
-        setTotalExtractionFiles((extractionFiles || []).length);
+        setTotalRegularFiles(regularFilesWithType.length);
+        setTotalEblotterFiles(eblotterFilesWithType.length);
+        setTotalWomenChildrenFiles(womenChildrenFilesWithType.length);
+        setTotalExtractionFiles(extractionFilesWithType.length);
 
-        // Combine all files for officer data calculation
+        // Combine all files for officer statistics
         const allFiles = [
-          ...(regularFiles || []),
-          ...(eblotterFiles || []),
-          ...(womenChildrenFiles || []),
-          ...(extractionFiles || []),
+          ...regularFilesWithType,
+          ...eblotterFilesWithType,
+          ...womenChildrenFilesWithType,
+          ...extractionFilesWithType
         ];
 
-        // Group files by creator
+        // Group files by creator for officer statistics
         const creatorMap = new Map();
         allFiles.forEach((file) => {
           const creatorName = file.creator?.name || "Unknown";
@@ -344,15 +383,24 @@ export default function Dashboard() {
           }
         });
 
-        // Convert map to array and sort by number of files (descending)
+        // Convert to array and sort by number of uploads
         const officerUploads = Array.from(creatorMap.entries())
-          .map(([officer, filesUploaded]) => ({ officer, filesUploaded }))
-          .sort((a, b) => b.filesUploaded - a.filesUploaded)
-          .slice(0, 10); // Get top 10 officers
+          .map(([name, count]) => ({ officer: name, filesUploaded: count }))
+          .sort((a, b) => b.filesUploaded - a.filesUploaded);
 
         setOfficerData(officerUploads);
       } catch (error) {
-        console.error("Error fetching file data:", error);
+        console.error('Error fetching file data:', error);
+        // Set empty data in case of error
+        setRegularFilesData(getEmptyData());
+        setEblotterFilesData(getEmptyData());
+        setWomenChildrenFilesData(getEmptyData());
+        setExtractionFilesData(getEmptyData());
+        setTotalRegularFiles(0);
+        setTotalEblotterFiles(0);
+        setTotalWomenChildrenFiles(0);
+        setTotalExtractionFiles(0);
+        setOfficerData([]);
       } finally {
         setIsLoading(false);
       }
@@ -839,19 +887,19 @@ export default function Dashboard() {
               className="mr-2 text-xs font-medium text-gray-700"
             >
               Select File Type:
-            </label>
-            <select
-              id="data-select"
-              value={selectedData}
-              onChange={handleDataChange}
+              </label>
+              <select
+                id="data-select"
+                value={selectedData}
+                onChange={handleDataChange}
               className="p-1 font-poppins border rounded-lg text-xs"
             >
               <option value="Incident Report">Incident Report</option>
               <option value="eblotterFiles">E-Blotter Files</option>
               <option value="womenChildrenFiles">Women & Children Files</option>
               <option value="extractionFiles">Extraction Files</option>
-            </select>
-          </div>
+              </select>
+            </div>
         </CardHeader>
 
         <CardContent className="h-36 p-2 flex items-center justify-center">
@@ -1097,7 +1145,7 @@ export default function Dashboard() {
       <Card className="p-3 shadow-md col-span-2 lg:col-span-3 h-80">
         <CardHeader className="p-2">
           <CardTitle className="text-lg font-semibold text-gray-900">
-            Recent Files Upload
+          Recent Files Upload
           </CardTitle>
         </CardHeader>
 
@@ -1119,9 +1167,9 @@ export default function Dashboard() {
                     <th className="px-6 py-3 text-left border-b">
                       Upload Time
                     </th>
-                  </tr>
-                </thead>
-                <tbody>
+                </tr>
+              </thead>
+              <tbody>
                   {currentItems.map((file) => (
                     <tr
                       key={`${file.file_type}-${file.id}`}
@@ -1157,10 +1205,10 @@ export default function Dashboard() {
                           timeZone: "Asia/Taipei", // Taiwan timezone
                         })}
                       </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             )}
           </div>
         </CardContent>
