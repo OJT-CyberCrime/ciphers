@@ -76,17 +76,6 @@ export default function Certifications() {
   const previousPage = "/dashboard";
   const previousPageName = "Home";
 
-  // Check user role
-  useEffect(() => {
-    const userData = JSON.parse(Cookies.get('user_data') || '{}');
-    const userRole = userData.role;
-
-    // If not WCPD role, redirect to dashboard
-    if (userRole !== 'wcpd') {
-      navigate('/dashboard');
-    }
-  }, [navigate]);
-
   // Fetch folders with their categories from Supabase
   useEffect(() => {
     const fetchFolders = async () => {
