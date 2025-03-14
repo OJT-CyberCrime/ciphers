@@ -21,6 +21,7 @@ import {
   Cell,
   AreaChart,
   Area,
+  Treemap,
 } from "recharts";
 import {
   Pagination,
@@ -169,8 +170,20 @@ interface FileCreator {
   } | null;
 }
 
+// Add media queries for responsive design
+const styles = {
+  container: `p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 font-poppins`,
+  cardGrid: `col-span-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2`,
+  card: `border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center`,
+  cardHeader: `flex flex-row items-center justify-between text-gray-900 font-medium pb-2`,
+  cardContent: `text-4xl font-bold text-gray-900 text-center`,
+  cardTitle: `text-sm font-medium text-gray-700`,
+  cardFooter: `text-xs text-gray-600 p-3 text-center mt-auto`,
+  responsiveContainer: `w-full h-full flex items-center justify-center`,
+};
+
 export default function Dashboard() {
-  const [selectedData, setSelectedData] = useState("regularFiles");
+  const [selectedData, setSelectedData] = useState("Incident Report");
   const [currentPage, setCurrentPage] = useState(0);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [regularFilesData, setRegularFilesData] = useState(
@@ -260,14 +273,14 @@ export default function Dashboard() {
     const diff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1); // Adjust when Sunday
     const startOfWeek = new Date(now.setDate(diff));
     startOfWeek.setHours(0, 0, 0, 0);
-    
+
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
-    
+
     return {
       start: startOfWeek.toISOString(),
-      end: endOfWeek.toISOString()
+      end: endOfWeek.toISOString(),
     };
   };
 
@@ -279,58 +292,72 @@ export default function Dashboard() {
         const { start, end } = getCurrentWeekDates();
 
         // Fetch weekly data for the graph
-        const [weeklyRegular, weeklyEblotter, weeklyWomenChildren, weeklyExtraction] = await Promise.all([
+        const [
+          weeklyRegular,
+          weeklyEblotter,
+          weeklyWomenChildren,
+          weeklyExtraction,
+        ] = await Promise.all([
           supabase
-            .from('files')
-            .select('created_at')
-            .gte('created_at', start)
-            .lte('created_at', end)
-            .not('is_archived', 'eq', true),
+            .from("files")
+            .select("created_at")
+            .gte("created_at", start)
+            .lte("created_at", end)
+            .not("is_archived", "eq", true),
           supabase
-            .from('eblotter_file')
-            .select('created_at')
-            .gte('created_at', start)
-            .lte('created_at', end)
-            .not('is_archived', 'eq', true),
+            .from("eblotter_file")
+            .select("created_at")
+            .gte("created_at", start)
+            .lte("created_at", end)
+            .not("is_archived", "eq", true),
           supabase
-            .from('womenchildren_file')
-            .select('created_at')
-            .gte('created_at', start)
-            .lte('created_at', end)
-            .not('is_archived', 'eq', true),
+            .from("womenchildren_file")
+            .select("created_at")
+            .gte("created_at", start)
+            .lte("created_at", end)
+            .not("is_archived", "eq", true),
           supabase
-            .from('extraction')
-            .select('created_at')
-            .gte('created_at', start)
-            .lte('created_at', end)
-            .not('is_archived', 'eq', true)
+            .from("extraction")
+            .select("created_at")
+            .gte("created_at", start)
+            .lte("created_at", end)
+            .not("is_archived", "eq", true),
         ]);
 
         // Fetch total counts (all-time)
-        const [totalRegular, totalEblotter, totalWomenChildren, totalExtraction] = await Promise.all([
+        const [
+          totalRegular,
+          totalEblotter,
+          totalWomenChildren,
+          totalExtraction,
+        ] = await Promise.all([
           supabase
-            .from('files')
-            .select('file_id', { count: 'exact' })
-            .not('is_archived', 'eq', true),
+            .from("files")
+            .select("file_id", { count: "exact" })
+            .not("is_archived", "eq", true),
           supabase
-            .from('eblotter_file')
-            .select('blotter_id', { count: 'exact' })
-            .not('is_archived', 'eq', true),
+            .from("eblotter_file")
+            .select("blotter_id", { count: "exact" })
+            .not("is_archived", "eq", true),
           supabase
-            .from('womenchildren_file')
-            .select('file_id', { count: 'exact' })
-            .not('is_archived', 'eq', true),
+            .from("womenchildren_file")
+            .select("file_id", { count: "exact" })
+            .not("is_archived", "eq", true),
           supabase
-            .from('extraction')
-            .select('extraction_id', { count: 'exact' })
-            .not('is_archived', 'eq', true)
+            .from("extraction")
+            .select("extraction_id", { count: "exact" })
+            .not("is_archived", "eq", true),
         ]);
 
         // Process the weekly data for the graph
         const regularFilesData = groupFilesByDay(weeklyRegular.data || []);
         const eblotterFilesData = groupFilesByDay(weeklyEblotter.data || []);
-        const womenChildrenFilesData = groupFilesByDay(weeklyWomenChildren.data || []);
-        const extractionFilesData = groupFilesByDay(weeklyExtraction.data || []);
+        const womenChildrenFilesData = groupFilesByDay(
+          weeklyWomenChildren.data || []
+        );
+        const extractionFilesData = groupFilesByDay(
+          weeklyExtraction.data || []
+        );
 
         // Set the graph data
         setRegularFilesData(regularFilesData);
@@ -343,9 +370,8 @@ export default function Dashboard() {
         setTotalEblotterFiles(totalEblotter.count || 0);
         setTotalWomenChildrenFiles(totalWomenChildren.count || 0);
         setTotalExtractionFiles(totalExtraction.count || 0);
-
       } catch (error) {
-        console.error('Error fetching file data:', error);
+        console.error("Error fetching file data:", error);
       } finally {
         setIsLoading(false);
       }
@@ -356,10 +382,10 @@ export default function Dashboard() {
 
   // Helper function to group files by day of the week
   const groupFilesByDay = (files: any[]) => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const groupedData = new Array(7).fill(0);
 
-    files.forEach(file => {
+    files.forEach((file) => {
       const date = new Date(file.created_at);
       const dayIndex = (date.getDay() + 6) % 7; // Convert Sunday = 0 to Monday = 0
       groupedData[dayIndex]++;
@@ -367,7 +393,7 @@ export default function Dashboard() {
 
     return days.map((day, index) => ({
       day,
-      total: groupedData[index]
+      total: groupedData[index],
     }));
   };
 
@@ -740,135 +766,139 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-poppins">
-      <h1 className="text-2xl font-medium mb-4 text-blue-900">Dashboard</h1>
+    <div className={styles.container}>
+      <h1 className="text-2xl font-medium mb-4 text-blue-900 col-span-full">
+        Dashboard
+      </h1>
 
       {/* Total Files Section */}
-      <div className="flex-1 gap-2 grid-cols-5 lg:col-span-3">
-        <div className="grid grid-cols-5 gap-2">
-          {/* Total Files */}
-          <Card className="border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center">
-            <CardHeader className="flex flex-row items-center justify-between text-gray-900 font-medium pb-2">
-              <div className="flex items-center gap-2">
-                <Files className="w-4 h-4 text-gray-500" />
-                <CardTitle className="text-sm font-medium text-gray-700">
-                  Total Files Uploaded
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="text-4xl font-bold text-gray-900 text-center">
-              {(
-                totalRegularFiles +
-                totalEblotterFiles +
-                totalWomenChildrenFiles +
-                totalExtractionFiles
-              ).toLocaleString()}
-            </CardContent>
-          </Card>
+      <div className={styles.cardGrid}>
+        {/* Total Files */}
+        <Card className={styles.card}>
+          <CardHeader className={styles.cardHeader}>
+            <div className="flex items-center gap-2">
+              <Files className="w-4 h-4 text-gray-500" />
+              <CardTitle className={styles.cardTitle}>
+                Total Files Uploaded
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className={styles.cardContent}>
+            {(
+              totalRegularFiles +
+              totalEblotterFiles +
+              totalWomenChildrenFiles +
+              totalExtractionFiles
+            ).toLocaleString()}
+          </CardContent>
+        </Card>
 
-          {/* Incident Reports */}
-          <Card className="border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center">
-            <CardHeader className="flex flex-row items-center justify-between text-gray-900 font-medium pb-2">
-              <div className="flex items-center gap-2">
-                <FileTextIcon className="w-5 h-5 text-blue-600" />
-                <CardTitle className="text-sm font-medium text-gray-700">
-                  Incident Reports
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="text-4xl font-bold text-gray-900 text-center">
-              {totalRegularFiles}
-            </CardContent>
-          </Card>
+        {/* Incident Reports */}
+        <Card className="border border-gray-300 rounded-lg bg-blue-100 p-1 h-24 flex flex-col justify-center">
+          <CardHeader className={styles.cardHeader}>
+            <div className="flex items-center gap-2">
+              <FileTextIcon className="w-5 h-5 text-blue-600" />
+              <CardTitle className={styles.cardTitle}>
+                Incident Reports
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className={styles.cardContent}>
+            {totalRegularFiles}
+          </CardContent>
+        </Card>
 
-          {/* E-Blotter */}
-          <Card className="border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center">
-            <CardHeader className="flex flex-row items-center justify-between text-gray-900 font-medium pb-2">
-              <div className="flex items-center gap-2">
-                <FileCheck className="w-5 h-5 text-green-600" />
-                <CardTitle className="text-sm font-medium text-gray-700">
-                  Blotter Reports
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="text-4xl font-bold text-gray-900 text-center">
-              {totalEblotterFiles}
-            </CardContent>
-          </Card>
+        {/* E-Blotter */}
+        <Card className="border border-gray-300 rounded-lg bg-green-100 p-1 h-24 flex flex-col justify-center">
+          <CardHeader className={styles.cardHeader}>
+            <div className="flex items-center gap-2">
+              <FileCheck className="w-5 h-5 text-green-600" />
+              <CardTitle className={styles.cardTitle}>
+                Blotter Reports
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className={styles.cardContent}>
+            {totalEblotterFiles}
+          </CardContent>
+        </Card>
 
-          {/* Women & Children */}
-          <Card className="border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center">
-            <CardHeader className="flex flex-row items-center justify-between text-gray-900 font-medium pb-2">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-purple-600" />
-                <CardTitle className="text-sm font-medium text-gray-700">
-                  Women & Children
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="text-4xl font-bold text-gray-900 text-center">
-              {totalWomenChildrenFiles}
-            </CardContent>
-          </Card>
+        {/* Women & Children */}
+        <Card className="border border-gray-300 rounded-lg bg-purple-100 p-1 h-24 flex flex-col justify-center">
+          <CardHeader className={styles.cardHeader}>
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-purple-600" />
+              <CardTitle className={styles.cardTitle}>
+                Women & Children
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className={styles.cardContent}>
+            {totalWomenChildrenFiles}
+          </CardContent>
+        </Card>
 
-          {/* Extraction */}
-          <Card className="border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center">
-            <CardHeader className="flex flex-row items-center justify-between text-gray-900 font-medium pb-2">
-              <div className="flex items-center gap-2">
-                <Archive className="w-5 h-5 text-orange-600" />
-                <CardTitle className="text-sm font-medium text-gray-700">
-                  Extraction
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="text-4xl font-bold text-gray-900 text-center">
-              {totalExtractionFiles}
-            </CardContent>
-          </Card>
-        </div>
+        {/* Extraction */}
+        <Card className="border border-gray-300 rounded-lg bg-orange-100 p-1 h-24 flex flex-col justify-center">
+          <CardHeader className={styles.cardHeader}>
+            <div className="flex items-center gap-2">
+              <Archive className="w-5 h-5 text-orange-600" />
+              <CardTitle className={styles.cardTitle}>
+                Extraction
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className={styles.cardContent}>
+            {totalExtractionFiles}
+          </CardContent>
+        </Card>
       </div>
 
       {/* File Statistics Card */}
-      <Card className="p-3 shadow-md col-span-2 lg:col-span-1 h-80 rounded-lg bg-white">
+      <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white flex flex-col">
         <CardHeader className="p-2">
-          <CardTitle className="text-lg font-semibold text-gray-900">
-            Daily Files Statistics
-          </CardTitle>
-          <CardDescription className="text-sm text-gray-600">
-            {selectedData === "Incident Report"
-              ? "Incident Report"
-              : selectedData === "eblotterFiles"
-              ? "E-Blotter Files"
-              : selectedData === "womenChildrenFiles"
-              ? "Women & Children Files"
-              : "Extraction Files"}
-          </CardDescription>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-lg font-semibold text-gray-900">
+              Daily Files Statistics
+            </CardTitle>
+            <span className="text-muted-foreground text-sm">
+              {selectedData === "Incident Report"
+                ? "Incident Report"
+                : selectedData === "eblotterFiles"
+                ? "E-Blotter Files"
+                : selectedData === "womenChildrenFiles"
+                ? "Women & Children Files"
+                : "Extraction Files"}
+            </span>
+          </div>
           <div className="flex items-center justify-between mt-3">
             <label
               htmlFor="data-select"
               className="mr-2 text-xs font-medium text-gray-700"
             >
               Select File Type:
-              </label>
-              <select
-                id="data-select"
-                value={selectedData}
-                onChange={handleDataChange}
+            </label>
+            <select
+              id="data-select"
+              value={selectedData}
+              onChange={handleDataChange}
               className="p-1 font-poppins border rounded-lg text-xs"
             >
               <option value="Incident Report">Incident Report</option>
               <option value="eblotterFiles">E-Blotter Files</option>
               <option value="womenChildrenFiles">Women & Children Files</option>
               <option value="extractionFiles">Extraction Files</option>
-              </select>
-            </div>
+            </select>
+          </div>
         </CardHeader>
 
-        <CardContent className="h-36 p-2 flex items-center justify-center">
+        <CardContent className="h-36 p-2 flex items-center justify-center flex-grow">
           {isLoading || !getSelectedData().data.length ? (
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-900"></div>
+            <div className={styles.responsiveContainer}>
+              <Skeleton className="h-full w-full" />
+            </div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%" aspect={2.5}>
+            <ResponsiveContainer width="100%" height="100%" aspect={3.5}>
               <AreaChart
                 data={getSelectedData().data}
                 margin={{
@@ -913,21 +943,31 @@ export default function Dashboard() {
           )}
         </CardContent>
 
-        <CardFooter className="text-sm text-gray-600 p-3 text-center">
+        <CardFooter className={styles.cardFooter}>
           {isLoading ? (
-            <span>Loading...</span>
+            <Skeleton className="h-5 w-32 mx-auto" />
+          ) : getSelectedData().data.length === 0 ? (
+            <span>No data to display</span>
           ) : (
-            <span>Total this week: {
-              selectedData === 'officerUploads' 
-                ? getSelectedData().data.reduce((sum, item) => sum + (item as { filesUploaded: number }).filesUploaded, 0)
-                : getSelectedData().data.reduce((sum, item) => sum + (item as { total: number }).total, 0)
-            }</span>
+            <span>
+              Total this week: {" "}
+              {selectedData === "officerUploads"
+                ? getSelectedData().data.reduce(
+                    (sum, item) =>
+                      sum + (item as { filesUploaded: number }).filesUploaded,
+                    0
+                  )
+                : getSelectedData().data.reduce(
+                    (sum, item) => sum + (item as { total: number }).total,
+                    0
+                  )}
+            </span>
           )}
         </CardFooter>
       </Card>
 
       {/* Category Distribution Card */}
-      <Card className="p-3 shadow-md col-span-2 lg:col-span-1 h-80 rounded-lg bg-white">
+      <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white flex flex-col">
         <CardHeader className="p-2">
           <CardTitle className="text-lg font-semibold text-gray-900">
             Crime Category Distribution
@@ -953,75 +993,72 @@ export default function Dashboard() {
           </div>
         </CardHeader>
 
-        <CardContent className="h-44 overflow-hidden">
+        <CardContent className="h-44 overflow-hidden flex flex-row">
           {categoryData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%" aspect={2}>
-              <PieChart
-                className="text-xs"
-                margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
-              >
-                <Pie
+            <div className="flex flex-row w-full">
+              {/* Treemap Chart */}
+              <ResponsiveContainer width="75%" height={180}>
+                <Treemap
                   data={categoryData}
                   dataKey="value"
                   nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={Math.min(60, categoryData.length > 8 ? 50 : 60)}
-                  innerRadius={Math.min(30, categoryData.length > 8 ? 25 : 30)}
-                  fill="#3b82f6" // Default blue color for the pie chart
-                  label={({ name, value }) =>
-                    categoryData.length > 8
-                      ? `${name.substring(0, 10)}${
-                          name.length > 10 ? ".." : ""
-                        } (${value})`
-                      : `${name} (${value})`
-                  }
-                  onClick={(data) => {
-                    // Handle pie chart slice click
-                    alert(`Category: ${data.name} - Value: ${data.value}`);
-                  }}
+                  aspectRatio={4 / 3}
+                  stroke="#fff"
+                  fill="#3b82f6"
                 >
-                  {categoryData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={`${
-                        index % 2 === 0
-                          ? "#3b82f6" // Light blue
-                          : "#2563eb" // Darker blue
-                      }`}
+                  <Tooltip
+                    formatter={(value: number, name: string) => [
+                      `${value}`,
+                      `${name}`,
+                    ]}
+                  />
+                </Treemap>
+              </ResponsiveContainer>
+
+              {/* Legend */}
+              <div className="flex flex-col items-start w-1/4 p-2 text-xs">
+                {categoryData.map((entry, index) => (
+                  <div
+                    key={entry.name}
+                    className="flex items-center text-gray-600 gap-1.5 leading-none mb-1"
+                  >
+                    <div
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{
+                        backgroundColor:
+                          index % 2 === 0 ? "#3b82f6" : "#2563eb",
+                      }}
                     />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: number, name: string) => [
-                    `${value}`,
-                    `${name}`,
-                  ]}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+                    <span className="text-[11px]">{entry.name}</span>
+                    <span className="text-[11px] font-medium">
+                      ({entry.value})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              No category data available for{" "}
-              {formatSelectedMonth(selectedMonth)}
+            <div className={styles.responsiveContainer}>
+              <Skeleton className="h-full w-full" />
             </div>
           )}
         </CardContent>
 
-        <CardFooter className="flex-col gap-1 text-xs text-gray-600 p-3 text-center">
-          <div className="flex items-center gap-2 leading-none">
-            {categoryData.length > 0 && (
-              <>
-                Most used category: <span>{categoryData[0]?.name}</span>
-                <span>({categoryData[0]?.value} folders)</span>
-              </>
-            )}
-          </div>
+        <CardFooter className={styles.cardFooter}>
+          {categoryData.length > 0 ? (
+            <div className="flex items-center text-xs">
+              Most used category: {" "}
+              <span className="mr-1 ml-2">{categoryData[0]?.name}</span>
+              <span>({categoryData[0]?.value} folders)</span>
+            </div>
+          ) : (
+            <span className="text-sm">No data to display</span>
+          )}
         </CardFooter>
       </Card>
 
       {/* Officer Upload Stats Card */}
-      <Card className="p-3 shadow-md col-span-2 lg:col-span-1 h-80 rounded-lg bg-white">
+      <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white flex flex-col">
         <CardHeader className="p-2">
           <CardTitle className="text-lg font-semibold text-gray-900">
             Officer Upload Statistics
@@ -1063,11 +1100,11 @@ export default function Dashboard() {
 
         <CardContent className="flex-grow overflow-y-auto">
           {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <Skeleton className="h-8 w-8" />
+            <div className={styles.responsiveContainer}>
+              <Skeleton className="h-full w-full" />
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {officerData.map((officer) => (
                 <div
                   key={officer.officer}
@@ -1093,33 +1130,33 @@ export default function Dashboard() {
           )}
         </CardContent>
 
-        <CardFooter className="flex justify-between items-center text-sm text-muted-foreground pt-4">
-          <div>
-            {isLoading ? (
-              <Skeleton className="h-5 w-32" />
-            ) : (
-              <span>
-                Total Uploads:{" "}
-                {officerData.reduce((acc, curr) => acc + curr.filesUploaded, 0)}
-              </span>
-            )}
-          </div>
+        <CardFooter className={styles.cardFooter}>
+          {isLoading ? (
+            <Skeleton className="h-5 w-32" />
+          ) : officerData.length === 0 ? (
+            <span>No data to display</span>
+          ) : (
+            <span>
+              Total Uploads: {" "}
+              {officerData.reduce((acc, curr) => acc + curr.filesUploaded, 0)}
+            </span>
+          )}
         </CardFooter>
       </Card>
 
       {/* Recent Files Upload Card */}
-      <Card className="p-3 shadow-md col-span-2 lg:col-span-3 h-80">
+      <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white">
         <CardHeader className="p-2">
           <CardTitle className="text-lg font-semibold text-gray-900">
-          Recent Files Upload
+            Recent Files Upload
           </CardTitle>
         </CardHeader>
 
         <CardContent className="h-52 overflow-auto">
           <div className="w-full h-full">
             {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
+              <div className={styles.responsiveContainer}>
+                <Skeleton className="h-full w-full" />
               </div>
             ) : (
               <table className="min-w-full border-collapse table-auto text-xs">
@@ -1133,9 +1170,9 @@ export default function Dashboard() {
                     <th className="px-6 py-3 text-left border-b">
                       Upload Time
                     </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </tr>
+                </thead>
+                <tbody>
                   {currentItems.map((file) => (
                     <tr
                       key={`${file.file_type}-${file.id}`}
@@ -1162,8 +1199,8 @@ export default function Dashboard() {
                           month: "long",
                           day: "numeric",
                           year: "numeric",
-                        })}{" "}
-                        -{" "}
+                        })} {" "}
+                        - {" "}
                         {new Date(file.created_at).toLocaleTimeString("en-US", {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -1171,10 +1208,10 @@ export default function Dashboard() {
                           timeZone: "Asia/Taipei", // Taiwan timezone
                         })}
                       </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
         </CardContent>
@@ -1182,7 +1219,6 @@ export default function Dashboard() {
         <CardFooter>
           <Pagination>
             <PaginationContent className="flex items-center space-x-2">
-              {/* Previous Pagination Link */}
               <PaginationItem>
                 <PaginationLink
                   onClick={() =>
@@ -1195,7 +1231,6 @@ export default function Dashboard() {
                 </PaginationLink>
               </PaginationItem>
 
-              {/* Page Number Pagination Links */}
               {Array.from({ length: pageCount }, (_, i) => (
                 <PaginationItem key={i}>
                   <PaginationLink
@@ -1208,7 +1243,6 @@ export default function Dashboard() {
                 </PaginationItem>
               ))}
 
-              {/* Next Pagination Link */}
               <PaginationItem>
                 <PaginationLink
                   onClick={() =>

@@ -17,7 +17,7 @@ import WomenChildrenFile from './pages/WomenChildrenFile/index';
 import Extraction from "./pages/extraction/index";
 import ExtractionFile from './pages/extractionFile/index';
 import Archives from './pages/Archives/index';
-
+import { Toaster } from "@/components/ui/sonner";
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -73,6 +73,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-hidden">
+      <Toaster/>
       <Router>
         <div className={`flex ${isLoggedIn ? "ml-64" : "ml-0"}`}>
           {/* Sidebar appears only if logged in */}

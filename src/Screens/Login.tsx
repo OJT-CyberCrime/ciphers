@@ -4,15 +4,11 @@ import { useNavigate } from "react-router-dom";
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/utils/supa";
 import Cookies from "js-cookie";
-import {
-  Eye,
-  EyeOff,
-  Loader,
-  ShieldCheckIcon,
-} from "lucide-react";
+import { Eye, EyeOff, Loader, ShieldCheckIcon } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
 import DataPrivacyModal from "@/components/DataPrivacyModal";
+import { toast } from "sonner";
 
 interface LoginProps {
   setIsLoggedIn: (value: boolean) => void;
@@ -110,11 +106,21 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
 
       const { data: userData, error: userError } = await supabase
         .from("users")
-        .select("*")
+        .select("user_id, name, email, role, uuid")
         .eq("email", email)
         .single();
 
       if (userError) throw userError;
+
+      // Display welcome toast with custom styling
+      // Display welcome toast with custom styling
+      toast.success(`Welcome to CRIMS, ${userData.name.split(" ")[0]}!`, {
+        style: {
+          backgroundColor: "#d4edda", // Light green background
+          color: "#155724", // Dark green text
+        },
+        position: "top-right",
+      });
 
       const now = new Date().toISOString();
       const { error: updateError } = await supabase

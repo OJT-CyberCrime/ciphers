@@ -10,6 +10,7 @@ import {
   MoreVertical,
   List,
   Grid,
+  SortAsc,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 // import {
@@ -67,16 +68,16 @@ interface Folder {
 // Function to determine badge color based on status
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
-    case 'pending':
-      return { class: 'bg-yellow-200 text-yellow-800', label: 'P' }; // Lighter for pending status
-    case 'resolved':
-      return { class: 'bg-green-200 text-green-800', label: 'R' }; // Lighter for resolved status
-    case 'dismissed':
-      return { class: 'bg-red-200 text-red-800', label: 'D' }; // Lighter for dismissed status
-    case 'under investigation':
-      return { class: 'bg-blue-200 text-blue-800', label: 'UI' }; // Lighter for under investigation status
+    case "pending":
+      return { class: "bg-yellow-200 text-yellow-800", label: "P" }; // Lighter for pending status
+    case "resolved":
+      return { class: "bg-green-200 text-green-800", label: "R" }; // Lighter for resolved status
+    case "dismissed":
+      return { class: "bg-red-200 text-red-800", label: "D" }; // Lighter for dismissed status
+    case "under investigation":
+      return { class: "bg-blue-200 text-blue-800", label: "UI" }; // Lighter for under investigation status
     default:
-      return { class: 'bg-gray-200 text-black', label: 'N/A' }; // Default case
+      return { class: "bg-gray-200 text-black", label: "N/A" }; // Default case
   }
 };
 
@@ -91,11 +92,19 @@ export default function IncidentReport() {
   const location = useLocation();
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [isEditingFolder, setIsEditingFolder] = useState(false);
-  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
-  const [contextMenuVisible, setContextMenuVisible] = useState<{ [key: number]: boolean }>({});
-  const [isListView, setIsListView] = useState(false);
+  const [availableCategories, setAvailableCategories] = useState<Category[]>(
+    []
+  );
+  const [contextMenuVisible, setContextMenuVisible] = useState<{
+    [key: number]: boolean;
+  }>({});
+  const [isListView, setIsListView] = useState(() => {
+    const savedPreference = localStorage.getItem("viewPreference");
+    return savedPreference ? JSON.parse(savedPreference) : false;
+  });
   const previousPage = "/dashboard";
   const previousPageName = "Home";
+  const [sortCriteria, setSortCriteria] = useState("created_at");
 
   // Fetch folders with their categories from Supabase
   useEffect(() => {
@@ -103,34 +112,39 @@ export default function IncidentReport() {
       try {
         // First fetch folders with user information
         const { data: foldersData, error: foldersError } = await supabase
-          .from('folders')
-          .select(`
+          .from("folders")
+          .select(
+            `
             *,
             creator:created_by(name),
             updater:updated_by(name)
-          `)
-          .eq('is_archived', false)
-          .eq('is_blotter', false)
-          .eq('is_womencase', false)
-          .eq('is_extraction', false) // Only fetch non-women case folders
-          .order('created_at', { ascending: false });
+          `
+          )
+          .eq("is_archived", false)
+          .eq("is_blotter", false)
+          .eq("is_womencase", false)
+          .eq("is_extraction", false) // Only fetch non-women case folders
+          .order("created_at", { ascending: false });
 
         if (foldersError) throw foldersError;
 
         // For each folder, fetch its categories
         const foldersWithCategories = await Promise.all(
           (foldersData || []).map(async (folder) => {
-            const { data: categoriesData, error: categoriesError } = await supabase
-              .from('folder_categories')
-              .select(`
+            const { data: categoriesData, error: categoriesError } =
+              await supabase
+                .from("folder_categories")
+                .select(
+                  `
                 categories (
                   category_id,
                   title,
                   created_by,
                   created_at
                 )
-              `)
-              .eq('folder_id', folder.folder_id);
+              `
+                )
+                .eq("folder_id", folder.folder_id);
 
             if (categoriesError) throw categoriesError;
 
@@ -138,14 +152,14 @@ export default function IncidentReport() {
               ...folder,
               created_by: folder.creator?.name || folder.created_by,
               updated_by: folder.updater?.name || folder.updated_by,
-              categories: categoriesData?.map(item => item.categories) || []
+              categories: categoriesData?.map((item) => item.categories) || [],
             };
           })
         );
 
         setFolders(foldersWithCategories);
       } catch (error) {
-        console.error('Error fetching folders:', error);
+        console.error("Error fetching folders:", error);
       } finally {
         setIsLoading(false);
       }
@@ -158,12 +172,12 @@ export default function IncidentReport() {
   useEffect(() => {
     const fetchCategories = async () => {
       const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('title', { ascending: true });
+        .from("categories")
+        .select("*")
+        .order("title", { ascending: true });
 
       if (error) {
-        console.error('Error fetching categories:', error);
+        console.error("Error fetching categories:", error);
         return;
       }
 
@@ -174,15 +188,33 @@ export default function IncidentReport() {
   }, []);
 
   // Filter folders based on search query and category
-  const filteredFolders = folders.filter(folder => {
-    const matchesSearch = folder.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = filter === "all" || folder.categories.some(cat => cat.category_id.toString() === filter);
+  const filteredFolders = folders.filter((folder) => {
+    const matchesSearch = folder.title
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      filter === "all" ||
+      folder.categories.some((cat) => cat.category_id.toString() === filter);
     return matchesSearch && matchesCategory;
+  });
+
+  const sortedFolders = [...filteredFolders].sort((a, b) => {
+    switch (sortCriteria) {
+      case "title":
+        return a.title.localeCompare(b.title);
+      case "status":
+        return a.status.localeCompare(b.status);
+      case "created_at":
+      default:
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+    }
   });
 
   const handleFolderClick = (folder: Folder) => {
     navigate(`/IncidentReportFile/${folder.folder_id}`, {
-      state: { from: location.pathname, fromName: "Incident Report" }
+      state: { from: location.pathname, fromName: "Incident Report" },
     });
   };
 
@@ -196,9 +228,28 @@ export default function IncidentReport() {
     setIsEditingFolder(true);
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".context-menu")) {
+        setContextMenuVisible({});
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleViewChange = (view: boolean) => {
+    setIsListView(view);
+    localStorage.setItem("viewPreference", JSON.stringify(view));
+  };
+
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row gap-4 mb-4">
+    <div className="p-6 max-w-screen-xl mx-auto">
+      <div className="flex flex-col md:flex-row gap-4 mb-4 items-center justify-between">
         <SearchBar
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -206,14 +257,14 @@ export default function IncidentReport() {
         />
 
         <Select onValueChange={setFilter} defaultValue="all">
-          <SelectTrigger className="w-48 p-5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+          <SelectTrigger className="w-full md:w-48 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             <SelectValue placeholder="Filter by category" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
             {availableCategories.map((category) => (
-              <SelectItem 
-                key={category.category_id} 
+              <SelectItem
+                key={category.category_id}
                 value={category.category_id.toString()}
               >
                 {category.title}
@@ -222,25 +273,29 @@ export default function IncidentReport() {
           </SelectContent>
         </Select>
 
-        <Button
-          onClick={() => setIsAddingFolder(true)}
-          className="bg-blue-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-800"
-        >
-          <Plus size={16} /> Add Folder
-        </Button>
+        <Select onValueChange={setSortCriteria} defaultValue="created_at">
+          <SelectTrigger className="w-full md:w-48 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
+            <SortAsc size={16} className="text-gray-600" />
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="created_at">Date Created</SelectItem>
+            <SelectItem value="title">Title</SelectItem>
+            <SelectItem value="status">Status</SelectItem>
+          </SelectContent>
+        </Select>
 
         <Button
-          onClick={() => setIsListView(!isListView)}
-          className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-300"
+          onClick={() => setIsAddingFolder(true)}
+          className="bg-blue-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-800 transition-colors"
         >
-          {isListView ? <Grid size={16} /> : <List size={16} />}
-          {isListView ? "Grid View" : "List View"}
+          <Plus size={16} /> Add Folder
         </Button>
       </div>
 
       <Breadcrumb className="mb-4 text-gray-600 flex space-x-2">
         <BreadcrumbItem>
-          <Link 
+          <Link
             to={previousPage}
             state={{ from: location.pathname }}
             className="text-gray-600 hover:text-gray-900"
@@ -256,137 +311,370 @@ export default function IncidentReport() {
         </BreadcrumbItem>
       </Breadcrumb>
 
-      <h1 className="text-2xl font-medium font-poppins mb-6 text-blue-900">
-        Incident Reports
-      </h1>
+      <div className="flex justify-between items-center mb-6 ">
+        <h1 className="text-2xl font-medium font-poppins text-blue-900">
+          Incident Reports
+        </h1>
+        <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
+          <Button
+            onClick={() => handleViewChange(true)}
+            className={`flex items-center justify-center w-10 h-8 rounded-s-full ${
+              isListView ? "bg-blue-200" : "bg-white"
+            } transition-colors hover:${
+              isListView ? "bg-blue-300" : "bg-gray-100"
+            }`}
+          >
+            <List size={16} color="black" />
+          </Button>
+          <Button
+            onClick={() => handleViewChange(false)}
+            className={`flex items-center justify-center w-10 h-8 rounded-e-full ${
+              !isListView ? "bg-blue-200" : "bg-white"
+            } transition-colors hover:${
+              !isListView ? "bg-blue-300" : "bg-gray-100"
+            }`}
+          >
+            <Grid size={16} color="black" />
+          </Button>
+        </div>
+      </div>
 
-      <div className={isListView ? "flex flex-col gap-4" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"}>
-        {isLoading ? (
-          Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-32 w-full rounded-lg" />
-          ))
-        ) : filteredFolders.length > 0 ? (
-          filteredFolders.map((folder) => (
-            <div
-              key={folder.folder_id}
-              className="relative bg-white p-4 rounded-lg border border-gray-200 hover:border-blue-500 cursor-pointer transition-all duration-200"
-              onClick={(e) => {
-                // Only navigate if not clicking menu or its items
-                if (!e.defaultPrevented) {
-                  handleFolderClick(folder);
-                }
-              }}
-            >
-              <div className={`flex items-center gap-x-3 w-full ${isListView ? "text-sm" : "text-lg"}`}>
-                <FolderClosed
-                  style={{ width: isListView ? "30px" : "40px", height: isListView ? "30px" : "40px" }}
-                  className="text-gray-600"
-                  fill="#4b5563"
-                />
-                <span className={`font-poppins font-medium text-gray-900 text-left overflow-hidden whitespace-nowrap text-ellipsis ${isListView ? "text-sm" : "text-lg"}`}>
-                  {folder.title}
-                </span>
-                <Badge 
-                  variant="outline" 
-                  className={`rounded-full text-xs font-poppins ${getStatusBadgeClass(folder.status).class}`}
-                >
-                  {getStatusBadgeClass(folder.status).label}
-                </Badge>
-              </div>
-              <div className={`flex ${isListView ? "flex-row items-center" : "flex-wrap"} gap-2 mt-2 ${isListView ? "text-xs" : ""} overflow-hidden`}>
-                {folder.categories && folder.categories.length > 0 ? (
-                  folder.categories.slice(0, 3).map((category) => (
-                    <Badge key={category.category_id} variant="outline" className="bg-gray-200 text-black">
-                      {category.title}
-                    </Badge>
-                  ))
-                ) : (
-                  <Badge variant="outline" className="bg-gray-200 text-black">
-                    No categories
-                  </Badge>
-                )}
-                {folder.categories.length > 3 && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Badge variant="outline" className="bg-gray-200 cursor-pointer">
-                          +{folder.categories.length - 3}
+      {isListView ? (
+        <div className="overflow-x-auto font-poppins">
+          <table className="min-w-full bg-gray-50">
+            <thead>
+              <tr>
+                <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                  Name
+                </th>
+                <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                  Status
+                </th>
+                <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                  Categories
+                </th>
+                <th className="font-semibold text-md  px-4 py-2 border-b text-left">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                Array.from({ length: 4 }).map((_, index) => (
+                  <tr key={index}>
+                    <td colSpan={4} className="px-4 py-2 border-b">
+                      <Skeleton className="h-8 w-full" />
+                    </td>
+                  </tr>
+                ))
+              ) : sortedFolders.length > 0 ? (
+                sortedFolders.map((folder) => (
+                  <tr
+                    key={folder.folder_id}
+                    className="hover:bg-gray-100 cursor-pointer transition-colors"
+                  >
+                    <td
+                      className="px-4 py-2 border-b"
+                      onClick={() => handleFolderClick(folder)}
+                    >
+                      <FolderClosed
+                        style={{
+                          width: "20px",
+                          height: "20px",
+                          display: "inline-block",
+                        }} // Make the icon inline
+                        className="text-gray-600 mr-2"
+                        fill="#4b5563"
+                      />
+                      <span>{folder.title}</span>{" "}
+                      {/* Add a span to ensure proper text rendering */}
+                    </td>
+
+                    <td className="px-4 py-2 border-b">
+                      <Badge
+                        variant="outline"
+                        className={`rounded-full text-xs font-poppins px-3 py-1 ${
+                          getStatusBadgeClass(folder.status).class
+                        }`}
+                      >
+                        {getStatusBadgeClass(folder.status).label}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-2 border-b">
+                      {folder.categories && folder.categories.length > 0 ? (
+                        folder.categories.slice(0, 3).map((category) => (
+                          <Badge
+                            key={category.category_id}
+                            variant="outline"
+                            className="bg-gray-200 text-black mr-2 font-medium"
+                          >
+                            {category.title}
+                          </Badge>
+                        ))
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="bg-gray-200 text-black"
+                        >
+                          No categories
                         </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {folder.categories.slice(3).map(cat => cat.title).join(", ")}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
+                      )}
+                      {folder.categories.length > 3 && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Badge
+                                variant="outline"
+                                className="bg-gray-200 cursor-pointer"
+                              >
+                                +{folder.categories.length - 3}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {folder.categories
+                                .slice(3)
+                                .map((cat) => cat.title)
+                                .join(", ")}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 border-b">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setContextMenuVisible((prev) => ({
+                            ...prev,
+                            [folder.folder_id]: !prev[folder.folder_id],
+                          }));
+                        }}
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                      {contextMenuVisible[folder.folder_id] && (
+                        <div className="absolute bg-white border border-gray-200 rounded-lg shadow-lg z-10 context-menu">
+                          <Button
+                            variant="ghost"
+                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleEditClick(folder);
+                              setContextMenuVisible((prev) => ({
+                                ...prev,
+                                [folder.folder_id]: false,
+                              }));
+                            }}
+                          >
+                            <Pencil className="inline w-4 h-4 mr-2" /> Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setSelectedFolder(folder);
+                              setDialogContent(
+                                "Are you sure you want to archive this folder?"
+                              );
+                              setContextMenuVisible((prev) => ({
+                                ...prev,
+                                [folder.folder_id]: false,
+                              }));
+                            }}
+                          >
+                            <Archive className="inline w-4 h-4 mr-2" /> Archive
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleViewDetails(folder);
+                              setContextMenuVisible((prev) => ({
+                                ...prev,
+                                [folder.folder_id]: false,
+                              }));
+                            }}
+                          >
+                            <Eye className="inline w-4 h-4 mr-2" /> View Details
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="text-center text-gray-500 py-8">
+                    No folders found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-32 w-full rounded-lg" />
+            ))
+          ) : sortedFolders.length > 0 ? (
+            sortedFolders.map((folder) => (
+              <div
+                key={folder.folder_id}
+                className="relative bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-500 cursor-pointer transition-all duration-200 aspect-w-1 aspect-h-1"
+                onClick={(e) => {
+                  if (!e.defaultPrevented) {
+                    handleFolderClick(folder);
+                  }
+                }}
+              >
+                <div className="flex items-center justify-between gap-x-3 w-full text-lg">
+                  <FolderClosed
+                    style={{ width: "40px", height: "40px" }}
+                    className="text-gray-600"
+                    fill="#4b5563"
+                  />
+                  <span className="flex-1 font-poppins font-medium text-gray-900 text-left overflow-hidden whitespace-nowrap text-ellipsis pr-4">
+                    {folder.title}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={`rounded-full mr-5 text-xs font-poppins ${
+                      getStatusBadgeClass(folder.status).class
+                    }`}
+                  >
+                    {getStatusBadgeClass(folder.status).label}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2 overflow-hidden">
+                  {folder.categories && folder.categories.length > 0 ? (
+                    folder.categories.slice(0, 3).map((category) => (
+                      <Badge
+                        key={category.category_id}
+                        variant="outline"
+                        className="bg-gray-200 text-black"
+                      >
+                        {category.title}
+                      </Badge>
+                    ))
+                  ) : (
+                    <Badge variant="outline" className="bg-gray-200 text-black">
+                      No categories
+                    </Badge>
+                  )}
+                  {folder.categories.length > 3 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Badge
+                            variant="outline"
+                            className="bg-gray-200 cursor-pointer"
+                          >
+                            +{folder.categories.length - 3}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {folder.categories
+                            .slice(3)
+                            .map((cat) => cat.title)
+                            .join(", ")}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
 
-              {/* Kebab menu button */}
-              <div className="absolute top-2 right-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="p-2 rounded-full hover:bg-gray-200"
-                  onClick={(e) => {
-                    e.preventDefault(); // Prevent default
-                    e.stopPropagation(); // Stop event from bubbling up
-                    setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: !prev[folder.folder_id] }));
-                  }}
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Context menu */}
-              {contextMenuVisible[folder.folder_id] && (
-                <div className="absolute top-10 right-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                {/* Kebab menu button */}
+                <div className="absolute top-4 right-2">
                   <Button
                     variant="ghost"
-                    className="block w-full text-left p-2 hover:bg-gray-100"
+                    size="icon"
+                    className="p-2 rounded-full hover:bg-gray-200 transition-colors"
                     onClick={(e) => {
-                      e.preventDefault(); // Prevent default
-                      e.stopPropagation(); // Stop event from bubbling up
-                      handleEditClick(folder);
-                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setContextMenuVisible((prev) => ({
+                        ...prev,
+                        [folder.folder_id]: !prev[folder.folder_id],
+                      }));
                     }}
                   >
-                    <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="block w-full text-left p-2 hover:bg-gray-100"
-                    onClick={(e) => {
-                      e.preventDefault(); // Prevent default
-                      e.stopPropagation(); // Stop event from bubbling up
-                      setSelectedFolder(folder);
-                      setDialogContent("Are you sure you want to archive this folder?");
-                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
-                    }}
-                  >
-                    <Archive className="inline w-4 h-4 mr-2" /> Archive
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="block w-full text-left p-2 hover:bg-gray-100"
-                    onClick={(e) => {
-                      e.preventDefault(); // Prevent default
-                      e.stopPropagation(); // Stop event from bubbling up
-                      handleViewDetails(folder);
-                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
-                    }}
-                  >
-                    <Eye className="inline w-4 h-4 mr-2" /> View Details
+                    <MoreVertical className="w-4 h-4" />
                   </Button>
                 </div>
-              )}
+
+                {/* Context menu */}
+                {contextMenuVisible[folder.folder_id] && (
+                  <div className="absolute top-10 right-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10 context-menu">
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleEditClick(folder);
+                        setContextMenuVisible((prev) => ({
+                          ...prev,
+                          [folder.folder_id]: false,
+                        }));
+                      }}
+                    >
+                      <Pencil className="inline w-4 h-4 mr-2" /> Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSelectedFolder(folder);
+                        setDialogContent(
+                          "Are you sure you want to archive this folder?"
+                        );
+                        setContextMenuVisible((prev) => ({
+                          ...prev,
+                          [folder.folder_id]: false,
+                        }));
+                      }}
+                    >
+                      <Archive className="inline w-4 h-4 mr-2" /> Archive
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleViewDetails(folder);
+                        setContextMenuVisible((prev) => ({
+                          ...prev,
+                          [folder.folder_id]: false,
+                        }));
+                      }}
+                    >
+                      <Eye className="inline w-4 h-4 mr-2" /> View Details
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-gray-500 py-8">
+              No folders found
             </div>
-          ))
-        ) : (
-          <div className="text-center text-gray-500 py-8">
-            No folders found
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       <FolderOperations
         isAddingFolder={isAddingFolder}
@@ -403,4 +691,4 @@ export default function IncidentReport() {
       />
     </div>
   );
-} 
+}
