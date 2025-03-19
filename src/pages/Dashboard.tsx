@@ -877,19 +877,19 @@ export default function Dashboard() {
               className="mr-2 text-xs font-medium text-gray-700"
             >
               Select File Type:
-            </label>
-            <select
-              id="data-select"
-              value={selectedData}
-              onChange={handleDataChange}
+              </label>
+              <select
+                id="data-select"
+                value={selectedData}
+                onChange={handleDataChange}
               className="p-1 font-poppins border rounded-lg text-xs"
             >
               <option value="Incident Report">Incident Report</option>
               <option value="eblotterFiles">E-Blotter Files</option>
               <option value="womenChildrenFiles">Women & Children Files</option>
               <option value="extractionFiles">Extraction Files</option>
-            </select>
-          </div>
+              </select>
+            </div>
         </CardHeader>
 
         <CardContent className="h-36 p-2 flex items-center justify-center flex-grow">
@@ -1032,7 +1032,7 @@ export default function Dashboard() {
                     <span className="text-[11px]">{entry.name}</span>
                     <span className="text-[11px] font-medium">
                       ({entry.value})
-                    </span>
+          </span>
                   </div>
                 ))}
               </div>
@@ -1050,7 +1050,7 @@ export default function Dashboard() {
               Most used category: {" "}
               <span className="mr-1 ml-2">{categoryData[0]?.name}</span>
               <span>({categoryData[0]?.value} folders)</span>
-            </div>
+          </div>
           ) : (
             <span className="text-sm">No data to display</span>
           )}
@@ -1148,7 +1148,7 @@ export default function Dashboard() {
       <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white">
         <CardHeader className="p-2">
           <CardTitle className="text-lg font-semibold text-gray-900">
-            Recent Files Upload
+          Recent Files Upload
           </CardTitle>
         </CardHeader>
 
@@ -1170,9 +1170,9 @@ export default function Dashboard() {
                     <th className="px-6 py-3 text-left border-b">
                       Upload Time
                     </th>
-                  </tr>
-                </thead>
-                <tbody>
+                </tr>
+              </thead>
+              <tbody>
                   {currentItems.map((file) => (
                     <tr
                       key={`${file.file_type}-${file.id}`}
@@ -1208,10 +1208,10 @@ export default function Dashboard() {
                           timeZone: "Asia/Taipei", // Taiwan timezone
                         })}
                       </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             )}
           </div>
         </CardContent>
