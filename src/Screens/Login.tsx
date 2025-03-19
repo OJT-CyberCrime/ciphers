@@ -15,7 +15,7 @@ interface LoginProps {
 }
 
 const MAX_ATTEMPTS = 3;
-const LOCKOUT_TIME = 1 * 60 * 1000; // 1 minute
+const LOCKOUT_TIME = 15 * 60 * 1000; // 1 minute
 
 const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -88,7 +88,7 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
           setRetryTimeout(lockoutEndTime);
           localStorage.setItem("retryTimeout", lockoutEndTime.toString());
           setErrorMessage(
-            "Too many failed attempts. Please wait 1 minute before retrying."
+            "Too many failed attempts. Please wait 15 minute before retrying."
           );
         } else {
           setErrorMessage(
