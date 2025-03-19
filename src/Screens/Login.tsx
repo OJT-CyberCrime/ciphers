@@ -9,6 +9,8 @@ import { Alert } from "@/components/ui/alert";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
 import DataPrivacyModal from "@/components/DataPrivacyModal";
 import { toast } from "sonner";
+import TwoFactorSetup from "@/components/TwoFactorSetup";
+import TwoFactorVerify from "@/components/TwoFactorVerify";
 
 interface LoginProps {
   setIsLoggedIn: (value: boolean) => void;
@@ -32,6 +34,9 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
   const [mfaCode, setMfaCode] = useState("");
   const [tempAuthData, setTempAuthData] = useState<any>(null);
   const [tempUserData, setTempUserData] = useState<any>(null);
+  const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
+  const [showTwoFactorVerify, setShowTwoFactorVerify] = useState(false);
+  const [twoFactorSecret, setTwoFactorSecret] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -135,19 +140,25 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
 
       const { data: userData, error: userError } = await supabase
         .from("users")
-        .select("user_id, name, email, role, uuid")
+        .select("user_id, name, email, role, uuid, two_factor_secret, two_factor_enabled")
         .eq("email", email)
         .single();
 
       if (userError) throw userError;
 
-      // Store temporary data and show MFA input
+      // Store temporary data
       setTempAuthData(authData);
       setTempUserData(userData);
-      setShowMFAInput(true);
-      
-      // Generate and send MFA code
-      await sendMFACode(email);
+
+      // Check 2FA status
+      if (!userData.two_factor_enabled) {
+        // Show 2FA setup if not enabled
+        setShowTwoFactorSetup(true);
+      } else {
+        // Show 2FA verification if enabled
+        setTwoFactorSecret(userData.two_factor_secret);
+        setShowTwoFactorVerify(true);
+      }
 
     } catch (error: any) {
       // Error is handled above
@@ -159,61 +170,23 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
     }
   };
 
-  const sendMFACode = async (email: string) => {
-    try {
-      // Generate a random 6-digit code
-      const mfaCode = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      // Store the code in Supabase with an expiration time (15 minutes)
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-      
-      await supabase.from('mfa_codes').insert([
-        {
-          email,
-          code: mfaCode,
-          expires_at: expiresAt
-        }
-      ]);
-
-      // Here you would typically send this code via email or SMS
-      // For now, we'll just show it in a toast for demonstration
-      toast.info(`Your verification code is: ${mfaCode}`, {
-        duration: 10000,
-      });
-
-    } catch (error) {
-      console.error('Error sending MFA code:', error);
-      toast.error('Failed to send verification code');
-    }
+  const handleTwoFactorSetupComplete = () => {
+    setShowTwoFactorSetup(false);
+    completeLogin();
   };
 
-  const verifyMFACode = async () => {
+  const handleTwoFactorVerifyComplete = () => {
+    setShowTwoFactorVerify(false);
+    completeLogin();
+  };
+
+  const completeLogin = async () => {
     if (!tempAuthData || !tempUserData) return;
 
     try {
       setIsLoading(true);
 
-      // Verify the MFA code
-      const { data: mfaData, error: mfaError } = await supabase
-        .from('mfa_codes')
-        .select('*')
-        .eq('email', tempUserData.email)
-        .eq('code', mfaCode)
-        .gte('expires_at', new Date().toISOString())
-        .single();
-
-      if (mfaError || !mfaData) {
-        setErrorMessage('Invalid or expired verification code');
-        return;
-      }
-
-      // Delete the used MFA code
-      await supabase
-        .from('mfa_codes')
-        .delete()
-        .eq('email', tempUserData.email);
-
-      // Complete the login process
+      // Reset login attempts
       setFailedAttempts(0);
       setRetryTimeout(null);
       localStorage.removeItem("retryTimeout");
@@ -267,18 +240,12 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
 
       setIsLoggedIn(true);
       navigate("/dashboard");
-
     } catch (error: any) {
-      console.error('Error verifying MFA code:', error);
-      setErrorMessage('Failed to verify code. Please try again.');
+      console.error('Error completing login:', error);
+      setErrorMessage('Failed to complete login process');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleMFASubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    verifyMFACode();
   };
 
   return (
@@ -328,7 +295,29 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
               </p>
             </div>
 
-            {!showMFAInput ? (
+            {showTwoFactorSetup ? (
+              <TwoFactorSetup
+                userEmail={tempUserData?.email || ''}
+                onVerificationComplete={handleTwoFactorSetupComplete}
+                onCancel={() => {
+                  setShowTwoFactorSetup(false);
+                  setTempAuthData(null);
+                  setTempUserData(null);
+                }}
+              />
+            ) : showTwoFactorVerify ? (
+              <TwoFactorVerify
+                userEmail={tempUserData?.email || ''}
+                secret={twoFactorSecret || ''}
+                onVerificationComplete={handleTwoFactorVerifyComplete}
+                onCancel={() => {
+                  setShowTwoFactorVerify(false);
+                  setTempAuthData(null);
+                  setTempUserData(null);
+                  setTwoFactorSecret(null);
+                }}
+              />
+            ) : (
               <form onSubmit={handleLogin} className="space-y-6">
                 <Input
                   type="email"
@@ -373,57 +362,6 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
                     onVerify={handleVerificationSuccess}
                     ref={captchaRef}
                   />
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={handleMFASubmit} className="space-y-6">
-                <div className="text-center mb-4">
-                  <KeyRound className="h-12 w-12 text-blue-900 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    Two-Step Verification
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Please enter the 6-digit verification code sent to your email
-                  </p>
-                </div>
-                <div className="space-y-4">
-                  <Input
-                    type="text"
-                    placeholder="Enter 6-digit code"
-                    value={mfaCode}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '');
-                      if (value.length <= MFA_CODE_LENGTH) {
-                        setMfaCode(value);
-                      }
-                    }}
-                    className="p-4 text-lg h-12 w-full border border-gray-300 rounded-lg font-poppins focus:outline-none focus:ring-2 focus:ring-blue-500 text-center tracking-widest"
-                    maxLength={MFA_CODE_LENGTH}
-                    required
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full bg-blue-900 text-white p-4 text-lg h-12 rounded-lg hover:bg-blue-800 transition-all duration-300 font-poppins flex items-center justify-center"
-                    disabled={isLoading || mfaCode.length !== MFA_CODE_LENGTH}
-                  >
-                    {isLoading ? (
-                      <Loader className="animate-spin h-5 w-5 mr-2" />
-                    ) : null}
-                    {isLoading ? "Verifying..." : "Login"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setShowMFAInput(false);
-                      setMfaCode("");
-                      setTempAuthData(null);
-                      setTempUserData(null);
-                    }}
-                  >
-                    Back to Login
-                  </Button>
                 </div>
               </form>
             )}
