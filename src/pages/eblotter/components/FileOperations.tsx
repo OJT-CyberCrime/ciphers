@@ -71,7 +71,7 @@ interface FileOperationsProps {
 // Helper function to get file type icon
 const getFileIcon = (filePath: string) => {
   const ext = filePath.split('.').pop()?.toLowerCase() || '';
-  const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
+  const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
   const documentTypes = ['pdf', 'doc', 'docx'];
   const spreadsheetTypes = ['xls', 'xlsx'];
   const presentationTypes = ['ppt', 'pptx'];
@@ -99,7 +99,7 @@ export default function FileOperations({
   // Use currentFile only for file operations and details dialog
   const currentFile = showFileDialog ? (selectedFile || file) : file;
   const ext = currentFile.path_file.split('.').pop()?.toLowerCase() || '';
-  const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
+  const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
   const pdfType = ['pdf'];
   const officeTypes = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
 
