@@ -18,6 +18,7 @@ import Extraction from "./pages/extraction/index";
 import ExtractionFile from './pages/extractionFile/index';
 import Archives from './pages/Archives/index';
 import { Toaster } from "@/components/ui/sonner";
+import TwoFactorResetPage from './pages/TwoFactorResetPage';
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -86,6 +87,8 @@ const App: React.FC = () => {
                 isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login setIsLoggedIn={setIsLoggedIn} />
               } />
               
+              <Route path="/2fa-reset" element={<TwoFactorResetPage />} />
+
               {/* Protected Routes */}
               <Route path="/dashboard" element={
                 <ProtectedRoute>
