@@ -11,6 +11,7 @@ import DataPrivacyModal from "@/components/DataPrivacyModal";
 import { toast } from "sonner";
 import TwoFactorSetup from "@/components/TwoFactorSetup";
 import TwoFactorVerify from "@/components/TwoFactorVerify";
+import TwoFactorReset from "@/components/TwoFactorReset";
 
 interface LoginProps {
   setIsLoggedIn: (value: boolean) => void;
@@ -37,6 +38,7 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
   const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
   const [showTwoFactorVerify, setShowTwoFactorVerify] = useState(false);
   const [twoFactorSecret, setTwoFactorSecret] = useState<string | null>(null);
+  const [showTwoFactorReset, setShowTwoFactorReset] = useState(false);
 
   const navigate = useNavigate();
 
@@ -306,17 +308,34 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
                 }}
               />
             ) : showTwoFactorVerify ? (
-              <TwoFactorVerify
-                userEmail={tempUserData?.email || ''}
-                secret={twoFactorSecret || ''}
-                onVerificationComplete={handleTwoFactorVerifyComplete}
-                onCancel={() => {
-                  setShowTwoFactorVerify(false);
-                  setTempAuthData(null);
-                  setTempUserData(null);
-                  setTwoFactorSecret(null);
-                }}
-              />
+              <>
+                {showTwoFactorReset ? (
+                  <TwoFactorReset
+                    onCancel={() => setShowTwoFactorReset(false)}
+                  />
+                ) : (
+                  <TwoFactorVerify
+                    userEmail={tempUserData?.email || ''}
+                    secret={twoFactorSecret || ''}
+                    onVerificationComplete={handleTwoFactorVerifyComplete}
+                    onCancel={() => {
+                      setShowTwoFactorVerify(false);
+                      setTempAuthData(null);
+                      setTempUserData(null);
+                      setTwoFactorSecret(null);
+                    }}
+                  >
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="mt-4 text-sm text-blue-600"
+                      onClick={() => setShowTwoFactorReset(true)}
+                    >
+                      Lost access to your authenticator app?
+                    </Button>
+                  </TwoFactorVerify>
+                )}
+              </>
             ) : (
               <form onSubmit={handleLogin} className="space-y-6">
                 <Input
