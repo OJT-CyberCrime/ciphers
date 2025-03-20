@@ -10,13 +10,15 @@ interface TwoFactorVerifyProps {
   secret: string;
   onVerificationComplete: () => void;
   onCancel: () => void;
+  children?: React.ReactNode;
 }
 
 export default function TwoFactorVerify({ 
   userEmail, 
   secret, 
   onVerificationComplete, 
-  onCancel 
+  onCancel,
+  children 
 }: TwoFactorVerifyProps) {
   const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +104,8 @@ export default function TwoFactorVerify({
             )}
           </Button>
         </div>
+
+        {children}
       </div>
     </div>
   );
