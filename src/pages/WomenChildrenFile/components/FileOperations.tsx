@@ -15,18 +15,24 @@ import { supabase } from "@/utils/supa";
 import Cookies from "js-cookie";
 import {
   Download,
-  X,
-  Printer,
-  File,
+  Plus,
   FileText,
   Image as ImageIcon,
+  File,
+  Pencil,
+  Archive,
+  Eye,
+  MoreVertical,
+  Printer
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface FileRecord {
   file_id: number;
   folder_id: number;
-  title: string;
+  file_name: string;
+  case_title: string;
+  blotter_number: string;
   incident_summary: string;
   file_path: string;
   public_url: string;
@@ -242,7 +248,7 @@ export default function FileOperations({
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = currentFile.title + '.' + ext;
+      a.download = currentFile.case_title + '.' + ext;
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(url);
@@ -361,7 +367,9 @@ export default function FileOperations({
     try {
       const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
-      const title = formData.get('title') as string;
+      const fileTitle = formData.get('file_name') as string;
+      const caseTitle = formData.get('case_title') as string;
+      const blotterNumber = formData.get('blotter_number') as string;
       const investigator = formData.get('investigator') as string;
       const deskOfficer = formData.get('desk_officer') as string;
       const summary = formData.get('summary') as string;
@@ -417,13 +425,16 @@ export default function FileOperations({
       const { error: updateError } = await supabase
         .from('womenchildren_file')
         .update({
-          title,
+          file_name: fileTitle,
+          case_title: caseTitle,
+          blotter_number: blotterNumber,
           investigator,
           desk_officer: deskOfficer,
           incident_summary: summary,
           ...(uploadedFile && uploadedFile instanceof globalThis.File && uploadedFile.size > 0 ? {
             file_path: filePath,
-            public_url: publicUrl
+            public_url: publicUrl,
+            file_name: uploadedFile.name
           } : {}),
           updated_by: userData2.user_id,
           updated_at: new Date().toISOString()
@@ -472,7 +483,7 @@ export default function FileOperations({
         <div className="relative aspect-video">
           <img 
             src={signedUrl} 
-            alt={currentFile.title}
+            alt={currentFile.case_title}
             className="w-full h-full object-contain"
             onError={() => setError('Failed to load image')}
           />
@@ -487,7 +498,7 @@ export default function FileOperations({
           <iframe
             src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true&rm=minimal`}
             className="w-full h-full border-none"
-            title={currentFile.title}
+            title={currentFile.case_title}
             onError={() => setError('Failed to load document preview')}
           />
         </div>
@@ -543,7 +554,7 @@ export default function FileOperations({
         <div className="w-full h-48 bg-gray-100 rounded-lg border overflow-hidden">
           <img 
             src={signedUrl || undefined} 
-            alt={currentFile.title}
+            alt={currentFile.case_title}
             className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer"
             onClick={() => {
               setSelectedFile(currentFile);
@@ -562,7 +573,7 @@ export default function FileOperations({
             <iframe
               src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true&rm=minimal`}
               className="w-full h-[400px] border-none"
-              title={currentFile.title}
+              title={currentFile.case_title}
             />
           </div>
           {/* Expand button overlay */}
@@ -625,7 +636,7 @@ export default function FileOperations({
           <DialogHeader>
             <div className="flex justify-between items-center">
               <div>
-                <DialogTitle className="text-2xl font-semibold">{currentFile.title}</DialogTitle>
+                <DialogTitle className="text-2xl font-semibold">{currentFile.case_title}</DialogTitle>
                 <p className="text-sm text-gray-500 mt-1">
                   {ext.toUpperCase()} Document • Added by {currentFile.created_by}
                 </p>
@@ -680,11 +691,31 @@ export default function FileOperations({
               <form onSubmit={handleEditFile}>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="title">File Title</Label>
+                    <Label htmlFor="file_name">File Name</Label>
                     <Input
-                      id="title"
-                      name="title"
-                      defaultValue={(selectedFile || file).title}
+                      id="file_name"
+                      name="file_name"
+                      defaultValue={(selectedFile || file).file_name}
+                      required
+                      className="border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="case_title">Case Title</Label>
+                    <Input
+                      id="case_title"
+                      name="case_title"
+                      defaultValue={(selectedFile || file).case_title}
+                      required
+                      className="border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="blotter_number">Blotter Number</Label>
+                    <Input
+                      id="blotter_number"
+                      name="blotter_number"
+                      defaultValue={(selectedFile || file).blotter_number}
                       required
                       className="border-gray-300 rounded-md"
                     />
@@ -714,9 +745,51 @@ export default function FileOperations({
                     <Textarea
                       id="summary"
                       name="summary"
-                      defaultValue={(selectedFile || file).incident_summary}
+                      defaultValue={((selectedFile || file).incident_summary || `REPORTING PERSON INFORMATION:
+Full Name: 
+Age:                    Birthday: 
+Gender: 
+Complete Address: 
+Contact Number: 
+
+INCIDENT DETAILS:
+Date Reported: 
+Time Reported: 
+Date of Incident: 
+Time of Incident: 
+Place of Incident: 
+
+SUSPECT/S INFORMATION:
+[SUSPECT 1]
+Full Name: 
+Age:                    Birthday: 
+Gender: 
+Complete Address: 
+Contact Number: 
+Relationship to Victim: 
+
+[SUSPECT 2]
+Full Name: 
+Age:                    Birthday: 
+Gender: 
+Complete Address: 
+Contact Number: 
+Relationship to Victim: 
+
+[SUSPECT 3]
+Full Name: 
+Age:                    Birthday: 
+Gender: 
+Complete Address: 
+Contact Number: 
+Relationship to Victim: 
+
+(Add more suspects if needed by copying the suspect template above)
+
+NARRATIVE:
+(Please provide a detailed account of the incident)`)}
                       required
-                      className="h-32 resize-none border-gray-300 rounded-md"
+                      className="h-96 resize-none border-gray-300 rounded-md font-mono"
                     />
                   </div>
                   <div>
@@ -770,8 +843,16 @@ export default function FileOperations({
             {showFileDialog === 'details' && (
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">File Title</h4>
-                  <p className="text-gray-900 text-lg font-medium">{currentFile.title}</p>
+                  <h4 className="font-medium text-blue-900 mb-1">File Name</h4>
+                  <p className="text-gray-900 text-lg font-medium">{currentFile.file_name}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Case Title</h4>
+                  <p className="text-gray-900 text-lg font-medium">{currentFile.case_title}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Blotter Number</h4>
+                  <p className="text-gray-900">{currentFile.blotter_number}</p>
                 </div>
                 <div>
                   <h4 className="font-medium text-blue-900 mb-1">Investigator</h4>
@@ -788,7 +869,7 @@ export default function FileOperations({
                     name="summary"
                     defaultValue={currentFile.incident_summary}
                     readOnly
-                    className="h-32 resize-none border-gray-300 rounded-md"
+                    className="h-96 resize-none border-gray-300 rounded-md font-mono whitespace-pre-wrap"
                   />
                 </div>
                 <div>
