@@ -80,7 +80,6 @@ interface Suspect {
   gender: 'Male' | 'Female' | 'Other';
   complete_address: string;
   contact_number: string;
-  relationship_to_victim: string;
 }
 
 interface FileOperationsProps {
@@ -179,8 +178,7 @@ export default function FileOperations({
       birthday: '',
       gender: 'Male',
       complete_address: '',
-      contact_number: '',
-      relationship_to_victim: ''
+      contact_number: ''
     }]);
   };
 
@@ -1114,15 +1112,6 @@ export default function FileOperations({
                           onChange={(e) => updateSuspect(index, 'contact_number', e.target.value)}
                         />
                       </div>
-                      <div>
-                        <Label htmlFor={`suspect_${index}_relationship_to_victim`}>Relationship to Victim</Label>
-                        <Textarea
-                          id={`suspect_${index}_relationship_to_victim`}
-                          value={suspect.relationship_to_victim}
-                          onChange={(e) => updateSuspect(index, 'relationship_to_victim', e.target.value)}
-                          className="h-24 resize-none border-gray-300 rounded-md"
-                        />
-                      </div>
                       <div className="flex justify-end">
                         <Button
                           type="button"
@@ -1291,10 +1280,6 @@ export default function FileOperations({
                           <div>
                             <Label>Contact Number</Label>
                             <p className="text-gray-900 mt-1">{suspect.contact_number}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <Label>Relationship to Victim</Label>
-                            <p className="text-gray-900 mt-1">{suspect.relationship_to_victim}</p>
                           </div>
                         </div>
                       </div>

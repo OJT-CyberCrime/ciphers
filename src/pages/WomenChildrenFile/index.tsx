@@ -92,7 +92,6 @@ interface Suspect {
   gender: 'Male' | 'Female' | 'Other';
   complete_address: string;
   contact_number: string;
-  relationship_to_victim: string;
 }
 
 // Helper function to get file type icon
@@ -174,8 +173,7 @@ export default function WomenChildrenFile() {
     birthday: '',
     gender: 'Male',
     complete_address: '',
-    contact_number: '',
-    relationship_to_victim: ''
+    contact_number: ''
   }]);
 
   // Function to add a new suspect form
@@ -187,7 +185,6 @@ export default function WomenChildrenFile() {
       gender: 'Male',
       complete_address: '',
       contact_number: '',
-      relationship_to_victim: ''
     }]);
   };
 
@@ -283,8 +280,7 @@ export default function WomenChildrenFile() {
       // Insert suspects
       const suspectsWithData = suspects.filter(suspect => 
         suspect.full_name || suspect.age || suspect.birthday || 
-        suspect.complete_address || suspect.contact_number || 
-        suspect.relationship_to_victim
+        suspect.complete_address || suspect.contact_number
       );
 
       if (suspectsWithData.length > 0) {
@@ -353,8 +349,7 @@ export default function WomenChildrenFile() {
         birthday: '',
         gender: 'Male',
         complete_address: '',
-        contact_number: '',
-        relationship_to_victim: ''
+        contact_number: ''
       }]);
     } catch (error: any) {
       console.error('Error uploading file:', error);
@@ -919,14 +914,6 @@ export default function WomenChildrenFile() {
                             onChange={(e) => updateSuspect(index, 'contact_number', e.target.value)}
                           />
                         </div>
-                        <div>
-                          <Label htmlFor={`suspect_${index}_relationship`}>Relationship to Victim</Label>
-                          <Input
-                            id={`suspect_${index}_relationship`}
-                            value={suspect.relationship_to_victim}
-                            onChange={(e) => updateSuspect(index, 'relationship_to_victim', e.target.value)}
-                          />
-                        </div>
                       </div>
                     </div>
                   ))}
@@ -965,8 +952,7 @@ export default function WomenChildrenFile() {
                       birthday: '',
                       gender: 'Male',
                       complete_address: '',
-                      contact_number: '',
-                      relationship_to_victim: ''
+                      contact_number: ''
                     }]);
                 }}
               >
