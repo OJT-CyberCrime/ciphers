@@ -161,7 +161,7 @@ export const fetchArchivedContent = async () => {
         file_type: 'regular' as const
       })),
       ...(eblotterFiles || []).map((file: any) => ({
-        file_id: file.blotter_id,
+        file_id: file.file_id,
         title: file.title,
         folder_id: file.folder_id,
         folder_title: file.folders?.title || 'No Folder',
@@ -225,7 +225,7 @@ export const handleRestoreFile = async (file: ArchivedFile) => {
         ({ error } = await supabase
           .from('eblotter_file')
           .update({ is_archived: false })
-          .eq('blotter_id', file.file_id));
+          .eq('file_id', file.file_id));
         break;
 
       case 'extraction':
