@@ -899,49 +899,7 @@ export default function FileOperations({
                     <Textarea
                       id="summary"
                       name="summary"
-                      defaultValue={((selectedFile || file).incident_summary || `REPORTING PERSON INFORMATION:
-Full Name: 
-Age:                    Birthday: 
-Gender: 
-Complete Address: 
-Contact Number: 
-
-INCIDENT DETAILS:
-Date Reported: 
-Time Reported: 
-Date of Incident: 
-Time of Incident: 
-Place of Incident: 
-
-SUSPECT/S INFORMATION:
-[SUSPECT 1]
-Full Name: 
-Age:                    Birthday: 
-Gender: 
-Complete Address: 
-Contact Number: 
-Relationship to Victim: 
-
-[SUSPECT 2]
-Full Name: 
-Age:                    Birthday: 
-Gender: 
-Complete Address: 
-Contact Number: 
-Relationship to Victim: 
-
-[SUSPECT 3]
-Full Name: 
-Age:                    Birthday: 
-Gender: 
-Complete Address: 
-Contact Number: 
-Relationship to Victim: 
-
-(Add more suspects if needed by copying the suspect template above)
-
-NARRATIVE:
-(Please provide a detailed account of the incident)`)}
+                      defaultValue={((selectedFile || file).incident_summary)} 
                       required
                       className="h-96 resize-none border-gray-300 rounded-md font-mono"
                     />
