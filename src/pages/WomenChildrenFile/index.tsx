@@ -281,17 +281,25 @@ export default function WomenChildrenFile() {
       if (reportingError) throw reportingError;
 
       // Insert suspects
-      const { error: suspectsError } = await supabase
-        .from('suspects')
-        .insert(
-          suspects.map(suspect => ({
-            wc_file_id: fileData.file_id,
-            ...suspect,
-            birthday: new Date(suspect.birthday).toISOString()
-          }))
-        );
+      const suspectsWithData = suspects.filter(suspect => 
+        suspect.full_name || suspect.age || suspect.birthday || 
+        suspect.complete_address || suspect.contact_number || 
+        suspect.relationship_to_victim
+      );
 
-      if (suspectsError) throw suspectsError;
+      if (suspectsWithData.length > 0) {
+        const { error: suspectsError } = await supabase
+          .from('suspects')
+          .insert(
+            suspectsWithData.map(suspect => ({
+              wc_file_id: fileData.file_id,
+              ...suspect,
+              birthday: suspect.birthday ? new Date(suspect.birthday).toISOString() : null
+            }))
+          );
+
+        if (suspectsError) throw suspectsError;
+      }
 
       // Fetch the complete file data with user information
       const { data: newFileWithUser, error: fetchError } = await supabase
@@ -860,7 +868,6 @@ export default function WomenChildrenFile() {
                             id={`suspect_${index}_name`}
                             value={suspect.full_name}
                             onChange={(e) => updateSuspect(index, 'full_name', e.target.value)}
-                            required
                           />
                         </div>
                         <div>
@@ -872,7 +879,6 @@ export default function WomenChildrenFile() {
                             max="150"
                             value={suspect.age}
                             onChange={(e) => updateSuspect(index, 'age', parseInt(e.target.value))}
-                            required
                           />
                         </div>
                         <div>
@@ -882,7 +888,6 @@ export default function WomenChildrenFile() {
                             type="date"
                             value={suspect.birthday}
                             onChange={(e) => updateSuspect(index, 'birthday', e.target.value)}
-                            required
                           />
                         </div>
                         <div>
@@ -904,7 +909,6 @@ export default function WomenChildrenFile() {
                             id={`suspect_${index}_address`}
                             value={suspect.complete_address}
                             onChange={(e) => updateSuspect(index, 'complete_address', e.target.value)}
-                            required
                           />
                         </div>
                         <div>
@@ -913,7 +917,6 @@ export default function WomenChildrenFile() {
                             id={`suspect_${index}_contact`}
                             value={suspect.contact_number}
                             onChange={(e) => updateSuspect(index, 'contact_number', e.target.value)}
-                            required
                           />
                         </div>
                         <div>
@@ -922,7 +925,6 @@ export default function WomenChildrenFile() {
                             id={`suspect_${index}_relationship`}
                             value={suspect.relationship_to_victim}
                             onChange={(e) => updateSuspect(index, 'relationship_to_victim', e.target.value)}
-                            required
                           />
                         </div>
                       </div>

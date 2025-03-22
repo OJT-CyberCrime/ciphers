@@ -1061,7 +1061,6 @@ export default function FileOperations({
                           id={`suspect_${index}_full_name`}
                           value={suspect.full_name}
                           onChange={(e) => updateSuspect(index, 'full_name', e.target.value)}
-                          required
                         />
                       </div>
                       <div>
@@ -1071,7 +1070,6 @@ export default function FileOperations({
                           type="number"
                           value={suspect.age}
                           onChange={(e) => updateSuspect(index, 'age', Number(e.target.value))}
-                          required
                         />
                       </div>
                       <div>
@@ -1081,7 +1079,6 @@ export default function FileOperations({
                           type="date"
                           value={formatDateForInput(suspect.birthday)}
                           onChange={(e) => updateSuspect(index, 'birthday', e.target.value)}
-                          required
                         />
                       </div>
                       <div>
@@ -1089,7 +1086,6 @@ export default function FileOperations({
                         <Select
                           value={suspect.gender}
                           onValueChange={(value) => updateSuspect(index, 'gender', value as 'Male' | 'Female' | 'Other')}
-                          required
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select gender" />
@@ -1107,7 +1103,6 @@ export default function FileOperations({
                           id={`suspect_${index}_complete_address`}
                           value={suspect.complete_address}
                           onChange={(e) => updateSuspect(index, 'complete_address', e.target.value)}
-                          required
                           className="h-24 resize-none border-gray-300 rounded-md"
                         />
                       </div>
@@ -1117,7 +1112,6 @@ export default function FileOperations({
                           id={`suspect_${index}_contact_number`}
                           value={suspect.contact_number}
                           onChange={(e) => updateSuspect(index, 'contact_number', e.target.value)}
-                          required
                         />
                       </div>
                       <div>
@@ -1126,7 +1120,6 @@ export default function FileOperations({
                           id={`suspect_${index}_relationship_to_victim`}
                           value={suspect.relationship_to_victim}
                           onChange={(e) => updateSuspect(index, 'relationship_to_victim', e.target.value)}
-                          required
                           className="h-24 resize-none border-gray-300 rounded-md"
                         />
                       </div>
