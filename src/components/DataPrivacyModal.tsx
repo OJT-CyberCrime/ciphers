@@ -13,7 +13,7 @@ const DataPrivacyModal: React.FC<DataPrivacyModalProps> = ({ isOpen, onClose }) 
         <DialogHeader>
           <DialogTitle className="font-poppins text-3xl">Data Privacy Notice</DialogTitle>
         </DialogHeader>
-        <div className="overflow-auto max-h-[80vh]">
+        <div className="overflow-auto max-h-[70vh]">
           <img src="/assets/DataPrivacy.jpg" alt="Data Privacy" className="w-full h-auto" />
         </div>
       </DialogContent>

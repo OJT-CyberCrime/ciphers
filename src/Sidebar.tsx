@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Home,
@@ -22,8 +22,13 @@ interface SidebarProps {
 
 export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const userData = JSON.parse(Cookies.get('user_data') || '{}');
   const userRole = userData.role;
+
+  const isActive = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(path + "/");
+  };
 
   const handleLogout = async () => {
     try {

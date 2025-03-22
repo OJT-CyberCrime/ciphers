@@ -20,6 +20,15 @@ import {
   Grid,
   SortAsc,
 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetOverlay,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Select,
@@ -30,14 +39,14 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/utils/supa";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogHeader,
+//   DialogTitle,
+//   DialogDescription,
+//   DialogFooter,
+// } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -146,18 +155,32 @@ export default function FolderPage() {
   const [previewStates, setPreviewStates] = useState<{
     [key: number]: boolean;
   }>({});
-  const [showOptions, setShowOptions] = useState<{ [key: number]: boolean }>(
-    {}
-  );
+  const [showOptions, setShowOptions] = useState<{ [key: number]: boolean }>({});
   // const navigate = useNavigate();
   // const location = useLocation();
   const previousPage = "/incident-report"; // Always navigate to incident report
   const previousPageName = "Incident Reports";
   const [isListView, setIsListView] = useState(() => {
     // Retrieve the view mode from local storage or default to false (grid view)
-    return localStorage.getItem("isListView") === "true";
+    const storedView = localStorage.getItem("viewPreference");
+    return storedView ? JSON.parse(storedView) : false;
   });
   const [sortCriteria, setSortCriteria] = useState("created_at");
+
+  // Add click outside handler for context menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.context-menu') && !target.closest('.menu-trigger')) {
+        setShowOptions({});
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Handle file upload
   const handleFileUpload = useCallback(
@@ -389,15 +412,20 @@ export default function FolderPage() {
 
   const handleViewChange = (view: boolean) => {
     setIsListView(view);
+    setShowOptions({}); // Reset context menu state
     localStorage.setItem("viewPreference", JSON.stringify(view));
   };
 
   const handleRowClick = useCallback((fileId: number) => {
-    setPreviewStates((prev) => ({
-      ...prev,
-      [fileId]: true,
-    }));
-  }, []);
+    const file = sortedFiles.find(f => f.file_id === fileId);
+    if (file) {
+      setSelectedFile(file);
+      setPreviewStates(prev => ({
+        ...prev,
+        [fileId]: true
+      }));
+    }
+  }, [sortedFiles]);
 
   return (
     <div className="p-6">
@@ -506,10 +534,18 @@ export default function FolderPage() {
       <div className="space-y-6">
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <Skeleton className="h-32 w-full rounded-lg" />
-            <Skeleton className="h-32 w-full rounded-lg" />
-            <Skeleton className="h-32 w-full rounded-lg" />
-            <Skeleton className="h-32 w-full rounded-lg" />
+            {/* Skeletons for grid view */}
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex items-center mb-2">
+                  <Skeleton className="h-40 w-12 rounded-full" /> {/* Placeholder for icon */}
+                  <div className="ml-3 flex-1">
+                    <Skeleton className="h-4 w-full mb-1" /> 
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : sortedFiles.length > 0 ? (
           isListView ? (
@@ -517,21 +553,11 @@ export default function FolderPage() {
               <table className="min-w-full bg-gray-50">
                 <thead>
                   <tr>
-                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
-                      File Name
-                    </th>
-                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
-                      Added By
-                    </th>
-                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
-                      Date Added
-                    </th>
-                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
-                      Folder Status
-                    </th>
-                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
-                      Actions
-                    </th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">File Name</th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">Added By</th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">Date Added</th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">Folder Status</th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -543,29 +569,30 @@ export default function FolderPage() {
                     >
                       <td className="px-4 py-2 border-b flex items-center gap-2">
                         {getFileIcon(file.file_path)}
-                        <span onClick={(e) => e.stopPropagation()}>{file.title}</span>
+                        <span 
+                          className="cursor-pointer hover:text-blue-600"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent row click
+                            setSelectedFile(file);
+                            setPreviewStates(prev => ({
+                              ...prev,
+                              [file.file_id]: true
+                            }));
+                          }}
+                        >
+                          {file.title}
+                        </span>
                       </td>
                       <td className="px-4 py-2 border-b">{file.created_by}</td>
+                      <td className="px-4 py-2 border-b">{new Date(file.created_at).toLocaleDateString()}</td>
                       <td className="px-4 py-2 border-b">
-                        {new Date(file.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-2 border-b">
-                        <Badge
-                          variant="outline"
-                          className={`${
-                            getStatusBadgeClass(folderDetails?.status || "N/A")
-                              .class
-                          } shadow-none`}
-                        >
-                          {
-                            getStatusBadgeClass(folderDetails?.status || "N/A")
-                              .label
-                          }
+                        <Badge variant="outline" className={`${getStatusBadgeClass(folderDetails?.status || 'N/A').class} shadow-none`}>
+                          {getStatusBadgeClass(folderDetails?.status || 'N/A').label}
                         </Badge>
                       </td>
                       <td className="px-4 py-2 border-b flex space-x-2">
                         <button
-                          className="p-2 rounded-full hover:bg-gray-200"
+                          className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
                           onClick={(e) => {
                             e.stopPropagation(); // Prevent row click
                             setShowOptions((prev) => ({
@@ -577,13 +604,13 @@ export default function FolderPage() {
                           <MoreVertical size={16} color="black" />
                         </button>
                         {showOptions[file.file_id] && (
-                          <div className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-50">
+                          <div className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 context-menu">
                             <button
                               className="block w-full text-left p-2 hover:bg-gray-100"
                               onClick={(e) => {
-                                e.stopPropagation(); // Prevents triggering the row click event
+                                e.stopPropagation();
                                 setSelectedFile(file);
-                                setShowFileDialog("edit");
+                                setShowFileDialog('edit');
                                 setShowOptions((prev) => ({
                                   ...prev,
                                   [file.file_id]: false,
@@ -595,32 +622,30 @@ export default function FolderPage() {
                             <button
                               className="block w-full text-left p-2 hover:bg-gray-100"
                               onClick={(e) => {
-                                e.stopPropagation(); // Prevents triggering the row click event
+                                e.stopPropagation();
                                 setSelectedFile(file);
-                                setShowFileDialog("archive");
+                                setShowFileDialog('archive');
                                 setShowOptions((prev) => ({
                                   ...prev,
                                   [file.file_id]: false,
                                 }));
                               }}
                             >
-                              <Archive className="inline w-4 h-4 mr-2" />{" "}
-                              Archive
+                              <Archive className="inline w-4 h-4 mr-2" /> Archive
                             </button>
                             <button
                               className="block w-full text-left p-2 hover:bg-gray-100"
                               onClick={(e) => {
-                                e.stopPropagation(); // Prevents triggering the row click event
+                                e.stopPropagation();
                                 setSelectedFile(file);
-                                setShowFileDialog("details");
+                                setShowFileDialog('details');
                                 setShowOptions((prev) => ({
                                   ...prev,
                                   [file.file_id]: false,
                                 }));
                               }}
                             >
-                              <Eye className="inline w-4 h-4 mr-2" /> View
-                              Details
+                              <Eye className="inline w-4 h-4 mr-2" /> View Details
                             </button>
                           </div>
                         )}
@@ -629,15 +654,39 @@ export default function FolderPage() {
                   ))}
                 </tbody>
               </table>
+              <FileOperations
+                file={selectedFile || sortedFiles[0]}
+                showFileDialog={showFileDialog}
+                setShowFileDialog={setShowFileDialog}
+                selectedFile={selectedFile}
+                setSelectedFile={setSelectedFile}
+                showPreview={selectedFile ? previewStates[selectedFile.file_id] : false}
+                setShowPreview={(show) => {
+                  if (selectedFile) {
+                    setPreviewStates(prev => ({
+                      ...prev,
+                      [selectedFile.file_id]: show
+                    }));
+                  }
+                }}
+                onFileUpdate={() => {
+                  if (showFileDialog === 'archive' && selectedFile) {
+                    setFiles(files.filter((f) => f.file_id !== selectedFile.file_id));
+                  } else {
+                    window.location.reload();
+                  }
+                }}
+                listView={true}
+              />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 font-poppins">
               {sortedFiles.map((file) => (
                 <div key={file.file_id} className="relative">
                   <div
                     className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow aspect-square"
                     onContextMenu={(e) => {
-                      e.preventDefault(); // Prevent default context menu
+                      e.preventDefault();
                       setShowOptions((prev) => ({
                         ...prev,
                         [file.file_id]: !prev[file.file_id],
@@ -647,14 +696,12 @@ export default function FolderPage() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
                         {getFileIcon(file.file_path)}
-                        <h3 className="font-medium text-gray-900">
-                          {file.title}
-                        </h3>
+                        <h3 className="font-medium text-gray-900">{file.title}</h3>
                       </div>
                       <button
-                        className="p-2 rounded-full hover:bg-gray-200"
+                        className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
                         onClick={(e) => {
-                          e.stopPropagation(); // Prevent row click event
+                          e.stopPropagation();
                           setShowOptions((prev) => ({
                             ...prev,
                             [file.file_id]: !prev[file.file_id],
@@ -678,30 +725,27 @@ export default function FolderPage() {
                       selectedFile={selectedFile}
                       setSelectedFile={setSelectedFile}
                       onFileUpdate={() => {
-                        if (showFileDialog === "archive") {
-                          setFiles(
-                            files.filter(
-                              (f) => f.file_id !== selectedFile?.file_id
-                            )
-                          );
+                        if (showFileDialog === 'archive') {
+                          setFiles(files.filter((f) => f.file_id !== selectedFile?.file_id));
                         } else {
                           window.location.reload();
                         }
                       }}
+                      listView={false}
                     />
                     <div className="text-xs text-gray-500 mt-2">
-                      Added by {file.created_by} on{" "}
-                      {new Date(file.created_at).toLocaleDateString()}
+                      Added by {file.created_by} on {new Date(file.created_at).toLocaleDateString()}
                     </div>
                   </div>
-
+      
                   {showOptions[file.file_id] && (
-                    <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                    <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 context-menu">
                       <button
                         className="block w-full text-left p-2 hover:bg-gray-100"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setSelectedFile(file);
-                          setShowFileDialog("edit");
+                          setShowFileDialog('edit');
                           setShowOptions((prev) => ({
                             ...prev,
                             [file.file_id]: false,
@@ -712,9 +756,10 @@ export default function FolderPage() {
                       </button>
                       <button
                         className="block w-full text-left p-2 hover:bg-gray-100"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setSelectedFile(file);
-                          setShowFileDialog("archive");
+                          setShowFileDialog('archive');
                           setShowOptions((prev) => ({
                             ...prev,
                             [file.file_id]: false,
@@ -725,9 +770,10 @@ export default function FolderPage() {
                       </button>
                       <button
                         className="block w-full text-left p-2 hover:bg-gray-100"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setSelectedFile(file);
-                          setShowFileDialog("details");
+                          setShowFileDialog('details');
                           setShowOptions((prev) => ({
                             ...prev,
                             [file.file_id]: false,
@@ -744,23 +790,25 @@ export default function FolderPage() {
           )
         ) : (
           <div className="text-center text-gray-500 py-8">
+            <File className="mx-auto mb-4 text-gray-400" size={48} />
             No files found in this folder
           </div>
         )}
       </div>
 
       {/* Add File Dialog */}
-      <Dialog open={isAddingFile} onOpenChange={setIsAddingFile}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New File</DialogTitle>
-            <DialogDescription>
+      <Sheet open={isAddingFile} onOpenChange={setIsAddingFile}>
+        <SheetContent className="max-w-4xl w-4/5 p-8 bg-white font-poppins overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-xl">Add New File</SheetTitle>
+            <SheetDescription className="text-sm">
               Upload a file and provide its details.
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
+
           <form onSubmit={handleFileUpload}>
-            <div className="space-y-4">
-              <div className="space-y-2">
+            <div className="space-y-4 py-4">
+              <div className="space-y-2 text-sm">
                 <Label htmlFor="title">File Title</Label>
                 <Input
                   id="title"
@@ -809,7 +857,8 @@ export default function FolderPage() {
                 />
               </div>
             </div>
-            <DialogFooter className="mt-4">
+
+            <SheetFooter className="mt-4 flex justify-end">
               <Button
                 type="button"
                 variant="outline"
@@ -821,16 +870,17 @@ export default function FolderPage() {
                   setNewDeskOfficer("");
                   setFileUpload(null);
                 }}
+                className="mr-2"
               >
                 Cancel
               </Button>
               <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
                 Upload File
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

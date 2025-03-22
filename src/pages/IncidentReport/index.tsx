@@ -362,8 +362,17 @@ export default function IncidentReport() {
               {isLoading ? (
                 Array.from({ length: 4 }).map((_, index) => (
                   <tr key={index}>
-                    <td colSpan={4} className="px-4 py-2 border-b">
-                      <Skeleton className="h-8 w-full" />
+                    <td className="px-4 py-2 border-b">
+                      <Skeleton className="h-4 w-1/2" />
+                    </td>
+                    <td className="px-4 py-2 border-b">
+                      <Skeleton className="h-4 w-1/4" />
+                    </td>
+                    <td className="px-4 py-2 border-b">
+                      <Skeleton className="h-4 w-1/4" />
+                    </td>
+                    <td className="px-4 py-2 border-b">
+                      <Skeleton className="h-4 w-1/4" />
                     </td>
                   </tr>
                 ))
