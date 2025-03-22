@@ -32,7 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface FileRecord {
   file_id: number;
   folder_id: number;
-  file_name: string;
+  title: string;
   case_title: string;
   blotter_number: string;
   incident_summary: string;
@@ -464,7 +464,7 @@ export default function FileOperations({
     try {
       const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
-      const fileTitle = formData.get('file_name') as string;
+      const fileTitle = formData.get('title') as string;
       const caseTitle = formData.get('case_title') as string;
       const blotterNumber = formData.get('blotter_number') as string;
       const investigator = formData.get('investigator') as string;
@@ -522,7 +522,7 @@ export default function FileOperations({
       const { error: updateError } = await supabase
         .from('womenchildren_file')
         .update({
-          file_name: fileTitle,
+          title: fileTitle,
           case_title: caseTitle,
           blotter_number: blotterNumber,
           investigator,
@@ -845,11 +845,11 @@ export default function FileOperations({
                 <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold">File Details</h3>
                   <div>
-                    <Label htmlFor="file_name">File Name</Label>
+                    <Label htmlFor="title">File Name</Label>
                     <Input
-                      id="file_name"
-                      name="file_name"
-                      defaultValue={(selectedFile || file).file_name}
+                      id="title"
+                      name="title"
+                      defaultValue={(selectedFile || file).title}
                       required
                       className="border-gray-300 rounded-md"
                     />
@@ -1229,7 +1229,7 @@ NARRATIVE:
                   <div className="grid grid-cols-2 gap-4">
                 <div>
                       <Label>File Name</Label>
-                      <p className="text-gray-900 mt-1">{currentFile.file_name}</p>
+                      <p className="text-gray-900 mt-1">{currentFile.title}</p>
                 </div>
                 <div>
                       <Label>Case Title</Label>

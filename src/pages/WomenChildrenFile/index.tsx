@@ -37,7 +37,7 @@ import { Textarea } from "@/components/ui/textarea";
 interface FileRecord {
   file_id: number;
   folder_id: number;
-  file_name: string;
+  title: string;
   case_title: string;
   blotter_number: string;
   incident_summary: string;
@@ -250,7 +250,7 @@ export default function WomenChildrenFile() {
         .insert([
           {
             folder_id: id,
-            file_name: newFileTitle,
+            title: newFileTitle,
             case_title: newCaseTitle,
             blotter_number: newBlotterNumber,
             incident_summary: newFileSummary,
@@ -532,7 +532,7 @@ export default function WomenChildrenFile() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       {getFileIcon(file.file_path)}
-                      <h3 className="font-medium text-gray-900">{file.file_name}</h3>
+                      <h3 className="font-medium text-gray-900">{file.title}</h3>
                     </div>
                     <button
                       className="p-2 rounded-full hover:bg-gray-200"
@@ -630,9 +630,9 @@ export default function WomenChildrenFile() {
                 <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold">File Details</h3>
               <div className="space-y-2">
-                <Label htmlFor="file_name">File Name</Label>
+                <Label htmlFor="title">File Name</Label>
                 <Input
-                  id="file_name"
+                  id="title"
                   placeholder="Enter file name"
                   value={newFileTitle}
                   onChange={(e) => setNewFileTitle(e.target.value)}
@@ -983,7 +983,7 @@ export default function WomenChildrenFile() {
         <div className="space-y-4">
           <div>
             <h4 className="font-medium text-blue-900 mb-1">File Name</h4>
-            <p className="text-gray-900 text-lg font-medium">{selectedFile?.file_name}</p>
+            <p className="text-gray-900 text-lg font-medium">{selectedFile?.title}</p>
           </div>
           <div>
             <h4 className="font-medium text-blue-900 mb-1">Case Title</h4>
