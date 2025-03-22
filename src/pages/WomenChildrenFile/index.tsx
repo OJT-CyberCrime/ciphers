@@ -968,38 +968,48 @@ export default function WomenChildrenFile() {
       </Dialog>
 
       {showFileDialog === 'details' && (
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium text-blue-900 mb-1">File Name</h4>
-            <p className="text-gray-900 text-lg font-medium">{selectedFile?.title}</p>
-          </div>
-          <div>
-            <h4 className="font-medium text-blue-900 mb-1">Case Title</h4>
-            <p className="text-gray-900 text-lg font-medium">{selectedFile?.case_title}</p>
-          </div>
-          <div>
-            <h4 className="font-medium text-blue-900 mb-1">Blotter Number</h4>
-            <p className="text-gray-900">{selectedFile?.blotter_number}</p>
-          </div>
-          <div>
-            <h4 className="font-medium text-blue-900 mb-1">Investigator</h4>
-            <p className="text-gray-900">{selectedFile?.investigator}</p>
-          </div>
-          <div>
-            <h4 className="font-medium text-blue-900 mb-1">Desk Officer</h4>
-            <p className="text-gray-900">{selectedFile?.desk_officer}</p>
-          </div>
-          <div>
-            <h4 className="font-medium text-blue-900 mb-1">Incident Summary</h4>
-            <Textarea
-              id="summary"
-              name="summary"
-              defaultValue={selectedFile?.incident_summary}
-              readOnly
-              className="h-32 resize-none border-gray-300 rounded-md"
-            />
-          </div>
-        </div>
+        <Dialog open={showFileDialog === 'details'} onOpenChange={() => setShowFileDialog(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>File Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">File Name</h4>
+                <p className="text-gray-900 text-lg font-medium">{selectedFile?.title}</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">Case Title</h4>
+                <p className="text-gray-900 text-lg font-medium">{selectedFile?.case_title}</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">Blotter Number</h4>
+                <p className="text-gray-900">{selectedFile?.blotter_number}</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">Investigator</h4>
+                <p className="text-gray-900">{selectedFile?.investigator}</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">Desk Officer</h4>
+                <p className="text-gray-900">{selectedFile?.desk_officer}</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">Incident Summary</h4>
+                <Textarea
+                  id="summary"
+                  name="summary"
+                  defaultValue={selectedFile?.incident_summary}
+                  readOnly
+                  className="h-32 resize-none border-gray-300 rounded-md"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setShowFileDialog(null)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
