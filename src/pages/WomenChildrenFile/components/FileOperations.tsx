@@ -23,9 +23,11 @@ import {
   Archive,
   Eye,
   MoreVertical,
-  Printer
+  Printer,
+  X
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface FileRecord {
   file_id: number;
@@ -56,6 +58,30 @@ interface FileRecord {
   printer?: { name: string };
 }
 
+interface ReportingPersonDetails {
+  full_name: string;
+  age: number;
+  birthday: string;
+  gender: 'Male' | 'Female' | 'Other';
+  complete_address: string;
+  contact_number: string;
+  date_reported: string;
+  time_reported: string;
+  date_of_incident: string;
+  time_of_incident: string;
+  place_of_incident: string;
+}
+
+interface Suspect {
+  full_name: string;
+  age: number;
+  birthday: string;
+  gender: 'Male' | 'Female' | 'Other';
+  complete_address: string;
+  contact_number: string;
+  relationship_to_victim: string;
+}
+
 interface FileOperationsProps {
   file: FileRecord;
   showPreview: boolean;
@@ -82,6 +108,12 @@ const getFileIcon = (filePath: string) => {
   return <File size={24} className="text-gray-600" />;
 };
 
+// Add this helper function at the top level
+const formatDateForInput = (dateString: string) => {
+  if (!dateString) return '';
+  return new Date(dateString).toISOString().split('T')[0];
+};
+
 export default function FileOperations({
   file,
   showPreview,
@@ -95,12 +127,76 @@ export default function FileOperations({
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
-  // Use currentFile only for file operations and details dialog
   const currentFile = showFileDialog ? (selectedFile || file) : file;
   const ext = currentFile.file_path.split('.').pop()?.toLowerCase() || '';
   const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
   const pdfType = ['pdf'];
   const officeTypes = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+
+  // Add state for reporting person and suspects
+  const [reportingPerson, setReportingPerson] = useState<ReportingPersonDetails | null>(null);
+  const [suspects, setSuspects] = useState<Suspect[]>([]);
+
+  // Fetch reporting person and suspects when viewing or editing a file
+  useEffect(() => {
+    const fetchFileDetails = async () => {
+      if (!showFileDialog || !currentFile) return;
+
+      try {
+        // Fetch reporting person details
+        const { data: reportingData, error: reportingError } = await supabase
+          .from('reporting_person_details')
+          .select('*')
+          .eq('wc_file_id', currentFile.file_id)
+          .single();
+
+        if (reportingError) throw reportingError;
+        setReportingPerson(reportingData);
+
+        // Fetch suspects
+        const { data: suspectsData, error: suspectsError } = await supabase
+          .from('suspects')
+          .select('*')
+          .eq('wc_file_id', currentFile.file_id);
+
+        if (suspectsError) throw suspectsError;
+        setSuspects(suspectsData || []);
+      } catch (error) {
+        console.error('Error fetching file details:', error);
+        toast.error('Failed to load file details');
+      }
+    };
+
+    fetchFileDetails();
+  }, [showFileDialog, currentFile]);
+
+  // Function to add a new suspect form
+  const addSuspect = () => {
+    setSuspects([...suspects, {
+      full_name: '',
+      age: 0,
+      birthday: '',
+      gender: 'Male',
+      complete_address: '',
+      contact_number: '',
+      relationship_to_victim: ''
+    }]);
+  };
+
+  // Function to update suspect details
+  const updateSuspect = (index: number, field: keyof Suspect, value: string | number) => {
+    const updatedSuspects = [...suspects];
+    updatedSuspects[index] = { ...updatedSuspects[index], [field]: value };
+    setSuspects(updatedSuspects);
+  };
+
+  // Function to remove a suspect
+  const removeSuspect = (index: number) => {
+    if (suspects.length > 1) {
+      const updatedSuspects = suspects.filter((_, i) => i !== index);
+      setSuspects(updatedSuspects);
+    }
+  };
 
   // Get signed URL on component mount and when showing preview
   useEffect(() => {
@@ -443,6 +539,41 @@ export default function FileOperations({
 
       if (updateError) throw updateError;
 
+      // Update reporting person details
+      if (reportingPerson) {
+        const { error: reportingError } = await supabase
+          .from('reporting_person_details')
+          .update({
+            ...reportingPerson,
+            birthday: new Date(reportingPerson.birthday).toISOString(),
+            date_reported: new Date(reportingPerson.date_reported).toISOString(),
+            date_of_incident: new Date(reportingPerson.date_of_incident).toISOString()
+          })
+          .eq('wc_file_id', fileToEdit.file_id);
+
+        if (reportingError) throw reportingError;
+      }
+
+      // Update suspects
+      const { error: deleteError } = await supabase
+        .from('suspects')
+        .delete()
+        .eq('wc_file_id', fileToEdit.file_id);
+
+      if (deleteError) throw deleteError;
+
+      const { error: suspectsError } = await supabase
+        .from('suspects')
+        .insert(
+          suspects.map(suspect => ({
+            wc_file_id: fileToEdit.file_id,
+            ...suspect,
+            birthday: new Date(suspect.birthday).toISOString()
+          }))
+        );
+
+      if (suspectsError) throw suspectsError;
+
       toast.success('File updated successfully');
       setShowFileDialog(null);
       onFileUpdate(); // Refresh the files list
@@ -674,22 +805,21 @@ export default function FileOperations({
         open={showFileDialog !== null}
         onOpenChange={() => setShowFileDialog(null)}  
       >
-        <DialogContent className="p-6 w-[90%] max-w-2xl h-[90%] max-h-[80vh] overflow-y-auto bg-white shadow-lg rounded-lg font-poppins scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">
+            <DialogTitle>
               {showFileDialog === 'edit' ? 'Edit File' :
                showFileDialog === 'archive' ? 'Archive File' :
                showFileDialog === 'details' ? 'File Details' : ''}
             </DialogTitle>
           </DialogHeader>
 
-          {/* Add a line after the dialog header */}
-          <hr className="my-1 border-gray-300" />
-
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-6">
             {showFileDialog === 'edit' && (
-              <form onSubmit={handleEditFile}>
-                <div className="space-y-4">
+              <form onSubmit={handleEditFile} className="space-y-6">
+                {/* File Details Section */}
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold">File Details</h3>
                   <div>
                     <Label htmlFor="file_name">File Name</Label>
                     <Input
@@ -805,8 +935,235 @@ NARRATIVE:
                     </p>
                   </div>
                 </div>
-                <DialogFooter className="mt-4 flex justify-end">
-                  <Button type="button" variant="outline" onClick={() => setShowFileDialog(null)} className="mr-2">
+
+                {/* Reporting Person Details */}
+                {reportingPerson && (
+                  <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                    <h3 className="text-lg font-semibold">Reporting Person Details</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="rp_full_name">Full Name</Label>
+                        <Input
+                          id="rp_full_name"
+                          value={reportingPerson.full_name}
+                          onChange={(e) => setReportingPerson({...reportingPerson, full_name: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_age">Age</Label>
+                        <Input
+                          id="rp_age"
+                          type="number"
+                          value={reportingPerson.age}
+                          onChange={(e) => setReportingPerson({...reportingPerson, age: Number(e.target.value)})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_birthday">Birthday</Label>
+                        <Input
+                          id="rp_birthday"
+                          type="date"
+                          value={formatDateForInput(reportingPerson.birthday)}
+                          onChange={(e) => setReportingPerson({...reportingPerson, birthday: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_gender">Gender</Label>
+                        <Select
+                          value={reportingPerson.gender}
+                          onValueChange={(value) => setReportingPerson({...reportingPerson, gender: value as 'Male' | 'Female' | 'Other'})}
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Male">Male</SelectItem>
+                            <SelectItem value="Female">Female</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2">
+                        <Label htmlFor="rp_complete_address">Complete Address</Label>
+                        <Textarea
+                          id="rp_complete_address"
+                          value={reportingPerson.complete_address}
+                          onChange={(e) => setReportingPerson({...reportingPerson, complete_address: e.target.value})}
+                          required
+                          className="h-24 resize-none border-gray-300 rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_contact_number">Contact Number</Label>
+                        <Input
+                          id="rp_contact_number"
+                          value={reportingPerson.contact_number}
+                          onChange={(e) => setReportingPerson({...reportingPerson, contact_number: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_date_reported">Date Reported</Label>
+                        <Input
+                          id="rp_date_reported"
+                          type="date"
+                          value={formatDateForInput(reportingPerson.date_reported)}
+                          onChange={(e) => setReportingPerson({...reportingPerson, date_reported: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_time_reported">Time Reported</Label>
+                        <Input
+                          id="rp_time_reported"
+                          value={reportingPerson.time_reported}
+                          onChange={(e) => setReportingPerson({...reportingPerson, time_reported: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_date_of_incident">Date of Incident</Label>
+                        <Input
+                          id="rp_date_of_incident"
+                          type="date"
+                          value={formatDateForInput(reportingPerson.date_of_incident)}
+                          onChange={(e) => setReportingPerson({...reportingPerson, date_of_incident: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_time_of_incident">Time of Incident</Label>
+                        <Input
+                          id="rp_time_of_incident"
+                          value={reportingPerson.time_of_incident}
+                          onChange={(e) => setReportingPerson({...reportingPerson, time_of_incident: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label htmlFor="rp_place_of_incident">Place of Incident</Label>
+                        <Textarea
+                          id="rp_place_of_incident"
+                          value={reportingPerson.place_of_incident}
+                          onChange={(e) => setReportingPerson({...reportingPerson, place_of_incident: e.target.value})}
+                          required
+                          className="h-24 resize-none border-gray-300 rounded-md"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Suspects Section */}
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-semibold">Suspects</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addSuspect}
+                      className="text-sm"
+                    >
+                      Add Another Suspect
+                    </Button>
+                  </div>
+                  {suspects.map((suspect, index) => (
+                    <div key={index} className="space-y-4 p-4 border rounded-lg">
+                      <div>
+                        <Label htmlFor={`suspect_${index}_full_name`}>Full Name</Label>
+                        <Input
+                          id={`suspect_${index}_full_name`}
+                          value={suspect.full_name}
+                          onChange={(e) => updateSuspect(index, 'full_name', e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`suspect_${index}_age`}>Age</Label>
+                        <Input
+                          id={`suspect_${index}_age`}
+                          type="number"
+                          value={suspect.age}
+                          onChange={(e) => updateSuspect(index, 'age', Number(e.target.value))}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`suspect_${index}_birthday`}>Birthday</Label>
+                        <Input
+                          id={`suspect_${index}_birthday`}
+                          type="date"
+                          value={formatDateForInput(suspect.birthday)}
+                          onChange={(e) => updateSuspect(index, 'birthday', e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`suspect_${index}_gender`}>Gender</Label>
+                        <Select
+                          value={suspect.gender}
+                          onValueChange={(value) => updateSuspect(index, 'gender', value as 'Male' | 'Female' | 'Other')}
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Male">Male</SelectItem>
+                            <SelectItem value="Female">Female</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2">
+                        <Label htmlFor={`suspect_${index}_complete_address`}>Complete Address</Label>
+                        <Textarea
+                          id={`suspect_${index}_complete_address`}
+                          value={suspect.complete_address}
+                          onChange={(e) => updateSuspect(index, 'complete_address', e.target.value)}
+                          required
+                          className="h-24 resize-none border-gray-300 rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`suspect_${index}_contact_number`}>Contact Number</Label>
+                        <Input
+                          id={`suspect_${index}_contact_number`}
+                          value={suspect.contact_number}
+                          onChange={(e) => updateSuspect(index, 'contact_number', e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`suspect_${index}_relationship_to_victim`}>Relationship to Victim</Label>
+                        <Textarea
+                          id={`suspect_${index}_relationship_to_victim`}
+                          value={suspect.relationship_to_victim}
+                          onChange={(e) => updateSuspect(index, 'relationship_to_victim', e.target.value)}
+                          required
+                          className="h-24 resize-none border-gray-300 rounded-md"
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => removeSuspect(index)}
+                          className="text-sm"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setShowFileDialog(null)}>
                     Cancel
                   </Button>
                   <Button type="submit" className="bg-blue-600 text-white hover:bg-blue-700">
@@ -841,39 +1198,140 @@ NARRATIVE:
             )}
 
             {showFileDialog === 'details' && (
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* File Details */}
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold">File Details</h3>
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">File Name</h4>
-                  <p className="text-gray-900 text-lg font-medium">{currentFile.file_name}</p>
+                    <Label htmlFor="file_name">File Name</Label>
+                    <p className="text-gray-900">{currentFile.file_name}</p>
                 </div>
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Case Title</h4>
-                  <p className="text-gray-900 text-lg font-medium">{currentFile.case_title}</p>
+                    <Label htmlFor="case_title">Case Title</Label>
+                    <p className="text-gray-900">{currentFile.case_title}</p>
                 </div>
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Blotter Number</h4>
+                    <Label htmlFor="blotter_number">Blotter Number</Label>
                   <p className="text-gray-900">{currentFile.blotter_number}</p>
                 </div>
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Investigator</h4>
+                    <Label htmlFor="investigator">Investigator</Label>
                   <p className="text-gray-900">{currentFile.investigator}</p>
                 </div>
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Desk Officer</h4>
+                    <Label htmlFor="desk_officer">Desk Officer</Label>
                   <p className="text-gray-900">{currentFile.desk_officer}</p>
                 </div>
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Incident Summary</h4>
+                    <Label htmlFor="incident_summary">Incident Summary</Label>
                   <Textarea
-                    id="summary"
-                    name="summary"
-                    defaultValue={currentFile.incident_summary}
+                      id="incident_summary"
+                      name="incident_summary"
+                      value={currentFile.incident_summary}
                     readOnly
                     className="h-96 resize-none border-gray-300 rounded-md font-mono whitespace-pre-wrap"
                   />
                 </div>
+                </div>
+
+                {/* Reporting Person Details */}
+                {reportingPerson && (
+                  <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                    <h3 className="text-lg font-semibold">Reporting Person Details</h3>
+                    <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">File Activity</h4>
+                        <Label>Full Name</Label>
+                        <p className="text-gray-900">{reportingPerson.full_name}</p>
+                      </div>
+                      <div>
+                        <Label>Age</Label>
+                        <p className="text-gray-900">{reportingPerson.age}</p>
+                      </div>
+                      <div>
+                        <Label>Birthday</Label>
+                        <p className="text-gray-900">{new Date(reportingPerson.birthday).toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <Label>Gender</Label>
+                        <p className="text-gray-900">{reportingPerson.gender}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <Label>Complete Address</Label>
+                        <p className="text-gray-900">{reportingPerson.complete_address}</p>
+                      </div>
+                      <div>
+                        <Label>Contact Number</Label>
+                        <p className="text-gray-900">{reportingPerson.contact_number}</p>
+                      </div>
+                      <div>
+                        <Label>Date Reported</Label>
+                        <p className="text-gray-900">{new Date(reportingPerson.date_reported).toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <Label>Time Reported</Label>
+                        <p className="text-gray-900">{reportingPerson.time_reported}</p>
+                      </div>
+                      <div>
+                        <Label>Date of Incident</Label>
+                        <p className="text-gray-900">{new Date(reportingPerson.date_of_incident).toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <Label>Time of Incident</Label>
+                        <p className="text-gray-900">{reportingPerson.time_of_incident}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <Label>Place of Incident</Label>
+                        <p className="text-gray-900">{reportingPerson.place_of_incident}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Suspects */}
+                {suspects.length > 0 && (
+                  <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                    <h3 className="text-lg font-semibold">Suspects</h3>
+                    {suspects.map((suspect, index) => (
+                      <div key={index} className="space-y-4 p-4 border rounded-lg">
+                        <h4 className="font-medium">Suspect {index + 1}</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Full Name</Label>
+                            <p className="text-gray-900">{suspect.full_name}</p>
+                          </div>
+                          <div>
+                            <Label>Age</Label>
+                            <p className="text-gray-900">{suspect.age}</p>
+                          </div>
+                          <div>
+                            <Label>Birthday</Label>
+                            <p className="text-gray-900">{new Date(suspect.birthday).toLocaleDateString()}</p>
+                          </div>
+                          <div>
+                            <Label>Gender</Label>
+                            <p className="text-gray-900">{suspect.gender}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <Label>Complete Address</Label>
+                            <p className="text-gray-900">{suspect.complete_address}</p>
+                          </div>
+                          <div>
+                            <Label>Contact Number</Label>
+                            <p className="text-gray-900">{suspect.contact_number}</p>
+                          </div>
+                          <div>
+                            <Label>Relationship to Victim</Label>
+                            <p className="text-gray-900">{suspect.relationship_to_victim}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* File Activity */}
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold">File Activity</h3>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <p className="text-xs text-gray-600">
@@ -925,7 +1383,8 @@ NARRATIVE:
                     </div>
                   </div>
                 </div>
-                <DialogFooter className="flex justify-end">
+
+                <DialogFooter>
                   <Button
                     className="bg-blue-600 text-white hover:bg-blue-700"
                     onClick={() => {
