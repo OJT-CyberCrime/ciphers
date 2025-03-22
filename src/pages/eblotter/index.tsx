@@ -1,4 +1,4 @@
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator} from "@/components/ui/breadcrumb";
 import SearchBar from "@/Search";
@@ -32,35 +32,30 @@ import Cookies from "js-cookie";
 import RichTextEditor from "@/components/RichTextEditor";
 import FileOperations from "./components/FileOperations";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Link } from "react-router-dom";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 
 interface FileRecord {
-  blotter_id: number;
+  file_id: number;
+  folder_id: number;
   title: string;
-  entry_num: string;
-  date_reported: string;
-  time_reported: string;
-  date_committed: string;  
-  time_committed: string;
-  path_file: string;
-  investigator: string;
-  desk_officer: string;
-  signatory_name: string;
-  created_by: number;
-  updated_by: number | null;
+  case_title: string;
+  blotter_number: string;
+  incident_summary: string;
+  file_path: string;
+  public_url: string;
+  created_by: string;
+  updated_by: string | null;
   created_at: string;
   updated_at: string | null;
   is_archived: boolean;
-  folder_id: number;
-  viewed_by: number | null;
+  investigator: string;
+  desk_officer: string;
+  viewed_by: string | null;
+  downloaded_by: string | null;
+  printed_by: string | null;
   viewed_at: string | null;
-  downloaded_by: number | null;
   downloaded_at: string | null;
-  printed_by: number | null;
   printed_at: string | null;
-  incident_summary: string;
-  public_url: string;
   creator?: { name: string };
   updater?: { name: string };
   viewer?: { name: string };
@@ -74,6 +69,29 @@ interface Folder {
   status: string;
   created_by: string;
   created_at: string;
+}
+
+interface ReportingPersonDetails {
+  full_name: string;
+  age: number;
+  birthday: string;
+  gender: 'Male' | 'Female' | 'Other';
+  complete_address: string;
+  contact_number: string;
+  date_reported: string;
+  time_reported: string;
+  date_of_incident: string;
+  time_of_incident: string;
+  place_of_incident: string;
+}
+
+interface Suspect {
+  full_name: string;
+  age: number;
+  birthday: string;
+  gender: 'Male' | 'Female' | 'Other';
+  complete_address: string;
+  contact_number: string;
 }
 
 // Helper function to get file type icon
@@ -113,7 +131,7 @@ const getStatusBadgeClass = (status: string) => {
   }
 };
 
-export default function FolderPage() {
+export default function EblotterFile() {
   const { id } = useParams<{ id: string }>();
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
@@ -121,23 +139,74 @@ export default function FolderPage() {
   const [folderDetails, setFolderDetails] = useState<Folder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingFile, setIsAddingFile] = useState(false);
+  const [newFileTitle, setNewFileTitle] = useState("");
+  const [newCaseTitle, setNewCaseTitle] = useState("");
+  const [newBlotterNumber, setNewBlotterNumber] = useState("");
   const [newFileSummary, setNewFileSummary] = useState("");
   const [fileUpload, setFileUpload] = useState<FileList | null>(null);
+  const [newInvestigator, setNewInvestigator] = useState("");
+  const [newDeskOfficer, setNewDeskOfficer] = useState("");
   const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null);
   const [showFileDialog, setShowFileDialog] = useState<'edit' | 'archive' | 'details' | null>(null);
   const [previewStates, setPreviewStates] = useState<{ [key: number]: boolean }>({});
   const [showOptions, setShowOptions] = useState<{ [key: number]: boolean }>({});
-  const [formRef, setFormRef] = useState<HTMLFormElement | null>(null);
-
-  // Get the current location to determine the previous page
+  const navigate = useNavigate();
   const location = useLocation();
-  const previousPage = location.state?.from || "/incident-report";
-  const previousPageName = location.state?.fromName || "Incident Reports";
+  const previousPage = "/eblotter";
+  const previousPageName = "Eblotter";
+  const [reportingPerson, setReportingPerson] = useState<ReportingPersonDetails>({
+    full_name: '',
+    age: 0,
+    birthday: '',
+    gender: 'Male',
+    complete_address: '',
+    contact_number: '',
+    date_reported: '',
+    time_reported: '',
+    date_of_incident: '',
+    time_of_incident: '',
+    place_of_incident: ''
+  });
+  const [suspects, setSuspects] = useState<Suspect[]>([{
+    full_name: '',
+    age: 0,
+    birthday: '',
+    gender: 'Male',
+    complete_address: '',
+    contact_number: ''
+  }]);
+
+  // Function to add a new suspect form
+  const addSuspect = () => {
+    setSuspects([...suspects, {
+      full_name: '',
+      age: 0,
+      birthday: '',
+      gender: 'Male',
+      complete_address: '',
+      contact_number: '',
+    }]);
+  };
+
+  // Function to update suspect details
+  const updateSuspect = (index: number, field: keyof Suspect, value: string | number) => {
+    const updatedSuspects = [...suspects];
+    updatedSuspects[index] = { ...updatedSuspects[index], [field]: value };
+    setSuspects(updatedSuspects);
+  };
+
+  // Function to remove a suspect
+  const removeSuspect = (index: number) => {
+    if (suspects.length > 1) {
+      const updatedSuspects = suspects.filter((_, i) => i !== index);
+      setSuspects(updatedSuspects);
+    }
+  };
 
   // Handle file upload
-  const handleFileUpload = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !fileUpload?.[0] || !formRef) return;
+    if (!id || !fileUpload?.[0]) return;
 
     try {
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
@@ -152,18 +221,6 @@ export default function FolderPage() {
       if (userError) throw userError;
       if (!userData2) throw new Error('User not found');
 
-      // Get form data
-      const formData = new FormData(formRef);
-      const title = formData.get('title') as string;
-      const entry_num = formData.get('entry_num') as string;
-      const date_reported = formData.get('date_reported') as string;
-      const time_reported = formData.get('time_reported') as string;
-      const date_committed = formData.get('date_committed') as string;
-      const time_committed = formData.get('time_committed') as string;
-      const investigator = formData.get('investigator') as string;
-      const desk_officer = formData.get('desk_officer') as string;
-      const signatory_name = formData.get('signatory_name') as string;
-
       // Upload file to storage
       const file = fileUpload[0];
       const fileExt = file.name.split('.').pop();
@@ -177,18 +234,12 @@ export default function FolderPage() {
           upsert: false
         });
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
       // Get the public URL for the uploaded file
       const { data: { publicUrl } } = supabase.storage
         .from('files')
         .getPublicUrl(filePath);
-
-      // Strip HTML tags from the incident summary
-      const cleanSummary = stripHtml(newFileSummary);
 
       // Create file record in database
       const { data: fileData, error: fileError } = await supabase
@@ -196,32 +247,55 @@ export default function FolderPage() {
         .insert([
           {
             folder_id: id,
-            title: title,
-            entry_num: entry_num,
-            date_reported: date_reported,
-            time_reported: time_reported,
-            date_committed: date_committed,
-            time_committed: time_committed,
-            path_file: filePath,
-            investigator: investigator,
-            desk_officer: desk_officer,
-            signatory_name: signatory_name,
-            incident_summary: cleanSummary,
+            title: newFileTitle,
+            case_title: newCaseTitle,
+            blotter_number: newBlotterNumber,
+            incident_summary: newFileSummary,
+            file_path: filePath,
             created_by: userData2.user_id,
             is_archived: false,
             public_url: publicUrl,
-            viewed_by: null,
-            downloaded_by: null,
-            printed_by: null,
-            viewed_at: null,
-            downloaded_at: null,
-            printed_at: null
+            investigator: newInvestigator,
+            desk_officer: newDeskOfficer
           }
         ])
         .select()
         .single();
 
       if (fileError) throw fileError;
+
+      // Insert reporting person details
+      const { error: reportingError } = await supabase
+        .from('reporting_person_details')
+        .insert([{
+          blotter_id: fileData.file_id,
+          ...reportingPerson,
+          birthday: new Date(reportingPerson.birthday).toISOString(),
+          date_reported: new Date(reportingPerson.date_reported).toISOString(),
+          date_of_incident: new Date(reportingPerson.date_of_incident).toISOString()
+        }]);
+
+      if (reportingError) throw reportingError;
+
+      // Insert suspects
+      const suspectsWithData = suspects.filter(suspect => 
+        suspect.full_name || suspect.age || suspect.birthday || 
+        suspect.complete_address || suspect.contact_number
+      );
+
+      if (suspectsWithData.length > 0) {
+        const { error: suspectsError } = await supabase
+          .from('suspects')
+          .insert(
+            suspectsWithData.map(suspect => ({
+              blotter_id: fileData.file_id,
+              ...suspect,
+              birthday: suspect.birthday ? new Date(suspect.birthday).toISOString() : null
+            }))
+          );
+
+        if (suspectsError) throw suspectsError;
+      }
 
       // Fetch the complete file data with user information
       const { data: newFileWithUser, error: fetchError } = await supabase
@@ -231,7 +305,7 @@ export default function FolderPage() {
           creator:created_by(name),
           updater:updated_by(name)
         `)
-        .eq('blotter_id', fileData.blotter_id)
+        .eq('file_id', fileData.file_id)
         .single();
 
       if (fetchError) throw fetchError;
@@ -247,8 +321,36 @@ export default function FolderPage() {
       setFiles([formattedFile, ...files]);
       toast.success("File uploaded successfully");
       setIsAddingFile(false);
+      
+      // Reset all form fields
+      setNewFileTitle("");
+      setNewCaseTitle("");
+      setNewBlotterNumber("");
       setNewFileSummary("");
+      setNewInvestigator("");
+      setNewDeskOfficer("");
       setFileUpload(null);
+      setReportingPerson({
+        full_name: '',
+        age: 0,
+        birthday: '',
+        gender: 'Male',
+        complete_address: '',
+        contact_number: '',
+        date_reported: '',
+        time_reported: '',
+        date_of_incident: '',
+        time_of_incident: '',
+        place_of_incident: ''
+      });
+      setSuspects([{
+        full_name: '',
+        age: 0,
+        birthday: '',
+        gender: 'Male',
+        complete_address: '',
+        contact_number: ''
+      }]);
     } catch (error: any) {
       console.error('Error uploading file:', error);
       toast.error(error.message || "Failed to upload file");
@@ -317,9 +419,9 @@ export default function FolderPage() {
 
   // Filter files based on search query and type
   const filteredFiles = files.filter(file => {
-    const matchesSearch = file.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         file.incident_summary.toLowerCase().includes(searchQuery.toLowerCase());
-    const fileExtension = file.path_file.split('.').pop()?.toLowerCase() || '';
+    const matchesSearch = (file.case_title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+                         (file.incident_summary?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+    const fileExtension = file.file_path?.split('.').pop()?.toLowerCase() || '';
     
     let matchesFilter = true;
     if (filter !== 'all') {
@@ -424,7 +526,7 @@ export default function FolderPage() {
         ) : filteredFiles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredFiles.map((file) => (
-              <div key={file.blotter_id} className="relative">
+              <div key={file.file_id} className="relative">
                 <div
                   className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
                   style={{ height: '420px', width: '100%', overflow: 'hidden' }}
@@ -432,28 +534,23 @@ export default function FolderPage() {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                      {getFileIcon(file.path_file)}
+                      {getFileIcon(file.file_path)}
                       <h3 className="font-medium text-gray-900">{file.title}</h3>
                     </div>
                     <button
                       className="p-2 rounded-full hover:bg-gray-200"
-                      onClick={() => setShowOptions(prev => ({ ...prev, [file.blotter_id]: !prev[file.blotter_id] }))}
+                      onClick={() => setShowOptions(prev => ({ ...prev, [file.file_id]: !prev[file.file_id] }))}
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
                   </div>
-                  <div 
-                    className="prose prose-sm max-w-none mb-2 text-gray-600 line-clamp-3 whitespace-pre-line overflow-hidden text-ellipsis"
-                  >
-                    {file.incident_summary}
-                  </div>
                   <FileOperations
                     file={file}
-                    showPreview={previewStates[file.blotter_id] || false}
+                    showPreview={previewStates[file.file_id] || false}
                     setShowPreview={(show) => {
                       setPreviewStates(prev => ({
                         ...prev,
-                        [file.blotter_id]: show
+                        [file.file_id]: show
                       }));
                     }}
                     showFileDialog={showFileDialog}
@@ -463,7 +560,7 @@ export default function FolderPage() {
                     onFileUpdate={() => {
                       // Remove the file from the UI if it was archived
                       if (showFileDialog === 'archive') {
-                        setFiles(files.filter(f => f.blotter_id !== selectedFile?.blotter_id));
+                        setFiles(files.filter(f => f.file_id !== selectedFile?.file_id));
                       } else {
                         // Refresh the files list
                         window.location.reload();
@@ -475,14 +572,14 @@ export default function FolderPage() {
                   </div>
                 </div>
 
-                {showOptions[file.blotter_id] && (
+                {showOptions[file.file_id] && (
                   <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
                     <button
                       className="block w-full text-left p-2 hover:bg-gray-100"
                       onClick={() => {
                         setSelectedFile(file);
                         setShowFileDialog('edit');
-                        setShowOptions(prev => ({ ...prev, [file.blotter_id]: false }));
+                        setShowOptions(prev => ({ ...prev, [file.file_id]: false }));
                       }}
                     >
                       <Pencil className="inline w-4 h-4 mr-2" /> Edit
@@ -492,7 +589,7 @@ export default function FolderPage() {
                       onClick={() => {
                         setSelectedFile(file);
                         setShowFileDialog('archive');
-                        setShowOptions(prev => ({ ...prev, [file.blotter_id]: false }));
+                        setShowOptions(prev => ({ ...prev, [file.file_id]: false }));
                       }}
                     >
                       <Archive className="inline w-4 h-4 mr-2" /> Archive
@@ -502,7 +599,7 @@ export default function FolderPage() {
                       onClick={() => {
                         setSelectedFile(file);
                         setShowFileDialog('details');
-                        setShowOptions(prev => ({ ...prev, [file.blotter_id]: false }));
+                        setShowOptions(prev => ({ ...prev, [file.file_id]: false }));
                       }}
                     >
                       <Eye className="inline w-4 h-4 mr-2" /> View Details
@@ -521,130 +618,342 @@ export default function FolderPage() {
 
       {/* Add File Dialog */}
       <Dialog open={isAddingFile} onOpenChange={setIsAddingFile}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="px-6 py-4">
             <DialogTitle>Add New File</DialogTitle>
             <DialogDescription>
               Upload a file and provide its details.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFileUpload} ref={(ref) => setFormRef(ref)}>
-            <ScrollArea className="h-[60vh]">
-              <div className="space-y-4 px-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Case Title</Label>
-                  <Input
-                    id="title"
-                    name="title"
-                    placeholder="Enter case title"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="entry_num">Entry Number</Label>
-                  <Input
-                    id="entry_num"
-                    name="entry_num"
-                    placeholder="Enter entry number"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="date_reported">Date Reported</Label>
-                    <Input
-                      id="date_reported"
-                      name="date_reported"
-                      type="date"
-                      required
-                    />
+          
+          <div className="flex-1 overflow-y-auto px-6">
+            <form onSubmit={handleFileUpload} className="space-y-6 pb-6">
+            <div className="space-y-4">
+                {/* File Details Section */}
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold">File Details</h3>
+              <div className="space-y-2">
+                <Label htmlFor="title">File Name</Label>
+                <Input
+                  id="title"
+                  placeholder="Enter file name"
+                  value={newFileTitle}
+                  onChange={(e) => setNewFileTitle(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="case_title">Case Title</Label>
+                <Input
+                  id="case_title"
+                  placeholder="Enter case title"
+                  value={newCaseTitle}
+                  onChange={(e) => setNewCaseTitle(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="blotter_number">Blotter Number</Label>
+                <Input
+                  id="blotter_number"
+                  placeholder="Enter blotter number"
+                  value={newBlotterNumber}
+                  onChange={(e) => setNewBlotterNumber(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="investigator">Investigator</Label>
+                <Input
+                  id="investigator"
+                  placeholder="Enter investigator name"
+                  value={newInvestigator}
+                  onChange={(e) => setNewInvestigator(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="desk_officer">Desk Officer</Label>
+                <Input
+                  id="desk_officer"
+                  placeholder="Enter desk officer name"
+                  value={newDeskOfficer}
+                  onChange={(e) => setNewDeskOfficer(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="summary">Incident Summary</Label>
+                <Textarea
+                  id="summary"
+                  name="summary"
+                      value={newFileSummary}
+                      placeholder="Please provide a detailed narrative of the incident..."
+                  onChange={(e) => setNewFileSummary(e.target.value)}
+                  required
+                      className="h-48 resize-none border-gray-300 rounded-md font-mono"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="file">Upload File</Label>
+                <Input
+                  id="file"
+                  type="file"
+                  onChange={(e) => setFileUpload(e.target.files)}
+                  required
+                />
+              </div>
+            </div>
+
+                {/* Reporting Person Details */}
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold">Reporting Person Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="rp_full_name">Full Name</Label>
+                      <Input
+                        id="rp_full_name"
+                        value={reportingPerson.full_name}
+                        onChange={(e) => setReportingPerson({...reportingPerson, full_name: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_age">Age</Label>
+                      <Input
+                        id="rp_age"
+                        type="number"
+                        min="0"
+                        max="150"
+                        value={reportingPerson.age}
+                        onChange={(e) => setReportingPerson({...reportingPerson, age: parseInt(e.target.value)})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_birthday">Birthday</Label>
+                      <Input
+                        id="rp_birthday"
+                        type="date"
+                        value={reportingPerson.birthday}
+                        onChange={(e) => setReportingPerson({...reportingPerson, birthday: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_gender">Gender</Label>
+                      <Select onValueChange={(value) => setReportingPerson({...reportingPerson, gender: value as 'Male' | 'Female' | 'Other'})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="rp_address">Complete Address</Label>
+                      <Textarea
+                        id="rp_address"
+                        value={reportingPerson.complete_address}
+                        onChange={(e) => setReportingPerson({...reportingPerson, complete_address: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_contact">Contact Number</Label>
+                      <Input
+                        id="rp_contact"
+                        value={reportingPerson.contact_number}
+                        onChange={(e) => setReportingPerson({...reportingPerson, contact_number: e.target.value})}
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="date_committed">Date Committed</Label>
-                    <Input
-                      id="date_committed"
-                      name="date_committed"
-                      type="date"
-                      required
-                    />
+
+                  {/* Incident Details */}
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <Label htmlFor="date_reported">Date Reported</Label>
+                      <Input
+                        id="date_reported"
+                        type="date"
+                        value={reportingPerson.date_reported}
+                        onChange={(e) => setReportingPerson({...reportingPerson, date_reported: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="time_reported">Time Reported</Label>
+                      <Input
+                        id="time_reported"
+                        type="time"
+                        value={reportingPerson.time_reported}
+                        onChange={(e) => setReportingPerson({...reportingPerson, time_reported: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="date_of_incident">Date of Incident</Label>
+                      <Input
+                        id="date_of_incident"
+                        type="date"
+                        value={reportingPerson.date_of_incident}
+                        onChange={(e) => setReportingPerson({...reportingPerson, date_of_incident: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="time_of_incident">Time of Incident</Label>
+                      <Input
+                        id="time_of_incident"
+                        type="time"
+                        value={reportingPerson.time_of_incident}
+                        onChange={(e) => setReportingPerson({...reportingPerson, time_of_incident: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="place_of_incident">Place of Incident</Label>
+                      <Textarea
+                        id="place_of_incident"
+                        value={reportingPerson.place_of_incident}
+                        onChange={(e) => setReportingPerson({...reportingPerson, place_of_incident: e.target.value})}
+                        required
+                      />
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="time_reported">Time Reported</Label>
-                    <Input
-                      id="time_reported"
-                      name="time_reported"
-                      type="time"
-                      required
-                    />
+
+                {/* Suspects Section */}
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-semibold">Suspects</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addSuspect}
+                      className="text-sm"
+                    >
+                      Add Another Suspect
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="time_committed">Time Committed</Label>
-                    <Input
-                      id="time_committed"
-                      name="time_committed"
-                      type="time"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="investigator">Investigator</Label>
-                  <Input
-                    id="investigator"
-                    name="investigator"
-                    placeholder="Enter investigator name"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="desk_officer">Desk Officer</Label>
-                  <Input
-                    id="desk_officer"
-                    name="desk_officer"
-                    placeholder="Enter desk officer name"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signatory_name">Signatory Name</Label>
-                  <Input
-                    id="signatory_name"
-                    name="signatory_name"
-                    placeholder="Enter signatory name"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="summary">Incident Summary</Label>
-                  <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                    <RichTextEditor
-                      content={newFileSummary}
-                      onChange={setNewFileSummary}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="file">Upload File</Label>
-                  <Input
-                    id="file"
-                    name="file"
-                    type="file"
-                    onChange={(e) => setFileUpload(e.target.files)}
-                    required
-                  />
+                  {suspects.map((suspect, index) => (
+                    <div key={index} className="space-y-4 p-4 border rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <h4 className="font-medium">Suspect {index + 1}</h4>
+                        {suspects.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => removeSuspect(index)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor={`suspect_${index}_name`}>Full Name</Label>
+                          <Input
+                            id={`suspect_${index}_name`}
+                            value={suspect.full_name}
+                            onChange={(e) => updateSuspect(index, 'full_name', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`suspect_${index}_age`}>Age</Label>
+                          <Input
+                            id={`suspect_${index}_age`}
+                            type="number"
+                            min="0"
+                            max="150"
+                            value={suspect.age}
+                            onChange={(e) => updateSuspect(index, 'age', parseInt(e.target.value))}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`suspect_${index}_birthday`}>Birthday</Label>
+                          <Input
+                            id={`suspect_${index}_birthday`}
+                            type="date"
+                            value={suspect.birthday}
+                            onChange={(e) => updateSuspect(index, 'birthday', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`suspect_${index}_gender`}>Gender</Label>
+                          <Select onValueChange={(value) => updateSuspect(index, 'gender', value as 'Male' | 'Female' | 'Other')}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Male">Male</SelectItem>
+                              <SelectItem value="Female">Female</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-2">
+                          <Label htmlFor={`suspect_${index}_address`}>Complete Address</Label>
+                          <Textarea
+                            id={`suspect_${index}_address`}
+                            value={suspect.complete_address}
+                            onChange={(e) => updateSuspect(index, 'complete_address', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`suspect_${index}_contact`}>Contact Number</Label>
+                          <Input
+                            id={`suspect_${index}_contact`}
+                            value={suspect.contact_number}
+                            onChange={(e) => updateSuspect(index, 'contact_number', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </ScrollArea>
-            <DialogFooter className="mt-4">
+
+              <DialogFooter className="sticky bottom-0 bg-white py-4 mt-6">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
                   setIsAddingFile(false);
+                  setNewFileTitle("");
+                  setNewCaseTitle("");
+                  setNewBlotterNumber("");
                   setNewFileSummary("");
+                  setNewInvestigator("");
+                  setNewDeskOfficer("");
                   setFileUpload(null);
+                    setReportingPerson({
+                      full_name: '',
+                      age: 0,
+                      birthday: '',
+                      gender: 'Male',
+                      complete_address: '',
+                      contact_number: '',
+                      date_reported: '',
+                      time_reported: '',
+                      date_of_incident: '',
+                      time_of_incident: '',
+                      place_of_incident: ''
+                    });
+                    setSuspects([{
+                      full_name: '',
+                      age: 0,
+                      birthday: '',
+                      gender: 'Male',
+                      complete_address: '',
+                      contact_number: ''
+                    }]);
                 }}
               >
                 Cancel
@@ -654,8 +963,44 @@ export default function FolderPage() {
               </Button>
             </DialogFooter>
           </form>
+          </div>
         </DialogContent>
       </Dialog>
+
+      {showFileDialog === 'details' && (
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-medium text-blue-900 mb-1">File Name</h4>
+            <p className="text-gray-900 text-lg font-medium">{selectedFile?.title}</p>
+          </div>
+          <div>
+            <h4 className="font-medium text-blue-900 mb-1">Case Title</h4>
+            <p className="text-gray-900 text-lg font-medium">{selectedFile?.case_title}</p>
+          </div>
+          <div>
+            <h4 className="font-medium text-blue-900 mb-1">Blotter Number</h4>
+            <p className="text-gray-900">{selectedFile?.blotter_number}</p>
+          </div>
+          <div>
+            <h4 className="font-medium text-blue-900 mb-1">Investigator</h4>
+            <p className="text-gray-900">{selectedFile?.investigator}</p>
+          </div>
+          <div>
+            <h4 className="font-medium text-blue-900 mb-1">Desk Officer</h4>
+            <p className="text-gray-900">{selectedFile?.desk_officer}</p>
+          </div>
+          <div>
+            <h4 className="font-medium text-blue-900 mb-1">Incident Summary</h4>
+            <Textarea
+              id="summary"
+              name="summary"
+              defaultValue={selectedFile?.incident_summary}
+              readOnly
+              className="h-32 resize-none border-gray-300 rounded-md"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
