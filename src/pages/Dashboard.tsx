@@ -43,6 +43,8 @@ import {
 import { Avatar } from "@/components/ui/avatar";
 import { Users, Archive, Files, FileTextIcon, FileCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 // Sample data for different file types
 const regularFilesData = [
@@ -170,6 +172,29 @@ interface FileCreator {
   } | null;
 }
 
+interface RecentEblotter {
+  blotter_id: number;
+  title: string;
+  entry_num: string | null;
+  created_by: string;
+  created_at: string;
+  creator: {
+    name: string;
+  } | null;
+}
+
+// Add the interface after RecentEblotter interface
+interface RecentExtraction {
+  extraction_id: number;
+  title: string;
+  control_num: string;
+  created_by: string;
+  created_at: string;
+  creator: {
+    name: string;
+  } | null;
+}
+
 // Add media queries for responsive design
 const styles = {
   container: `p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 font-poppins`,
@@ -229,6 +254,9 @@ export default function Dashboard() {
       "0"
     )}`;
   });
+  const [recentEblotters, setRecentEblotters] = useState<RecentEblotter[]>([]);
+  const [recentExtractions, setRecentExtractions] = useState<RecentExtraction[]>([]);
+  const navigate = useNavigate();
 
   // Helper function to format the selected month
   const formatSelectedMonth = (dateString: string) => {
@@ -478,7 +506,7 @@ export default function Dashboard() {
                 (file) => ({
                   id: file.file_id!,
                   title: file.title,
-                  uploaded_by: file.creator?.name || "Unknown",
+                  uploaded_by: file.creator?.name || file.created_by,
                   created_at: file.created_at,
                   file_type: "Incident report" as const,
                 })
@@ -505,7 +533,7 @@ export default function Dashboard() {
                 (file) => ({
                   id: file.blotter_id!,
                   title: file.title,
-                  uploaded_by: file.creator?.name || "Unknown",
+                  uploaded_by: file.creator?.name || file.created_by,
                   created_at: file.created_at,
                   file_type: "eblotter" as const,
                 })
@@ -532,7 +560,7 @@ export default function Dashboard() {
                 (file) => ({
                   id: file.file_id!,
                   title: file.title,
-                  uploaded_by: file.creator?.name || "Unknown",
+                  uploaded_by: file.creator?.name || file.created_by,
                   created_at: file.created_at,
                   file_type: "womenchildren" as const,
                 })
@@ -559,7 +587,7 @@ export default function Dashboard() {
                 (file) => ({
                   id: file.extraction_id!,
                   title: file.title,
-                  uploaded_by: file.creator?.name || "Unknown",
+                  uploaded_by: file.creator?.name || file.created_by,
                   created_at: file.created_at,
                   file_type: "extraction" as const,
                 })
@@ -712,6 +740,93 @@ export default function Dashboard() {
 
     fetchMonthlyTotals();
   }, [selectedTotalMonth]);
+
+  const fetchRecentEblotters = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('eblotter_file')
+        .select(`
+          blotter_id,
+          title,
+          entry_num,
+          created_by,
+          created_at,
+          creator:users!created_by(name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+
+      // Format the data to match the RecentEblotter interface
+      const formattedData = (data || []).map((item: any) => ({
+        blotter_id: item.blotter_id,
+        title: item.title,
+        entry_num: item.entry_num,
+        created_by: item.created_by,
+        created_at: item.created_at,
+        creator: item.creator || { name: item.created_by }
+      }));
+
+      setRecentEblotters(formattedData);
+    } catch (error) {
+      console.error('Error fetching recent e-blotter entries:', error);
+      setRecentEblotters([]);
+    }
+  };
+
+  // Add the fetch function after fetchRecentEblotters
+  const fetchRecentExtractions = async () => {
+    try {
+      const { data: extractionData, error: extractionError } = await supabase
+        .from('extraction')
+        .select(`
+          extraction_id,
+          title,
+          control_num,
+          created_by,
+          created_at
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (extractionError) throw extractionError;
+
+      // Fetch creator names in a separate query
+      const creatorIds = [...new Set((extractionData || []).map(item => item.created_by))];
+      const { data: creatorData, error: creatorError } = await supabase
+        .from('users')
+        .select('id:user_id, name')
+        .in('user_id', creatorIds);
+
+      if (creatorError) throw creatorError;
+
+      // Create a map of creator IDs to names
+      const creatorMap = new Map(
+        (creatorData || []).map(creator => [creator.id, { name: creator.name }])
+      );
+
+      // Transform the data to match the RecentExtraction interface
+      const transformedData: RecentExtraction[] = (extractionData || []).map(item => ({
+        extraction_id: item.extraction_id,
+        title: item.title,
+        control_num: item.control_num,
+        created_by: item.created_by,
+        created_at: item.created_at,
+        creator: creatorMap.get(item.created_by) || null
+      }));
+
+      setRecentExtractions(transformedData);
+    } catch (error) {
+      console.error('Error fetching recent extractions:', error);
+    }
+  };
+
+  // Add fetchRecentExtractions to useEffect
+  useEffect(() => {
+    fetchRecentEblotters();
+    fetchRecentExtractions();
+  }, []);
 
   const handleDataChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedData(event.target.value);
@@ -1257,6 +1372,138 @@ export default function Dashboard() {
             </PaginationContent>
           </Pagination>
         </CardFooter>
+      </Card>
+
+      {/* Recent E-Blotter Entries */}
+      <Card 
+        className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white"
+      >
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg font-semibold text-gray-900">
+            Recent E-Blotter Entries
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="h-52 overflow-auto">
+          {recentEblotters.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-gray-500">No recent e-blotter entries found</p>
+            </div>
+          ) : (
+            <table className="min-w-full border-collapse table-auto text-xs">
+              <thead className="bg-blue-100 text-blue-900">
+                <tr>
+                  <th className="px-6 py-3 text-left border-b">Entry Number</th>
+                  <th className="px-6 py-3 text-left border-b">Title</th>
+                  <th className="px-6 py-3 text-left border-b">Created By</th>
+                  <th className="px-6 py-3 text-left border-b">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentEblotters.map((eblotter) => (
+                  <tr
+                    key={eblotter.blotter_id}
+                    className="hover:bg-blue-50 transition-colors duration-200"
+                  >
+                    <td className="px-6 py-2 border-b">
+                      <span className="font-medium text-blue-900">
+                        {eblotter.entry_num || "N/A"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-2 border-b">{eblotter.title}</td>
+                    <td className="px-6 py-2 border-b flex items-center space-x-2">
+                      <img
+                        src="/assets/RACU.png"
+                        alt={eblotter.creator?.name || "Unknown"}
+                        className="h-8 w-8 rounded-full"
+                      />
+                      <span>{eblotter.creator?.name || "Unknown"}</span>
+                    </td>
+                    <td className="px-6 py-2 border-b">
+                      {new Date(eblotter.created_at).toLocaleDateString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })} {" "}
+                      - {" "}
+                      {new Date(eblotter.created_at).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                        timeZone: "Asia/Taipei",
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recent Extractions */}
+      <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white">
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg font-semibold text-gray-900">
+            Recent Extractions
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="h-52 overflow-auto">
+          {recentExtractions.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-gray-500">No recent extractions found</p>
+            </div>
+          ) : (
+            <table className="min-w-full border-collapse table-auto text-xs">
+              <thead className="bg-blue-100 text-blue-900">
+                <tr>
+                  <th className="px-6 py-3 text-left border-b">Control Number</th>
+                  <th className="px-6 py-3 text-left border-b">Title</th>
+                  <th className="px-6 py-3 text-left border-b">Created By</th>
+                  <th className="px-6 py-3 text-left border-b">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentExtractions.map((extraction) => (
+                  <tr
+                    key={extraction.extraction_id}
+                    className="hover:bg-blue-50 transition-colors duration-200"
+                  >
+                    <td className="px-6 py-2 border-b">
+                      <span className="font-medium text-blue-900">
+                        {extraction.control_num || "N/A"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-2 border-b">{extraction.title}</td>
+                    <td className="px-6 py-2 border-b flex items-center space-x-2">
+                      <img
+                        src="/assets/RACU.png"
+                        alt={extraction.creator?.name || "Unknown"}
+                        className="h-8 w-8 rounded-full"
+                      />
+                      <span>{extraction.creator?.name || extraction.created_by}</span>
+                    </td>
+                    <td className="px-6 py-2 border-b">
+                      {new Date(extraction.created_at).toLocaleDateString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })} {" "}
+                      - {" "}
+                      {new Date(extraction.created_at).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                        timeZone: "Asia/Taipei",
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
       </Card>
     </div>
   );
