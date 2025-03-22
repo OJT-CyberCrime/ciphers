@@ -73,6 +73,7 @@ interface ReportingPersonDetails {
 }
 
 interface Suspect {
+  suspect_id?: number;
   full_name: string;
   age: number;
   birthday: string;
@@ -562,17 +563,40 @@ export default function FileOperations({
 
       if (deleteError) throw deleteError;
 
-      const { error: suspectsError } = await supabase
-        .from('suspects')
-        .insert(
-          suspects.map(suspect => ({
-            wc_file_id: fileToEdit.file_id,
-            ...suspect,
-            birthday: new Date(suspect.birthday).toISOString()
-          }))
-        );
+      // Split suspects into existing and new
+      const existingSuspects = suspects.filter(s => s.suspect_id);
+      const newSuspects = suspects.filter(s => !s.suspect_id);
 
-      if (suspectsError) throw suspectsError;
+      // Update existing suspects
+      if (existingSuspects.length > 0) {
+        const { error: updateError } = await supabase
+          .from('suspects')
+          .upsert(
+            existingSuspects.map(suspect => ({
+              suspect_id: suspect.suspect_id,
+              wc_file_id: fileToEdit.file_id,
+              ...suspect,
+              birthday: new Date(suspect.birthday).toISOString()
+            }))
+          );
+
+        if (updateError) throw updateError;
+      }
+
+      // Insert new suspects
+      if (newSuspects.length > 0) {
+        const { error: insertError } = await supabase
+          .from('suspects')
+          .insert(
+            newSuspects.map(suspect => ({
+              wc_file_id: fileToEdit.file_id,
+              ...suspect,
+              birthday: new Date(suspect.birthday).toISOString()
+            }))
+          );
+
+        if (insertError) throw insertError;
+      }
 
       toast.success('File updated successfully');
       setShowFileDialog(null);
@@ -1203,26 +1227,26 @@ NARRATIVE:
                 <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold">File Details</h3>
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
+                <div>
                       <Label>File Name</Label>
                       <p className="text-gray-900 mt-1">{currentFile.file_name}</p>
-                    </div>
-                    <div>
+                </div>
+                <div>
                       <Label>Case Title</Label>
                       <p className="text-gray-900 mt-1">{currentFile.case_title}</p>
-                    </div>
-                    <div>
+                </div>
+                <div>
                       <Label>Blotter Number</Label>
                       <p className="text-gray-900 mt-1">{currentFile.blotter_number}</p>
-                    </div>
-                    <div>
+                </div>
+                <div>
                       <Label>Investigator</Label>
                       <p className="text-gray-900 mt-1">{currentFile.investigator}</p>
-                    </div>
-                    <div>
+                </div>
+                <div>
                       <Label>Desk Officer</Label>
                       <p className="text-gray-900 mt-1">{currentFile.desk_officer}</p>
-                    </div>
+                </div>
                     <div className="col-span-2">
                       <Label>Incident Summary</Label>
                       <div className="mt-1 p-3 bg-white border rounded-md whitespace-pre-wrap font-mono text-sm">
@@ -1237,11 +1261,11 @@ NARRATIVE:
                   <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                     <h3 className="text-lg font-semibold">Reporting Person Details</h3>
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
+                <div>
                         <Label>Full Name</Label>
                         <p className="text-gray-900 mt-1">{reportingPerson.full_name}</p>
-                      </div>
-                      <div>
+                </div>
+                <div>
                         <Label>Age</Label>
                         <p className="text-gray-900 mt-1">{reportingPerson.age}</p>
                       </div>
@@ -1334,8 +1358,8 @@ NARRATIVE:
                     <div className="flex items-center justify-between p-2 bg-white rounded-md">
                       <Label>Created</Label>
                       <p className="text-sm text-gray-600">
-                        {new Date(currentFile.created_at).toLocaleString()} by{" "}
-                        <span className="text-blue-900">{currentFile.created_by}</span>
+                          {new Date(currentFile.created_at).toLocaleString()} by{" "}
+                          <span className="text-blue-900">{currentFile.created_by}</span>
                       </p>
                     </div>
                     <div className="flex items-center justify-between p-2 bg-white rounded-md">
