@@ -1202,36 +1202,34 @@ NARRATIVE:
                 {/* File Details */}
                 <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold">File Details</h3>
-                <div>
-                    <Label htmlFor="file_name">File Name</Label>
-                    <p className="text-gray-900">{currentFile.file_name}</p>
-                </div>
-                <div>
-                    <Label htmlFor="case_title">Case Title</Label>
-                    <p className="text-gray-900">{currentFile.case_title}</p>
-                </div>
-                <div>
-                    <Label htmlFor="blotter_number">Blotter Number</Label>
-                  <p className="text-gray-900">{currentFile.blotter_number}</p>
-                </div>
-                <div>
-                    <Label htmlFor="investigator">Investigator</Label>
-                  <p className="text-gray-900">{currentFile.investigator}</p>
-                </div>
-                <div>
-                    <Label htmlFor="desk_officer">Desk Officer</Label>
-                  <p className="text-gray-900">{currentFile.desk_officer}</p>
-                </div>
-                <div>
-                    <Label htmlFor="incident_summary">Incident Summary</Label>
-                  <Textarea
-                      id="incident_summary"
-                      name="incident_summary"
-                      value={currentFile.incident_summary}
-                    readOnly
-                    className="h-96 resize-none border-gray-300 rounded-md font-mono whitespace-pre-wrap"
-                  />
-                </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>File Name</Label>
+                      <p className="text-gray-900 mt-1">{currentFile.file_name}</p>
+                    </div>
+                    <div>
+                      <Label>Case Title</Label>
+                      <p className="text-gray-900 mt-1">{currentFile.case_title}</p>
+                    </div>
+                    <div>
+                      <Label>Blotter Number</Label>
+                      <p className="text-gray-900 mt-1">{currentFile.blotter_number}</p>
+                    </div>
+                    <div>
+                      <Label>Investigator</Label>
+                      <p className="text-gray-900 mt-1">{currentFile.investigator}</p>
+                    </div>
+                    <div>
+                      <Label>Desk Officer</Label>
+                      <p className="text-gray-900 mt-1">{currentFile.desk_officer}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <Label>Incident Summary</Label>
+                      <div className="mt-1 p-3 bg-white border rounded-md whitespace-pre-wrap font-mono text-sm">
+                        {currentFile.incident_summary}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Reporting Person Details */}
@@ -1239,49 +1237,49 @@ NARRATIVE:
                   <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                     <h3 className="text-lg font-semibold">Reporting Person Details</h3>
                     <div className="grid grid-cols-2 gap-4">
-                <div>
+                      <div>
                         <Label>Full Name</Label>
-                        <p className="text-gray-900">{reportingPerson.full_name}</p>
+                        <p className="text-gray-900 mt-1">{reportingPerson.full_name}</p>
                       </div>
                       <div>
                         <Label>Age</Label>
-                        <p className="text-gray-900">{reportingPerson.age}</p>
+                        <p className="text-gray-900 mt-1">{reportingPerson.age}</p>
                       </div>
                       <div>
                         <Label>Birthday</Label>
-                        <p className="text-gray-900">{new Date(reportingPerson.birthday).toLocaleDateString()}</p>
+                        <p className="text-gray-900 mt-1">{new Date(reportingPerson.birthday).toLocaleDateString()}</p>
                       </div>
                       <div>
                         <Label>Gender</Label>
-                        <p className="text-gray-900">{reportingPerson.gender}</p>
+                        <p className="text-gray-900 mt-1">{reportingPerson.gender}</p>
                       </div>
                       <div className="col-span-2">
                         <Label>Complete Address</Label>
-                        <p className="text-gray-900">{reportingPerson.complete_address}</p>
+                        <p className="text-gray-900 mt-1">{reportingPerson.complete_address}</p>
                       </div>
                       <div>
                         <Label>Contact Number</Label>
-                        <p className="text-gray-900">{reportingPerson.contact_number}</p>
+                        <p className="text-gray-900 mt-1">{reportingPerson.contact_number}</p>
                       </div>
                       <div>
                         <Label>Date Reported</Label>
-                        <p className="text-gray-900">{new Date(reportingPerson.date_reported).toLocaleDateString()}</p>
+                        <p className="text-gray-900 mt-1">{new Date(reportingPerson.date_reported).toLocaleDateString()}</p>
                       </div>
                       <div>
                         <Label>Time Reported</Label>
-                        <p className="text-gray-900">{reportingPerson.time_reported}</p>
+                        <p className="text-gray-900 mt-1">{reportingPerson.time_reported}</p>
                       </div>
                       <div>
                         <Label>Date of Incident</Label>
-                        <p className="text-gray-900">{new Date(reportingPerson.date_of_incident).toLocaleDateString()}</p>
+                        <p className="text-gray-900 mt-1">{new Date(reportingPerson.date_of_incident).toLocaleDateString()}</p>
                       </div>
                       <div>
                         <Label>Time of Incident</Label>
-                        <p className="text-gray-900">{reportingPerson.time_of_incident}</p>
+                        <p className="text-gray-900 mt-1">{reportingPerson.time_of_incident}</p>
                       </div>
                       <div className="col-span-2">
                         <Label>Place of Incident</Label>
-                        <p className="text-gray-900">{reportingPerson.place_of_incident}</p>
+                        <p className="text-gray-900 mt-1">{reportingPerson.place_of_incident}</p>
                       </div>
                     </div>
                   </div>
@@ -1292,36 +1290,36 @@ NARRATIVE:
                   <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                     <h3 className="text-lg font-semibold">Suspects</h3>
                     {suspects.map((suspect, index) => (
-                      <div key={index} className="space-y-4 p-4 border rounded-lg">
-                        <h4 className="font-medium">Suspect {index + 1}</h4>
+                      <div key={index} className="p-4 border rounded-lg bg-white">
+                        <h4 className="font-medium mb-4">Suspect {index + 1}</h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label>Full Name</Label>
-                            <p className="text-gray-900">{suspect.full_name}</p>
+                            <p className="text-gray-900 mt-1">{suspect.full_name}</p>
                           </div>
                           <div>
                             <Label>Age</Label>
-                            <p className="text-gray-900">{suspect.age}</p>
+                            <p className="text-gray-900 mt-1">{suspect.age}</p>
                           </div>
                           <div>
                             <Label>Birthday</Label>
-                            <p className="text-gray-900">{new Date(suspect.birthday).toLocaleDateString()}</p>
+                            <p className="text-gray-900 mt-1">{new Date(suspect.birthday).toLocaleDateString()}</p>
                           </div>
                           <div>
                             <Label>Gender</Label>
-                            <p className="text-gray-900">{suspect.gender}</p>
+                            <p className="text-gray-900 mt-1">{suspect.gender}</p>
                           </div>
                           <div className="col-span-2">
                             <Label>Complete Address</Label>
-                            <p className="text-gray-900">{suspect.complete_address}</p>
+                            <p className="text-gray-900 mt-1">{suspect.complete_address}</p>
                           </div>
                           <div>
                             <Label>Contact Number</Label>
-                            <p className="text-gray-900">{suspect.contact_number}</p>
+                            <p className="text-gray-900 mt-1">{suspect.contact_number}</p>
                           </div>
-                          <div>
+                          <div className="col-span-2">
                             <Label>Relationship to Victim</Label>
-                            <p className="text-gray-900">{suspect.relationship_to_victim}</p>
+                            <p className="text-gray-900 mt-1">{suspect.relationship_to_victim}</p>
                           </div>
                         </div>
                       </div>
@@ -1332,18 +1330,18 @@ NARRATIVE:
                 {/* File Activity */}
                 <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold">File Activity</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-600">
-                        Created: <span>
-                          {new Date(currentFile.created_at).toLocaleString()} by{" "}
-                          <span className="text-blue-900">{currentFile.created_by}</span>
-                        </span>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-2 bg-white rounded-md">
+                      <Label>Created</Label>
+                      <p className="text-sm text-gray-600">
+                        {new Date(currentFile.created_at).toLocaleString()} by{" "}
+                        <span className="text-blue-900">{currentFile.created_by}</span>
                       </p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-600">
-                        Last updated: {currentFile.updated_at ? (
+                    <div className="flex items-center justify-between p-2 bg-white rounded-md">
+                      <Label>Last Updated</Label>
+                      <p className="text-sm text-gray-600">
+                        {currentFile.updated_at ? (
                           <span>
                             {new Date(currentFile.updated_at).toLocaleString()} by{" "}
                             <span className="text-blue-900">{currentFile.updated_by}</span>
@@ -1351,9 +1349,10 @@ NARRATIVE:
                         ) : 'Never'}
                       </p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-600">
-                        Last viewed: {currentFile.viewed_at ? (
+                    <div className="flex items-center justify-between p-2 bg-white rounded-md">
+                      <Label>Last Viewed</Label>
+                      <p className="text-sm text-gray-600">
+                        {currentFile.viewed_at ? (
                           <span>
                             {new Date(currentFile.viewed_at).toLocaleString()} by{" "}
                             <span className="text-blue-900">{currentFile.viewed_by}</span>
@@ -1361,9 +1360,10 @@ NARRATIVE:
                         ) : 'Never'}
                       </p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-600">
-                        Last downloaded: {currentFile.downloaded_at ? (
+                    <div className="flex items-center justify-between p-2 bg-white rounded-md">
+                      <Label>Last Downloaded</Label>
+                      <p className="text-sm text-gray-600">
+                        {currentFile.downloaded_at ? (
                           <span>
                             {new Date(currentFile.downloaded_at).toLocaleString()} by{" "}
                             <span className="text-blue-900">{currentFile.downloaded_by}</span>
@@ -1371,9 +1371,10 @@ NARRATIVE:
                         ) : 'Never'}
                       </p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-600">
-                        Last printed: {currentFile.printed_at ? (
+                    <div className="flex items-center justify-between p-2 bg-white rounded-md">
+                      <Label>Last Printed</Label>
+                      <p className="text-sm text-gray-600">
+                        {currentFile.printed_at ? (
                           <span>
                             {new Date(currentFile.printed_at).toLocaleString()} by{" "}
                             <span className="text-blue-900">{currentFile.printed_by}</span>
