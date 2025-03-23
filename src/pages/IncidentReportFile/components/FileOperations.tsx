@@ -1,13 +1,12 @@
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetOverlay,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,27 +15,34 @@ import { supabase } from "@/utils/supa";
 import Cookies from "js-cookie";
 import {
   Download,
-  Printer,
-  File,
+  Plus,
   FileText,
   Image as ImageIcon,
+  File,
+  Pencil,
+  Archive,
+  Eye,
+  MoreVertical,
+  Printer,
+  X,
+  ZoomIn,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogOverlay,
-} from "@/components/ui/dialog";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
 interface FileRecord {
   file_id: number;
   folder_id: number;
   title: string;
+  case_title: string;
+  blotter_number: string;
   incident_summary: string;
   file_path: string;
   public_url: string;
@@ -60,16 +66,40 @@ interface FileRecord {
   printer?: { name: string };
 }
 
+interface ReportingPersonDetails {
+  full_name: string;
+  age: number;
+  birthday: string;
+  gender: "Male" | "Female" | "Other";
+  complete_address: string;
+  contact_number: string;
+  date_reported: string;
+  time_reported: string;
+  date_of_incident: string;
+  time_of_incident: string;
+  place_of_incident: string;
+}
+
+interface Suspect {
+  suspect_id?: number;
+  full_name: string;
+  age: number;
+  birthday: string;
+  gender: "Male" | "Female" | "Other";
+  complete_address: string;
+  contact_number: string;
+}
+
 interface FileOperationsProps {
   file: FileRecord;
-  showPreview?: boolean;
-  setShowPreview?: (show: boolean) => void;
+  showPreview: boolean;
+  setShowPreview: (show: boolean) => void;
   showFileDialog: "edit" | "archive" | "details" | null;
   setShowFileDialog: (dialog: "edit" | "archive" | "details" | null) => void;
   onFileUpdate: () => void;
   selectedFile?: FileRecord | null;
   setSelectedFile: (file: FileRecord | null) => void;
-  listView?: boolean;
+  isListView: boolean;
 }
 
 // Helper function to get file type icon
@@ -91,26 +121,103 @@ const getFileIcon = (filePath: string) => {
   return <File size={24} className="text-gray-600" />;
 };
 
+// Add this helper function at the top level
+const formatDateForInput = (dateString: string) => {
+  if (!dateString) return "";
+  return new Date(dateString).toISOString().split("T")[0];
+};
+
 export default function FileOperations({
   file,
-  showPreview = false,
-  setShowPreview = () => {},
+  showPreview,
+  setShowPreview,
   showFileDialog,
   setShowFileDialog,
   onFileUpdate,
   selectedFile,
   setSelectedFile,
-  listView = false,
+  isListView,
 }: FileOperationsProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
-  // Use currentFile only for file operations and details dialog
   const currentFile = showFileDialog ? selectedFile || file : file;
   const ext = currentFile.file_path.split(".").pop()?.toLowerCase() || "";
   const imageTypes = ["jpg", "jpeg", "png", "gif", "bmp", "webp"];
   const pdfType = ["pdf"];
   const officeTypes = ["doc", "docx", "xls", "xlsx", "ppt", "pptx"];
+
+  // Add state for reporting person and suspects
+  const [reportingPerson, setReportingPerson] =
+    useState<ReportingPersonDetails | null>(null);
+  const [suspects, setSuspects] = useState<Suspect[]>([]);
+
+  // Fetch reporting person and suspects when viewing or editing a file
+  useEffect(() => {
+    const fetchFileDetails = async () => {
+      if (!showFileDialog || !currentFile) return;
+
+      try {
+        // Fetch reporting person details
+        const { data: reportingData, error: reportingError } = await supabase
+          .from("reporting_person_details")
+          .select("*")
+          .eq("file_id", currentFile.file_id)
+          .single();
+
+        if (reportingError) throw reportingError;
+        setReportingPerson(reportingData);
+
+        // Fetch suspects
+        const { data: suspectsData, error: suspectsError } = await supabase
+          .from("suspects")
+          .select("*")
+          .eq("file_id", currentFile.file_id);
+
+        if (suspectsError) throw suspectsError;
+        setSuspects(suspectsData || []);
+      } catch (error) {
+        console.error("Error fetching file details:", error);
+        toast.error("Failed to load file details");
+      }
+    };
+
+    fetchFileDetails();
+  }, [showFileDialog, currentFile]);
+
+  // Function to add a new suspect form
+  const addSuspect = () => {
+    setSuspects([
+      ...suspects,
+      {
+        full_name: "",
+        age: 0,
+        birthday: "",
+        gender: "Male",
+        complete_address: "",
+        contact_number: "",
+      },
+    ]);
+  };
+
+  // Function to update suspect details
+  const updateSuspect = (
+    index: number,
+    field: keyof Suspect,
+    value: string | number
+  ) => {
+    const updatedSuspects = [...suspects];
+    updatedSuspects[index] = { ...updatedSuspects[index], [field]: value };
+    setSuspects(updatedSuspects);
+  };
+
+  // Function to remove a suspect
+  const removeSuspect = (index: number) => {
+    if (suspects.length > 1) {
+      const updatedSuspects = suspects.filter((_, i) => i !== index);
+      setSuspects(updatedSuspects);
+    }
+  };
 
   // Get signed URL on component mount and when showing preview
   useEffect(() => {
@@ -267,7 +374,7 @@ export default function FileOperations({
       const url = URL.createObjectURL(data);
       const a = document.createElement("a");
       a.href = url;
-      a.download = currentFile.title + "." + ext;
+      a.download = currentFile.case_title + "." + ext;
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(url);
@@ -392,7 +499,9 @@ export default function FileOperations({
     try {
       const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
-      const title = formData.get("title") as string;
+      const fileTitle = formData.get("title") as string;
+      const caseTitle = formData.get("case_title") as string;
+      const blotterNumber = formData.get("blotter_number") as string;
       const investigator = formData.get("investigator") as string;
       const deskOfficer = formData.get("desk_officer") as string;
       const summary = formData.get("summary") as string;
@@ -454,7 +563,9 @@ export default function FileOperations({
       const { error: updateError } = await supabase
         .from("files")
         .update({
-          title,
+          title: fileTitle,
+          case_title: caseTitle,
+          blotter_number: blotterNumber,
           investigator,
           desk_officer: deskOfficer,
           incident_summary: summary,
@@ -464,6 +575,7 @@ export default function FileOperations({
             ? {
                 file_path: filePath,
                 public_url: publicUrl,
+                file_name: uploadedFile.name,
               }
             : {}),
           updated_by: userData2.user_id,
@@ -472,6 +584,64 @@ export default function FileOperations({
         .eq("file_id", fileToEdit.file_id);
 
       if (updateError) throw updateError;
+
+      // Update reporting person details
+      if (reportingPerson) {
+        const { error: reportingError } = await supabase
+          .from("reporting_person_details")
+          .update({
+            ...reportingPerson,
+            birthday: new Date(reportingPerson.birthday).toISOString(),
+            date_reported: new Date(
+              reportingPerson.date_reported
+            ).toISOString(),
+            date_of_incident: new Date(
+              reportingPerson.date_of_incident
+            ).toISOString(),
+          })
+          .eq("file_id", fileToEdit.file_id);
+
+        if (reportingError) throw reportingError;
+      }
+
+      // Update suspects
+      const { error: deleteError } = await supabase
+        .from("suspects")
+        .delete()
+        .eq("file_id", fileToEdit.file_id);
+
+      if (deleteError) throw deleteError;
+
+      // Split suspects into existing and new
+      const existingSuspects = suspects.filter((s) => s.suspect_id);
+      const newSuspects = suspects.filter((s) => !s.suspect_id);
+
+      // Update existing suspects
+      if (existingSuspects.length > 0) {
+        const { error: updateError } = await supabase.from("suspects").upsert(
+          existingSuspects.map((suspect) => ({
+            suspect_id: suspect.suspect_id,
+            file_id: fileToEdit.file_id,
+            ...suspect,
+            birthday: new Date(suspect.birthday).toISOString(),
+          }))
+        );
+
+        if (updateError) throw updateError;
+      }
+
+      // Insert new suspects
+      if (newSuspects.length > 0) {
+        const { error: insertError } = await supabase.from("suspects").insert(
+          newSuspects.map((suspect) => ({
+            file_id: fileToEdit.file_id,
+            ...suspect,
+            birthday: new Date(suspect.birthday).toISOString(),
+          }))
+        );
+
+        if (insertError) throw insertError;
+      }
 
       toast.success("File updated successfully");
       setShowFileDialog(null);
@@ -513,7 +683,7 @@ export default function FileOperations({
         <div className="relative aspect-video">
           <img
             src={signedUrl}
-            alt={currentFile.title}
+            alt={currentFile.case_title}
             className="w-full h-full object-contain"
             onError={() => setError("Failed to load image")}
           />
@@ -530,7 +700,7 @@ export default function FileOperations({
               signedUrl
             )}&embedded=true&rm=minimal`}
             className="w-full h-full border-none"
-            title={currentFile.title}
+            title={currentFile.case_title}
             onError={() => setError("Failed to load document preview")}
           />
         </div>
@@ -550,6 +720,7 @@ export default function FileOperations({
     );
   };
 
+  // Render card preview
   // Render card preview
   const renderCardPreview = () => {
     if (isLoading) {
@@ -660,97 +831,87 @@ export default function FileOperations({
     );
   };
 
-  // Only render preview-related UI if showPreview prop is provided
-  const renderPreviewUI = () => {
-    if (showPreview === undefined) return null;
-
-    return (
-      <>
-        {/* Preview Dialog */}
-        <Sheet
-          open={showPreview}
-          onOpenChange={(open) => {
-            setShowPreview(open);
-            if (!open) {
-              setSelectedFile(null);
-            }
-          }}
-        >
-          <SheetOverlay className="bg-black/60 " />
-          <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100">
-            <SheetHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <SheetTitle className="text-xl font-semibold">
-                    {currentFile.title}
-                  </SheetTitle>
-                  <SheetDescription className="text-xs text-gray-500 mt-1">
-                    {ext.toUpperCase()} Document • Added by{" "}
-                    {currentFile.created_by}
-                  </SheetDescription>
-                </div>
-              </div>
-            </SheetHeader>
-
-            {/* Scrollable Preview Content */}
-            <div className="flex-1 overflow-auto rounded-lg border max-h-[calc(100vh-150px)] mt-5">
-              {renderPreviewContent()}
-            </div>
-
-            <SheetFooter className="flex justify-between items-center mt-auto">
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                {currentFile.viewed_at && (
-                  <span>
-                    Last viewed:{" "}
-                    {new Date(currentFile.viewed_at).toLocaleString()}
-                  </span>
-                )}
-              </div>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
-
-        {/* Card Preview - Only show in grid view */}
-        {!listView && (
-          <div className="mt-2 relative">{renderCardPreview()}</div>
-        )}
-      </>
-    );
-  };
-
   return (
     <>
-      {renderPreviewUI()}
+      {/* Preview Dialog */}
+      <Dialog
+        open={showPreview}
+        onOpenChange={(open) => {
+          setShowPreview(open);
+          if (!open) {
+            setSelectedFile(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-6xl w-4/5 h-[80vh] overflow-y-auto bg-white shadow-lg rounded-lg font-poppins scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <DialogHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <DialogTitle className="text-2xl font-semibold">
+                  {currentFile.case_title}
+                </DialogTitle>
+                <p className="text-sm text-gray-500 mt-1">
+                  {ext.toUpperCase()} Document • Added by{" "}
+                  {currentFile.created_by}
+                </p>
+              </div>
+              {/* <Button 
+                variant="ghost" 
+                size="icon"   
+                onClick={() => {
+                  setSelectedFile(null);
+                  setShowPreview(false);
+                }}
+              >
+                <X size={20} />
+              </Button> */}
+            </div>
+          </DialogHeader>
+
+          {/* Scrollable Preview Content */}
+          <div className="flex-1 overflow-auto rounded-lg border max-h-[calc(80vh-150px)] p-4 bg-gray-50">
+            {renderPreviewContent()}
+          </div>
+
+          <DialogFooter className="flex justify-between items-center">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              {currentFile.viewed_at && (
+                <span>
+                  Last viewed:{" "}
+                  {new Date(currentFile.viewed_at).toLocaleString()}
+                </span>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* File Operations Dialog */}
-      <Sheet
-        open={showFileDialog !== null && showFileDialog !== "archive"}
+      <Dialog
+        open={showFileDialog !== null}
         onOpenChange={() => setShowFileDialog(null)}
       >
-        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100">
-          <SheetHeader className="sticky top-0 z-10">
-            <SheetTitle className="text-xl font-semibold">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
               {showFileDialog === "edit"
                 ? "Edit File"
+                : showFileDialog === "archive"
+                ? "Archive File"
                 : showFileDialog === "details"
                 ? "File Details"
                 : ""}
-            </SheetTitle>
-            <SheetDescription className="text-sm text-gray-500">
-              {showFileDialog === "edit"
-                ? "You can modify the file details below."
-                : showFileDialog === "details"
-                ? "View complete details of the file."
-                : ""}
-            </SheetDescription>
-          </SheetHeader>
-          {/* <Separator className="w-full mb-3"/> */}
-          <div className="space-y-4 font-poppins">
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-6">
             {showFileDialog === "edit" && (
-              <form onSubmit={handleEditFile}>
-                <div className="space-y-4">
+              <form onSubmit={handleEditFile} className="space-y-6">
+                {/* File Details Section */}
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold">File Details</h3>
                   <div>
-                    <Label htmlFor="title" className="text-gray-700">File Title</Label>
+                    <Label htmlFor="title">File Name</Label>
                     <Input
                       id="title"
                       name="title"
@@ -760,7 +921,27 @@ export default function FileOperations({
                     />
                   </div>
                   <div>
-                    <Label htmlFor="investigator" className="text-gray-700">Investigator</Label>
+                    <Label htmlFor="case_title">Case Title</Label>
+                    <Input
+                      id="case_title"
+                      name="case_title"
+                      defaultValue={(selectedFile || file).case_title}
+                      required
+                      className="border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="blotter_number">Blotter Number</Label>
+                    <Input
+                      id="blotter_number"
+                      name="blotter_number"
+                      defaultValue={(selectedFile || file).blotter_number}
+                      required
+                      className="border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="investigator">Investigator</Label>
                     <Input
                       id="investigator"
                       name="investigator"
@@ -770,7 +951,7 @@ export default function FileOperations({
                     />
                   </div>
                   <div>
-                    <Label htmlFor="desk_officer" className="text-gray-700">Desk Officer</Label>
+                    <Label htmlFor="desk_officer">Desk Officer</Label>
                     <Input
                       id="desk_officer"
                       name="desk_officer"
@@ -780,34 +961,372 @@ export default function FileOperations({
                     />
                   </div>
                   <div>
-                    <Label htmlFor="summary" className="text-gray-700">Incident Summary</Label>
+                    <Label htmlFor="summary">Incident Summary</Label>
                     <Textarea
                       id="summary"
                       name="summary"
                       defaultValue={(selectedFile || file).incident_summary}
                       required
-                      className="h-32 resize-none border-gray-300 rounded-md"
+                      className="h-96 resize-none border-gray-300 rounded-md font-mono"
                     />
                   </div>
-                  <div className="flex flex-col space-y-2">
-                    <Label
-                      htmlFor="file"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Update File (Optional)
-                    </Label>
+                  <div>
+                    <Label htmlFor="file">Update File (Optional)</Label>
                     <Input
                       id="file"
                       name="file"
                       type="file"
-                      className="border-gray-300 rounded-md px-3 py-2"
+                      className="border-gray-300 rounded-md"
                     />
-                    <p className="text-xs text-gray-500 font-light">
+                    <p className="text-sm text-gray-500">
                       Leave empty to keep the current file
                     </p>
                   </div>
                 </div>
-                <SheetFooter className="mt-10 flex justify-end">
+
+                {/* Reporting Person Details */}
+                {reportingPerson && (
+                  <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                    <h3 className="text-lg font-semibold">
+                      Reporting Person Details
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="rp_full_name">Full Name</Label>
+                        <Input
+                          id="rp_full_name"
+                          value={reportingPerson.full_name}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              full_name: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_age">Age</Label>
+                        <Input
+                          id="rp_age"
+                          type="number"
+                          value={reportingPerson.age}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              age: Number(e.target.value),
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_birthday">Birthday</Label>
+                        <Input
+                          id="rp_birthday"
+                          type="date"
+                          value={formatDateForInput(reportingPerson.birthday)}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              birthday: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_gender">Gender</Label>
+                        <Select
+                          value={reportingPerson.gender}
+                          onValueChange={(value) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              gender: value as "Male" | "Female" | "Other",
+                            })
+                          }
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Male">Male</SelectItem>
+                            <SelectItem value="Female">Female</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2">
+                        <Label htmlFor="rp_complete_address">
+                          Complete Address
+                        </Label>
+                        <Textarea
+                          id="rp_complete_address"
+                          value={reportingPerson.complete_address}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              complete_address: e.target.value,
+                            })
+                          }
+                          required
+                          className="h-24 resize-none border-gray-300 rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_contact_number">
+                          Contact Number
+                        </Label>
+                        <Input
+                          id="rp_contact_number"
+                          value={reportingPerson.contact_number}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              contact_number: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_date_reported">Date Reported</Label>
+                        <Input
+                          id="rp_date_reported"
+                          type="date"
+                          value={formatDateForInput(
+                            reportingPerson.date_reported
+                          )}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              date_reported: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_time_reported">Time Reported</Label>
+                        <Input
+                          id="rp_time_reported"
+                          value={reportingPerson.time_reported}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              time_reported: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_date_of_incident">
+                          Date of Incident
+                        </Label>
+                        <Input
+                          id="rp_date_of_incident"
+                          type="date"
+                          value={formatDateForInput(
+                            reportingPerson.date_of_incident
+                          )}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              date_of_incident: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="rp_time_of_incident">
+                          Time of Incident
+                        </Label>
+                        <Input
+                          id="rp_time_of_incident"
+                          value={reportingPerson.time_of_incident}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              time_of_incident: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label htmlFor="rp_place_of_incident">
+                          Place of Incident
+                        </Label>
+                        <Textarea
+                          id="rp_place_of_incident"
+                          value={reportingPerson.place_of_incident}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              place_of_incident: e.target.value,
+                            })
+                          }
+                          required
+                          className="h-24 resize-none border-gray-300 rounded-md"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Suspects Section */}
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-semibold">Suspects</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addSuspect}
+                      className="text-sm"
+                    >
+                      Add Another Suspect
+                    </Button>
+                  </div>
+                  {suspects.map((suspect, index) => (
+                    <div
+                      key={index}
+                      className="space-y-4 p-4 border rounded-lg"
+                    >
+                      <div>
+                        <Label htmlFor={`suspect_${index}_full_name`}>
+                          Full Name
+                        </Label>
+                        <Input
+                          id={`suspect_${index}_full_name`}
+                          value={suspect.full_name}
+                          onChange={(e) =>
+                            updateSuspect(index, "full_name", e.target.value)
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`suspect_${index}_age`}>Age</Label>
+                        <Input
+                          id={`suspect_${index}_age`}
+                          type="number"
+                          value={suspect.age}
+                          onChange={(e) =>
+                            updateSuspect(index, "age", Number(e.target.value))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`suspect_${index}_birthday`}>
+                          Birthday
+                        </Label>
+                        <Input
+                          id={`suspect_${index}_birthday`}
+                          type="date"
+                          value={formatDateForInput(suspect.birthday)}
+                          onChange={(e) =>
+                            updateSuspect(index, "birthday", e.target.value)
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`suspect_${index}_gender`}>
+                          Gender
+                        </Label>
+                        <Select
+                          value={suspect.gender}
+                          onValueChange={(value) =>
+                            updateSuspect(
+                              index,
+                              "gender",
+                              value as "Male" | "Female" | "Other"
+                            )
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Male">Male</SelectItem>
+                            <SelectItem value="Female">Female</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2">
+                        <Label htmlFor={`suspect_${index}_complete_address`}>
+                          Complete Address
+                        </Label>
+                        <Textarea
+                          id={`suspect_${index}_complete_address`}
+                          value={suspect.complete_address}
+                          onChange={(e) =>
+                            updateSuspect(
+                              index,
+                              "complete_address",
+                              e.target.value
+                            )
+                          }
+                          className="h-24 resize-none border-gray-300 rounded-md"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`suspect_${index}_contact_number`}>
+                          Contact Number
+                        </Label>
+                        <Input
+                          id={`suspect_${index}_contact_number`}
+                          value={suspect.contact_number}
+                          onChange={(e) =>
+                            updateSuspect(
+                              index,
+                              "contact_number",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => removeSuspect(index)}
+                          className="text-sm"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowFileDialog(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    Save Changes
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
+
+            {showFileDialog === "archive" && (
+              <div className="space-y-4">
+                <DialogDescription className="text-gray-600">
+                  Are you sure you want to archive this file? This will remove
+                  it from the active files list.
+                </DialogDescription>
+                <DialogFooter className="flex justify-end">
                   <Button
                     type="button"
                     variant="outline"
@@ -817,60 +1336,283 @@ export default function FileOperations({
                     Cancel
                   </Button>
                   <Button
-                    type="submit"
-                    className="bg-blue-800 text-white hover:bg-blue-700"
+                    type="button"
+                    className="bg-red-600 text-white hover:bg-red-700"
+                    onClick={async () => {
+                      await handleArchiveFile();
+                      setShowFileDialog(null);
+                    }}
                   >
-                    Save Changes
+                    Yes, Archive
                   </Button>
-                </SheetFooter>
-              </form>
+                </DialogFooter>
+              </div>
             )}
 
             {showFileDialog === "details" && (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title">File Title</Label>
-                  <Input
-                    id="file-title"
-                    name="file-title"
-                    defaultValue={currentFile.title}
-                    readOnly
-                    className="border-gray-300 rounded-md font-regular text-gray-500"
-                  />
+              <div className="space-y-6">
+                {/* File Details */}
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold">File Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>File Name</Label>
+                      <p className="text-gray-900 mt-1">{currentFile.title}</p>
+                    </div>
+                    <div>
+                      <Label>Case Title</Label>
+                      <p className="text-gray-900 mt-1">
+                        {currentFile.case_title}
+                      </p>
+                    </div>
+                    <div>
+                      <Label>Blotter Number</Label>
+                      <p className="text-gray-900 mt-1">
+                        {currentFile.blotter_number}
+                      </p>
+                    </div>
+                    <div>
+                      <Label>Investigator</Label>
+                      <p className="text-gray-900 mt-1">
+                        {currentFile.investigator}
+                      </p>
+                    </div>
+                    <div>
+                      <Label>Desk Officer</Label>
+                      <p className="text-gray-900 mt-1">
+                        {currentFile.desk_officer}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <Label>Incident Summary</Label>
+                      <div className="mt-1 p-3 bg-white border rounded-md whitespace-pre-wrap font-mono text-sm">
+                        {currentFile.incident_summary}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="title">Investigator</Label>
-                  <Input
-                    id="investigator"
-                    name="investigator"
-                    defaultValue={currentFile.investigator}
-                    readOnly
-                    className="border-gray-300 rounded-md font-regular text-gray-500"
-                  />
+
+                {/* Reporting Person Details */}
+                {reportingPerson && (
+                  <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                    <h3 className="text-lg font-semibold">
+                      Reporting Person Details
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Full Name</Label>
+                        <p className="text-gray-900 mt-1">
+                          {reportingPerson.full_name}
+                        </p>
+                      </div>
+                      <div>
+                        <Label>Age</Label>
+                        <p className="text-gray-900 mt-1">
+                          {reportingPerson.age}
+                        </p>
+                      </div>
+                      <div>
+                        <Label>Birthday</Label>
+                        <p className="text-gray-900 mt-1">
+                          {new Date(
+                            reportingPerson.birthday
+                          ).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div>
+                        <Label>Gender</Label>
+                        <p className="text-gray-900 mt-1">
+                          {reportingPerson.gender}
+                        </p>
+                      </div>
+                      <div className="col-span-2">
+                        <Label>Complete Address</Label>
+                        <p className="text-gray-900 mt-1">
+                          {reportingPerson.complete_address}
+                        </p>
+                      </div>
+                      <div>
+                        <Label>Contact Number</Label>
+                        <p className="text-gray-900 mt-1">
+                          {reportingPerson.contact_number}
+                        </p>
+                      </div>
+                      <div>
+                        <Label>Date Reported</Label>
+                        <p className="text-gray-900 mt-1">
+                          {new Date(
+                            reportingPerson.date_reported
+                          ).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div>
+                        <Label>Time Reported</Label>
+                        <p className="text-gray-900 mt-1">
+                          {reportingPerson.time_reported}
+                        </p>
+                      </div>
+                      <div>
+                        <Label>Date of Incident</Label>
+                        <p className="text-gray-900 mt-1">
+                          {new Date(
+                            reportingPerson.date_of_incident
+                          ).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div>
+                        <Label>Time of Incident</Label>
+                        <p className="text-gray-900 mt-1">
+                          {reportingPerson.time_of_incident}
+                        </p>
+                      </div>
+                      <div className="col-span-2">
+                        <Label>Place of Incident</Label>
+                        <p className="text-gray-900 mt-1">
+                          {reportingPerson.place_of_incident}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Suspects */}
+                {suspects.length > 0 && (
+                  <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                    <h3 className="text-lg font-semibold">Suspects</h3>
+                    {suspects.map((suspect, index) => (
+                      <div
+                        key={index}
+                        className="p-4 border rounded-lg bg-white"
+                      >
+                        <h4 className="font-medium mb-4">
+                          Suspect {index + 1}
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Full Name</Label>
+                            <p className="text-gray-900 mt-1">
+                              {suspect.full_name}
+                            </p>
+                          </div>
+                          <div>
+                            <Label>Age</Label>
+                            <p className="text-gray-900 mt-1">{suspect.age}</p>
+                          </div>
+                          <div>
+                            <Label>Birthday</Label>
+                            <p className="text-gray-900 mt-1">
+                              {new Date(suspect.birthday).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div>
+                            <Label>Gender</Label>
+                            <p className="text-gray-900 mt-1">
+                              {suspect.gender}
+                            </p>
+                          </div>
+                          <div className="col-span-2">
+                            <Label>Complete Address</Label>
+                            <p className="text-gray-900 mt-1">
+                              {suspect.complete_address}
+                            </p>
+                          </div>
+                          <div>
+                            <Label>Contact Number</Label>
+                            <p className="text-gray-900 mt-1">
+                              {suspect.contact_number}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* File Activity */}
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold">File Activity</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-2 bg-white rounded-md">
+                      <Label>Created</Label>
+                      <p className="text-sm text-gray-600">
+                        {new Date(currentFile.created_at).toLocaleString()} by{" "}
+                        <span className="text-blue-900">
+                          {currentFile.created_by}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-white rounded-md">
+                      <Label>Last Updated</Label>
+                      <p className="text-sm text-gray-600">
+                        {currentFile.updated_at ? (
+                          <span>
+                            {new Date(currentFile.updated_at).toLocaleString()}{" "}
+                            by{" "}
+                            <span className="text-blue-900">
+                              {currentFile.updated_by}
+                            </span>
+                          </span>
+                        ) : (
+                          "Never"
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-white rounded-md">
+                      <Label>Last Viewed</Label>
+                      <p className="text-sm text-gray-600">
+                        {currentFile.viewed_at ? (
+                          <span>
+                            {new Date(currentFile.viewed_at).toLocaleString()}{" "}
+                            by{" "}
+                            <span className="text-blue-900">
+                              {currentFile.viewed_by}
+                            </span>
+                          </span>
+                        ) : (
+                          "Never"
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-white rounded-md">
+                      <Label>Last Downloaded</Label>
+                      <p className="text-sm text-gray-600">
+                        {currentFile.downloaded_at ? (
+                          <span>
+                            {new Date(
+                              currentFile.downloaded_at
+                            ).toLocaleString()}{" "}
+                            by{" "}
+                            <span className="text-blue-900">
+                              {currentFile.downloaded_by}
+                            </span>
+                          </span>
+                        ) : (
+                          "Never"
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-white rounded-md">
+                      <Label>Last Printed</Label>
+                      <p className="text-sm text-gray-600">
+                        {currentFile.printed_at ? (
+                          <span>
+                            {new Date(currentFile.printed_at).toLocaleString()}{" "}
+                            by{" "}
+                            <span className="text-blue-900">
+                              {currentFile.printed_by}
+                            </span>
+                          </span>
+                        ) : (
+                          "Never"
+                        )}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="title">Desk Officer</Label>
-                  <Input
-                    id="desk-officer"
-                    name="desk-officer"
-                    defaultValue={currentFile.desk_officer}
-                    readOnly
-                    className="border-gray-300 rounded-md font-regular text-gray-500"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="title">Incident Summary</Label>
-                  <Textarea
-                    id="summary"
-                    name="summary"
-                    defaultValue={currentFile.incident_summary}
-                    readOnly
-                    className="h-32 resize-none border-gray-300 rounded-md font-regular text-gray-500"
-                  />
-                </div>
-                <SheetFooter className="flex justify-end">
+
+                <DialogFooter>
                   <Button
-                    className="bg-blue-800 text-white hover:bg-blue-700 mt-10"
+                    className="bg-blue-600 text-white hover:bg-blue-700"
                     onClick={() => {
                       setSelectedFile(null);
                       setShowFileDialog(null);
@@ -878,51 +1620,18 @@ export default function FileOperations({
                   >
                     Close
                   </Button>
-                </SheetFooter>
+                </DialogFooter>
               </div>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Archive Dialog */}
-      <Dialog
-        open={showFileDialog === "archive"}
-        onOpenChange={() => setShowFileDialog(null)}
-      >
-        <DialogContent className="font-poppins">
-          <DialogHeader className="text-xl">
-            <DialogTitle>Archive File</DialogTitle>
-          </DialogHeader>
-          <DialogDescription className="text-gray-600 text-sm">
-            Are you sure you want to archive this file? This will remove it from
-            the active files list.
-          </DialogDescription>
-          <DialogFooter className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowFileDialog(null)}
-              className="mr-2"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="bg-red-600 text-white hover:bg-red-700"
-              onClick={async () => {
-                await handleArchiveFile();
-                setShowFileDialog(null);
-              }}
-            >
-              Yes, Archive
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Render card preview in both list and grid view */}
+      {!isListView && renderCardPreview()}
+
       {/* Download and Print buttons - only show when not in list view */}
-      {!listView && (
+      {!isListView && (
         <div className="flex gap-2 justify-center">
           <Button
             variant="ghost"

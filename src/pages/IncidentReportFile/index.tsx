@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
@@ -20,15 +20,7 @@ import {
   Grid,
   SortAsc,
 } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from "@/components/ui/sheet";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Select,
   SelectContent,
@@ -38,18 +30,37 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/utils/supa";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  // DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import Cookies from "js-cookie";
-import RichTextEditor from "@/components/RichTextEditor";
+// import RichTextEditor from "@/components/RichTextEditor";
 import FileOperations from "./components/FileOperations";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 
 interface FileRecord {
   file_id: number;
   folder_id: number;
   title: string;
+  case_title: string;
+  blotter_number: string;
   incident_summary: string;
   file_path: string;
   public_url: string;
@@ -71,7 +82,6 @@ interface FileRecord {
   viewer?: { name: string };
   downloader?: { name: string };
   printer?: { name: string };
-  status?: string;
 }
 
 interface Folder {
@@ -80,6 +90,29 @@ interface Folder {
   status: string;
   created_by: string;
   created_at: string;
+}
+
+interface ReportingPersonDetails {
+  full_name: string;
+  age: number;
+  birthday: string;
+  gender: "Male" | "Female" | "Other";
+  complete_address: string;
+  contact_number: string;
+  date_reported: string;
+  time_reported: string;
+  date_of_incident: string;
+  time_of_incident: string;
+  place_of_incident: string;
+}
+
+interface Suspect {
+  full_name: string;
+  age: number;
+  birthday: string;
+  gender: "Male" | "Female" | "Other";
+  complete_address: string;
+  contact_number: string;
 }
 
 // Helper function to get file type icon
@@ -126,7 +159,7 @@ const getStatusBadgeClass = (status: string) => {
   }
 };
 
-export default function FolderPage() {
+export default function IncidentReport() {
   const { id } = useParams<{ id: string }>();
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
@@ -135,6 +168,8 @@ export default function FolderPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingFile, setIsAddingFile] = useState(false);
   const [newFileTitle, setNewFileTitle] = useState("");
+  const [newCaseTitle, setNewCaseTitle] = useState("");
+  const [newBlotterNumber, setNewBlotterNumber] = useState("");
   const [newFileSummary, setNewFileSummary] = useState("");
   const [fileUpload, setFileUpload] = useState<FileList | null>(null);
   const [newInvestigator, setNewInvestigator] = useState("");
@@ -146,153 +181,246 @@ export default function FolderPage() {
   const [previewStates, setPreviewStates] = useState<{
     [key: number]: boolean;
   }>({});
-  const [showOptions, setShowOptions] = useState<{ [key: number]: boolean }>({});
-  // const navigate = useNavigate();
-  // const location = useLocation();
-  const previousPage = "/incident-report"; // Always navigate to incident report
-  const previousPageName = "Incident Reports";
-  const [isListView, setIsListView] = useState(() => {
-    // Retrieve the view mode from local storage or default to false (grid view)
-    const storedView = localStorage.getItem("viewPreference");
-    return storedView ? JSON.parse(storedView) : false;
-  });
+  const [showOptions, setShowOptions] = useState<{ [key: number]: boolean }>(
+    {}
+  );
+  const navigate = useNavigate();
+  const location = useLocation();
+  const previousPage = "/incident-report"; 
+  const previousPageName = "Incident Report"; // Update to correct page name
   const [sortCriteria, setSortCriteria] = useState("created_at");
+  const [reportingPerson, setReportingPerson] =
+    useState<ReportingPersonDetails>({
+      full_name: "",
+      age: 0,
+      birthday: "",
+      gender: "Male",
+      complete_address: "",
+      contact_number: "",
+      date_reported: "",
+      time_reported: "",
+      date_of_incident: "",
+      time_of_incident: "",
+      place_of_incident: "",
+    });
+  const [suspects, setSuspects] = useState<Suspect[]>([
+    {
+      full_name: "",
+      age: 0,
+      birthday: "",
+      gender: "Male",
+      complete_address: "",
+      contact_number: "",
+    },
+  ]);
+  const [isListView, setIsListView] = useState(() => {
+    // Retrieve the view state from localStorage
+    const savedView = localStorage.getItem("isListView");
+    return savedView ? JSON.parse(savedView) : false; // Default to grid view if not set
+  });
+  const contextMenuRef = useRef<HTMLDivElement | null>(null); // Create a ref for the context menu
 
-  // Add click outside handler for context menu
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.context-menu') && !target.closest('.menu-trigger')) {
-        setShowOptions({});
-      }
-    };
+  // Function to add a new suspect form
+  const addSuspect = () => {
+    setSuspects([
+      ...suspects,
+      {
+        full_name: "",
+        age: 0,
+        birthday: "",
+        gender: "Male",
+        complete_address: "",
+        contact_number: "",
+      },
+    ]);
+  };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  // Function to update suspect details
+  const updateSuspect = (
+    index: number,
+    field: keyof Suspect,
+    value: string | number
+  ) => {
+    const updatedSuspects = [...suspects];
+    updatedSuspects[index] = { ...updatedSuspects[index], [field]: value };
+    setSuspects(updatedSuspects);
+  };
+
+  // Function to remove a suspect
+  const removeSuspect = (index: number) => {
+    if (suspects.length > 1) {
+      const updatedSuspects = suspects.filter((_, i) => i !== index);
+      setSuspects(updatedSuspects);
+    }
+  };
 
   // Handle file upload
-  const handleFileUpload = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!id || !fileUpload?.[0]) return;
+  const handleFileUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !fileUpload?.[0]) return;
 
-      try {
-        const userData = JSON.parse(Cookies.get("user_data") || "{}");
+    try {
+      const userData = JSON.parse(Cookies.get("user_data") || "{}");
 
-        // Get the user's ID from the users table using their email
-        const { data: userData2, error: userError } = await supabase
-          .from("users")
-          .select("user_id")
-          .eq("email", userData.email)
-          .single();
+      // Get the user's ID from the users table using their email
+      const { data: userData2, error: userError } = await supabase
+        .from("users")
+        .select("user_id")
+        .eq("email", userData.email)
+        .single();
 
-        if (userError) throw userError;
-        if (!userData2) throw new Error("User not found");
+      if (userError) throw userError;
+      if (!userData2) throw new Error("User not found");
 
-        // Upload file to storage
-        const file = fileUpload[0];
-        const fileExt = file.name.split(".").pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `folder_${id}/${fileName}`;
+      // Upload file to storage
+      const file = fileUpload[0];
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `folder_${id}/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from("files")
-          .upload(filePath, file, {
-            cacheControl: "3600",
-            upsert: false,
-          });
+      const { error: uploadError } = await supabase.storage
+        .from("files")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
 
-        if (uploadError) {
-          console.error("Upload error:", uploadError);
-          throw uploadError;
-        }
+      if (uploadError) throw uploadError;
 
-        // Get the public URL for the uploaded file
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("files").getPublicUrl(filePath);
+      // Get the public URL for the uploaded file
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("files").getPublicUrl(filePath);
 
-        // Strip HTML tags from the incident summary
-        const cleanSummary = stripHtml(newFileSummary);
+      // Create file record in database
+      const { data: fileData, error: fileError } = await supabase
+        .from("files")
+        .insert([
+          {
+            folder_id: id,
+            title: newFileTitle,
+            case_title: newCaseTitle,
+            blotter_number: newBlotterNumber,
+            incident_summary: newFileSummary,
+            file_path: filePath,
+            created_by: userData2.user_id,
+            is_archived: false,
+            public_url: publicUrl,
+            investigator: newInvestigator,
+            desk_officer: newDeskOfficer,
+          },
+        ])
+        .select()
+        .single();
 
-        // Create file record in database
-        const { data: fileData, error: fileError } = await supabase
-          .from("files")
-          .insert([
-            {
-              folder_id: id,
-              title: newFileTitle,
-              incident_summary: cleanSummary,
-              file_path: filePath,
-              created_by: userData2.user_id,
-              is_archived: false,
-              public_url: publicUrl,
-              investigator: newInvestigator,
-              desk_officer: newDeskOfficer,
-              viewed_by: null,
-              downloaded_by: null,
-              printed_by: null,
-              viewed_at: null,
-              downloaded_at: null,
-              printed_at: null,
-            },
-          ])
-          .select()
-          .single();
+      if (fileError) throw fileError;
 
-        if (fileError) throw fileError;
+      // Insert reporting person details
+      const { error: reportingError } = await supabase
+        .from("reporting_person_details")
+        .insert([
+          {
+            file_id: fileData.file_id,
+            ...reportingPerson,
+            birthday: new Date(reportingPerson.birthday).toISOString(),
+            date_reported: new Date(
+              reportingPerson.date_reported
+            ).toISOString(),
+            date_of_incident: new Date(
+              reportingPerson.date_of_incident
+            ).toISOString(),
+          },
+        ]);
 
-        // Fetch the complete file data with user information
-        const { data: newFileWithUser, error: fetchError } = await supabase
-          .from("files")
-          .select(
-            `
+      if (reportingError) throw reportingError;
+
+      // Insert suspects
+      const suspectsWithData = suspects.filter(
+        (suspect) =>
+          suspect.full_name ||
+          suspect.age ||
+          suspect.birthday ||
+          suspect.complete_address ||
+          suspect.contact_number
+      );
+
+      if (suspectsWithData.length > 0) {
+        const { error: suspectsError } = await supabase.from("suspects").insert(
+          suspectsWithData.map((suspect) => ({
+            file_id: fileData.file_id,
+            ...suspect,
+            birthday: suspect.birthday
+              ? new Date(suspect.birthday).toISOString()
+              : null,
+          }))
+        );
+
+        if (suspectsError) throw suspectsError;
+      }
+
+      // Fetch the complete file data with user information
+      const { data: newFileWithUser, error: fetchError } = await supabase
+        .from("files")
+        .select(
+          `
           *,
           creator:created_by(name),
           updater:updated_by(name)
         `
-          )
-          .eq("file_id", fileData.file_id)
-          .single();
+        )
+        .eq("file_id", fileData.file_id)
+        .single();
 
-        if (fetchError) throw fetchError;
+      if (fetchError) throw fetchError;
 
-        // Format the file data for the UI
-        const formattedFile = {
-          ...newFileWithUser,
-          created_by:
-            newFileWithUser.creator?.name || newFileWithUser.created_by,
-          updated_by:
-            newFileWithUser.updater?.name || newFileWithUser.updated_by,
-        };
+      // Format the file data for the UI
+      const formattedFile = {
+        ...newFileWithUser,
+        created_by: newFileWithUser.creator?.name || newFileWithUser.created_by,
+        updated_by: newFileWithUser.updater?.name || newFileWithUser.updated_by,
+      };
 
-        // Update the UI with the new file
-        setFiles([formattedFile, ...files]);
-        toast.success("File uploaded successfully");
-        setIsAddingFile(false);
-        setNewFileTitle("");
-        setNewFileSummary("");
-        setNewInvestigator("");
-        setNewDeskOfficer("");
-        setFileUpload(null);
-      } catch (error: any) {
-        console.error("Error uploading file:", error);
-        toast.error(error.message || "Failed to upload file");
-      }
-    },
-    [
-      id,
-      fileUpload,
-      newFileSummary,
-      newFileTitle,
-      newInvestigator,
-      newDeskOfficer,
-      files,
-    ]
-  );
+      // Update the UI with the new file
+      setFiles([formattedFile, ...files]);
+      toast.success("File uploaded successfully");
+      setIsAddingFile(false);
+
+      // Reset all form fields
+      setNewFileTitle("");
+      setNewCaseTitle("");
+      setNewBlotterNumber("");
+      setNewFileSummary("");
+      setNewInvestigator("");
+      setNewDeskOfficer("");
+      setFileUpload(null);
+      setReportingPerson({
+        full_name: "",
+        age: 0,
+        birthday: "",
+        gender: "Male",
+        complete_address: "",
+        contact_number: "",
+        date_reported: "",
+        time_reported: "",
+        date_of_incident: "",
+        time_of_incident: "",
+        place_of_incident: "",
+      });
+      setSuspects([
+        {
+          full_name: "",
+          age: 0,
+          birthday: "",
+          gender: "Male",
+          complete_address: "",
+          contact_number: "",
+        },
+      ]);
+    } catch (error: any) {
+      console.error("Error uploading file:", error);
+      toast.error(error.message || "Failed to upload file");
+    }
+  };
 
   // Fetch folder details and files
   useEffect(() => {
@@ -359,64 +487,57 @@ export default function FolderPage() {
   }, [id]);
 
   // Filter files based on search query and type
-  const filteredFiles = useMemo(() => {
-    return files.filter((file) => {
-      const matchesSearch =
-        file.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        file.incident_summary.toLowerCase().includes(searchQuery.toLowerCase());
-      const fileExtension =
-        file.file_path.split(".").pop()?.toLowerCase() || "";
+  const filteredFiles = files.filter((file) => {
+    const matchesSearch =
+      (file.case_title?.toLowerCase() || "").includes(
+        searchQuery.toLowerCase()
+      ) ||
+      (file.incident_summary?.toLowerCase() || "").includes(
+        searchQuery.toLowerCase()
+      );
+    const fileExtension = file.file_path?.split(".").pop()?.toLowerCase() || "";
 
-      let matchesFilter = true;
-      if (filter !== "all") {
-        const documentTypes = ["pdf", "doc", "docx", "txt"];
-        const imageTypes = ["jpg", "jpeg", "png", "gif", "bmp"];
+    let matchesFilter = true;
+    if (filter !== "all") {
+      const documentTypes = ["pdf", "doc", "docx", "txt"];
+      const imageTypes = ["jpg", "jpeg", "png", "gif", "bmp"];
 
-        if (filter === "document") {
-          matchesFilter = documentTypes.includes(fileExtension);
-        } else if (filter === "image") {
-          matchesFilter = imageTypes.includes(fileExtension);
-        } else if (filter === "other") {
-          matchesFilter =
-            !documentTypes.includes(fileExtension) &&
-            !imageTypes.includes(fileExtension);
-        }
+      if (filter === "document") {
+        matchesFilter = documentTypes.includes(fileExtension);
+      } else if (filter === "image") {
+        matchesFilter = imageTypes.includes(fileExtension);
+      } else if (filter === "other") {
+        matchesFilter =
+          !documentTypes.includes(fileExtension) &&
+          !imageTypes.includes(fileExtension);
       }
+    }
 
-      return matchesSearch && matchesFilter;
-    });
-  }, [files, searchQuery, filter]);
+    return matchesSearch && matchesFilter;
+  });
 
-  // Sort files based on the selected criteria
-  const sortedFiles = useMemo(() => {
-    return [...filteredFiles].sort((a, b) => {
-      if (sortCriteria === "created_at") {
-        return (
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-      } else if (sortCriteria === "title") {
-        return a.title.localeCompare(b.title);
-      }
-      return 0;
-    });
-  }, [filteredFiles, sortCriteria]);
-
+  // Function to handle view change
   const handleViewChange = (view: boolean) => {
     setIsListView(view);
-    setShowOptions({}); // Reset context menu state
-    localStorage.setItem("viewPreference", JSON.stringify(view));
+    localStorage.setItem("isListView", JSON.stringify(view)); // Save the view state to localStorage
   };
 
-  const handleRowClick = useCallback((fileId: number) => {
-    const file = sortedFiles.find(f => f.file_id === fileId);
-    if (file) {
-      setSelectedFile(file);
-      setPreviewStates(prev => ({
-        ...prev,
-        [fileId]: true
-      }));
+  // Function to handle clicks outside the context menu
+  const handleClickOutside = (event: MouseEvent) => {
+    if (
+      contextMenuRef.current &&
+      !contextMenuRef.current.contains(event.target as Node)
+    ) {
+      setShowOptions({}); // Close the context menu
     }
-  }, [sortedFiles]);
+  };
+
+  useEffect(() => {
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <div className="p-6">
@@ -483,297 +604,304 @@ export default function FolderPage() {
         </BreadcrumbItem>
       </Breadcrumb>
 
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-medium font-poppins text-blue-900">
-            {folderDetails?.title || `Folder ${id}`}
-          </h1>
-          <Badge
-            variant="outline"
-            className={`${
-              getStatusBadgeClass(folderDetails?.status || "N/A").class
-            } shadow-none`}
-          >
-            {getStatusBadgeClass(folderDetails?.status || "N/A").label}
-          </Badge>
-        </div>
-        <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
-          <Button
-            onClick={() => handleViewChange(true)}
-            className={`flex items-center justify-center w-10 h-8 rounded-s-full ${
-              isListView ? "bg-blue-200" : "bg-white"
-            } transition-colors hover:${
-              isListView ? "bg-blue-300" : "bg-gray-100"
-            }`}
-          >
-            <List size={16} color="black" />
-          </Button>
-          <Button
-            onClick={() => handleViewChange(false)}
-            className={`flex items-center justify-center w-10 h-8 rounded-e-full ${
-              !isListView ? "bg-blue-200" : "bg-white"
-            } transition-colors hover:${
-              !isListView ? "bg-blue-300" : "bg-gray-100"
-            }`}
-          >
-            <Grid size={16} color="black" />
-          </Button>
-        </div>
-      </div>
-
       {/* Folder Content */}
       <div className="space-y-6">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-medium font-poppins text-blue-900">
+              {folderDetails?.title || `Folder ${id}`}
+            </h1>
+            <Badge
+              variant="outline"
+              className={`${
+                getStatusBadgeClass(folderDetails?.status || "N/A").class
+              } shadow-none`}
+            >
+              {getStatusBadgeClass(folderDetails?.status || "N/A").label}
+            </Badge>
+          </div>
+          <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
+            <Button
+              onClick={() => handleViewChange(true)}
+              className={`flex items-center justify-center w-10 h-8 rounded-s-full ${
+                isListView ? "bg-blue-200" : "bg-white"
+              } transition-colors hover:${
+                isListView ? "bg-blue-300" : "bg-gray-100"
+              }`}
+            >
+              <List size={16} color="black" />
+            </Button>
+            <Button
+              onClick={() => handleViewChange(false)}
+              className={`flex items-center justify-center w-10 h-8 rounded-e-full ${
+                !isListView ? "bg-blue-200" : "bg-white"
+              } transition-colors hover:${
+                !isListView ? "bg-blue-300" : "bg-gray-100"
+              }`}
+            >
+              <Grid size={16} color="black" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Loading Skeleton or Files Grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {/* Skeletons for grid view */}
-            {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                <div className="flex items-center mb-2">
-                  <Skeleton className="h-40 w-12 rounded-full" /> {/* Placeholder for icon */}
-                  <div className="ml-3 flex-1">
-                    <Skeleton className="h-4 w-full mb-1" /> 
-                    <Skeleton className="h-4 w-3/4" />
-                  </div>
-                </div>
-              </div>
-            ))}
+            <Skeleton className="h-32 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
           </div>
-        ) : sortedFiles.length > 0 ? (
-          isListView ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-gray-50">
-                <thead>
-                  <tr>
-                    <th className="font-semibold text-md px-4 py-2 border-b text-left">File Name</th>
-                    <th className="font-semibold text-md px-4 py-2 border-b text-left">Added By</th>
-                    <th className="font-semibold text-md px-4 py-2 border-b text-left">Date Added</th>
-                    <th className="font-semibold text-md px-4 py-2 border-b text-left">Folder Status</th>
-                    <th className="font-semibold text-md px-4 py-2 border-b text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedFiles.map((file) => (
-                    <tr
-                      key={file.file_id}
-                      className="hover:bg-gray-100 cursor-pointer transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent row click
-                        setSelectedFile(file);
-                        setPreviewStates(prev => ({
-                          ...prev,
-                          [file.file_id]: true
-                        }));
-                      }}
-                    >
-                      <td className="px-4 py-2 border-b flex items-center gap-2">
-                        {getFileIcon(file.file_path)}
-                          {file.title}
-                      </td>
-                      <td className="px-4 py-2 border-b">{file.created_by}</td>
-                      <td className="px-4 py-2 border-b">{new Date(file.created_at).toLocaleDateString()}</td>
-                      <td className="px-4 py-2 border-b">
-                        <Badge variant="outline" className={`${getStatusBadgeClass(folderDetails?.status || 'N/A').class} shadow-none`}>
-                          {getStatusBadgeClass(folderDetails?.status || 'N/A').label}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-2 border-b flex space-x-2">
-                        <button
-                          className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent row click
-                            setShowOptions((prev) => ({
-                              ...prev,
-                              [file.file_id]: !prev[file.file_id],
-                            }));
-                          }}
-                        >
-                          <MoreVertical size={16} color="black" />
-                        </button>
-                        {showOptions[file.file_id] && (
-                          <div className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 context-menu">
-                            <button
-                              className="block w-full text-left p-2 hover:bg-gray-100"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedFile(file);
-                                setShowFileDialog('edit');
-                                setShowOptions((prev) => ({
-                                  ...prev,
-                                  [file.file_id]: false,
-                                }));
-                              }}
-                            >
-                              <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                            </button>
-                            <button
-                              className="block w-full text-left p-2 hover:bg-gray-100"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedFile(file);
-                                setShowFileDialog('archive');
-                                setShowOptions((prev) => ({
-                                  ...prev,
-                                  [file.file_id]: false,
-                                }));
-                              }}
-                            >
-                              <Archive className="inline w-4 h-4 mr-2" /> Archive
-                            </button>
-                            <button
-                              className="block w-full text-left p-2 hover:bg-gray-100"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedFile(file);
-                                setShowFileDialog('details');
-                                setShowOptions((prev) => ({
-                                  ...prev,
-                                  [file.file_id]: false,
-                                }));
-                              }}
-                            >
-                              <Eye className="inline w-4 h-4 mr-2" /> View Details
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <FileOperations
-                file={selectedFile || sortedFiles[0]}
-                showFileDialog={showFileDialog}
-                setShowFileDialog={setShowFileDialog}
-                selectedFile={selectedFile}
-                setSelectedFile={setSelectedFile}
-                showPreview={selectedFile ? previewStates[selectedFile.file_id] : false}
-                setShowPreview={(show) => {
-                  if (selectedFile) {
-                    setPreviewStates(prev => ({
-                      ...prev,
-                      [selectedFile.file_id]: show
-                    }));
-                  }
-                }}
-                onFileUpdate={() => {
-                  if (showFileDialog === 'archive' && selectedFile) {
-                    setFiles(files.filter((f) => f.file_id !== selectedFile.file_id));
-                  } else {
-                    window.location.reload();
-                  }
-                }}
-                listView={true}
-              />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 font-poppins">
-              {sortedFiles.map((file) => (
-                <div key={file.file_id} className="relative">
-                  <div
-                    className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow aspect-square"
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      setShowOptions((prev) => ({
+        ) : isListView ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-gray-50 font-poppins">
+              <thead>
+                <tr>
+                  <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                    File Name
+                  </th>
+                  <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                    Added By
+                  </th>
+                  <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                    Date Added
+                  </th>
+                  <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {files.map((file) => (
+                  <tr
+                    key={file.file_id}
+                    className="hover:bg-gray-100 cursor-pointer transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent row click
+                      setSelectedFile(file);
+                      setPreviewStates((prev) => ({
                         ...prev,
-                        [file.file_id]: !prev[file.file_id],
+                        [file.file_id]: true,
                       }));
                     }}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        {getFileIcon(file.file_path)}
-                        <h3 className="font-medium text-gray-900">{file.title}</h3>
-                      </div>
+                    <td className="px-4 py-2 border-b flex items-center gap-2">
+                      {getFileIcon(file.file_path)}
+                        {file.title}
+                    </td>
+                    <td className="px-4 py-2 border-b">{file.created_by}</td>
+                    <td className="px-4 py-2 border-b">
+                      {new Date(file.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-2 border-b flex space-x-2">
                       <button
                         className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
                         onClick={(e) => {
-                          e.stopPropagation();
+                          e.stopPropagation(); // Prevent row click
                           setShowOptions((prev) => ({
                             ...prev,
                             [file.file_id]: !prev[file.file_id],
                           }));
                         }}
                       >
-                        <MoreVertical className="w-4 h-4" />
+                        <MoreVertical size={16} color="black" />
                       </button>
+                      {showOptions[file.file_id] && (
+                        <div
+                          ref={contextMenuRef}
+                          className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 context-menu"
+                        >
+                          <button
+                            className="block w-full text-left p-2 hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedFile(file);
+                              setShowFileDialog("edit");
+                              setShowOptions((prev) => ({
+                                ...prev,
+                                [file.file_id]: false,
+                              }));
+                            }}
+                          >
+                            <Pencil className="inline w-4 h-4 mr-2" /> Edit
+                          </button>
+                          <button
+                            className="block w-full text-left p-2 hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedFile(file);
+                              setShowFileDialog("archive");
+                              setShowOptions((prev) => ({
+                                ...prev,
+                                [file.file_id]: false,
+                              }));
+                            }}
+                          >
+                            <Archive className="inline w-4 h-4 mr-2" /> Archive
+                          </button>
+                          <button
+                            className="block w-full text-left p-2 hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedFile(file);
+                              setShowFileDialog("details");
+                              setShowOptions((prev) => ({
+                                ...prev,
+                                [file.file_id]: false,
+                              }));
+                            }}
+                          >
+                            <Eye className="inline w-4 h-4 mr-2" /> View Details
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <FileOperations
+              file={selectedFile || files[0]}
+              showPreview={previewStates[selectedFile?.file_id || 0] || false}
+              setShowPreview={(show) => {
+                setPreviewStates((prev) => ({
+                  ...prev,
+                  [selectedFile?.file_id || 0]: show,
+                }));
+              }}
+              showFileDialog={showFileDialog}
+              setShowFileDialog={setShowFileDialog}
+              selectedFile={selectedFile}
+              setSelectedFile={setSelectedFile}
+              onFileUpdate={() => {
+                // Remove the file from the UI if it was archived
+                if (showFileDialog === "archive") {
+                  setFiles(
+                    files.filter((f) => f.file_id !== selectedFile?.file_id)
+                  );
+                } else {
+                  // Refresh the files list
+                  window.location.reload();
+                }
+              }}
+              isListView={isListView} // Pass the isListView prop
+            />
+          </div>
+        ) : filteredFiles.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 font-poppins">
+            {filteredFiles.map((file) => (
+              <div key={file.file_id} className="relative">
+                <div
+                  className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow aspect-square"
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setShowOptions((prev) => ({
+                      ...prev,
+                      [file.file_id]: !prev[file.file_id],
+                    }));
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      {getFileIcon(file.file_path)}
+                      <h3 className="font-medium text-gray-900">
+                        {file.title}
+                      </h3>
                     </div>
-                    <FileOperations
-                      file={file}
-                      showPreview={previewStates[file.file_id] || false}
-                      setShowPreview={(show) => {
-                        setPreviewStates((prev) => ({
+                    <button
+                      className="p-2 rounded-full hover:bg-gray-200"
+                      onClick={() =>
+                        setShowOptions((prev) => ({
                           ...prev,
-                          [file.file_id]: show,
+                          [file.file_id]: !prev[file.file_id],
+                        }))
+                      }
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <FileOperations
+                    file={file}
+                    showPreview={previewStates[file.file_id] || false}
+                    setShowPreview={(show) => {
+                      setPreviewStates((prev) => ({
+                        ...prev,
+                        [file.file_id]: show,
+                      }));
+                    }}
+                    showFileDialog={showFileDialog}
+                    setShowFileDialog={setShowFileDialog}
+                    selectedFile={selectedFile}
+                    setSelectedFile={setSelectedFile}
+                    onFileUpdate={() => {
+                      // Remove the file from the UI if it was archived
+                      if (showFileDialog === "archive") {
+                        setFiles(
+                          files.filter(
+                            (f) => f.file_id !== selectedFile?.file_id
+                          )
+                        );
+                      } else {
+                        // Refresh the files list
+                        window.location.reload();
+                      }
+                    }}
+                    isListView={isListView} // Pass the isListView prop
+                  />
+                  <div className="text-sm text-gray-500 mt-2">
+                    Added by {file.created_by} on{" "}
+                    {new Date(file.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+
+                {showOptions[file.file_id] && (
+                  <div 
+                  ref={contextMenuRef}
+                  className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                    <button
+                      className="block w-full text-left p-2 hover:bg-gray-100"
+                      onClick={() => {
+                        setSelectedFile(file);
+                        setShowFileDialog("edit");
+                        setShowOptions((prev) => ({
+                          ...prev,
+                          [file.file_id]: false,
                         }));
                       }}
-                      showFileDialog={showFileDialog}
-                      setShowFileDialog={setShowFileDialog}
-                      selectedFile={selectedFile}
-                      setSelectedFile={setSelectedFile}
-                      onFileUpdate={() => {
-                        if (showFileDialog === 'archive') {
-                          setFiles(files.filter((f) => f.file_id !== selectedFile?.file_id));
-                        } else {
-                          window.location.reload();
-                        }
+                    >
+                      <Pencil className="inline w-4 h-4 mr-2" /> Edit
+                    </button>
+                    <button
+                      className="block w-full text-left p-2 hover:bg-gray-100"
+                      onClick={() => {
+                        setSelectedFile(file);
+                        setShowFileDialog("archive");
+                        setShowOptions((prev) => ({
+                          ...prev,
+                          [file.file_id]: false,
+                        }));
                       }}
-                      listView={false}
-                    />
-                    <div className="text-xs text-gray-500 mt-2">
-                      Added by {file.created_by} on {new Date(file.created_at).toLocaleDateString()}
-                    </div>
+                    >
+                      <Archive className="inline w-4 h-4 mr-2" /> Archive
+                    </button>
+                    <button
+                      className="block w-full text-left p-2 hover:bg-gray-100"
+                      onClick={() => {
+                        setSelectedFile(file);
+                        setShowFileDialog("details");
+                        setShowOptions((prev) => ({
+                          ...prev,
+                          [file.file_id]: false,
+                        }));
+                      }}
+                    >
+                      <Eye className="inline w-4 h-4 mr-2" /> View Details
+                    </button>
                   </div>
-      
-                  {showOptions[file.file_id] && (
-                    <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 context-menu">
-                      <button
-                        className="block w-full text-left p-2 hover:bg-gray-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedFile(file);
-                          setShowFileDialog('edit');
-                          setShowOptions((prev) => ({
-                            ...prev,
-                            [file.file_id]: false,
-                          }));
-                        }}
-                      >
-                        <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                      </button>
-                      <button
-                        className="block w-full text-left p-2 hover:bg-gray-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedFile(file);
-                          setShowFileDialog('archive');
-                          setShowOptions((prev) => ({
-                            ...prev,
-                            [file.file_id]: false,
-                          }));
-                        }}
-                      >
-                        <Archive className="inline w-4 h-4 mr-2" /> Archive
-                      </button>
-                      <button
-                        className="block w-full text-left p-2 hover:bg-gray-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedFile(file);
-                          setShowFileDialog('details');
-                          setShowOptions((prev) => ({
-                            ...prev,
-                            [file.file_id]: false,
-                          }));
-                        }}
-                      >
-                        <Eye className="inline w-4 h-4 mr-2" /> View Details
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )
+                )}
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="text-center text-gray-500 py-8">
             <File className="mx-auto mb-4 text-gray-400" size={48} />
@@ -794,53 +922,389 @@ export default function FolderPage() {
 
           <form onSubmit={handleFileUpload}>
             <div className="space-y-4 py-4">
-              <div className="space-y-2 text-sm">
-                <Label htmlFor="title">File Title</Label>
-                <Input
-                  id="title"
-                  placeholder="Enter file title"
-                  value={newFileTitle}
-                  onChange={(e) => setNewFileTitle(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="investigator">Investigator</Label>
-                <Input
-                  id="investigator"
-                  placeholder="Enter investigator name"
-                  value={newInvestigator}
-                  onChange={(e) => setNewInvestigator(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="desk_officer">Desk Officer</Label>
-                <Input
-                  id="desk_officer"
-                  placeholder="Enter desk officer name"
-                  value={newDeskOfficer}
-                  onChange={(e) => setNewDeskOfficer(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="summary">Incident Summary</Label>
-                <div style={{ maxHeight: "200px", overflowY: "auto" }}>
-                  <RichTextEditor
-                    content={newFileSummary}
-                    onChange={setNewFileSummary}
+              <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold">File Details</h3>
+                <div className="space-y-2">
+                  <Label htmlFor="title">File Name</Label>
+                  <Input
+                    id="title"
+                    placeholder="Enter file name"
+                    value={newFileTitle}
+                    onChange={(e) => setNewFileTitle(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="case_title">Case Title</Label>
+                  <Input
+                    id="case_title"
+                    placeholder="Enter case title"
+                    value={newCaseTitle}
+                    onChange={(e) => setNewCaseTitle(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="blotter_number">Blotter Number</Label>
+                  <Input
+                    id="blotter_number"
+                    placeholder="Enter blotter number"
+                    value={newBlotterNumber}
+                    onChange={(e) => setNewBlotterNumber(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="investigator">Investigator</Label>
+                  <Input
+                    id="investigator"
+                    placeholder="Enter investigator name"
+                    value={newInvestigator}
+                    onChange={(e) => setNewInvestigator(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="desk_officer">Desk Officer</Label>
+                  <Input
+                    id="desk_officer"
+                    placeholder="Enter desk officer name"
+                    value={newDeskOfficer}
+                    onChange={(e) => setNewDeskOfficer(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="summary">Incident Summary</Label>
+                  <Textarea
+                    id="summary"
+                    name="summary"
+                    value={newFileSummary}
+                    placeholder="Please provide a detailed narrative of the incident..."
+                    onChange={(e) => setNewFileSummary(e.target.value)}
+                    required
+                    className="h-48 resize-none border-gray-300 rounded-md font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="file">Upload File</Label>
+                  <Input
+                    id="file"
+                    type="file"
+                    onChange={(e) => setFileUpload(e.target.files)}
+                    required
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="file">Upload File</Label>
-                <Input
-                  id="file"
-                  type="file"
-                  onChange={(e) => setFileUpload(e.target.files)}
-                  required
-                />
+
+              <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold">
+                  Reporting Person Details
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="rp_full_name">Full Name</Label>
+                    <Input
+                      id="rp_full_name"
+                      value={reportingPerson.full_name}
+                      onChange={(e) =>
+                        setReportingPerson({
+                          ...reportingPerson,
+                          full_name: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="rp_age">Age</Label>
+                    <Input
+                      id="rp_age"
+                      type="number"
+                      min="0"
+                      max="150"
+                      value={reportingPerson.age}
+                      onChange={(e) =>
+                        setReportingPerson({
+                          ...reportingPerson,
+                          age: parseInt(e.target.value),
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="rp_birthday">Birthday</Label>
+                    <Input
+                      id="rp_birthday"
+                      type="date"
+                      value={reportingPerson.birthday}
+                      onChange={(e) =>
+                        setReportingPerson({
+                          ...reportingPerson,
+                          birthday: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="rp_gender">Gender</Label>
+                    <Select
+                      onValueChange={(value) =>
+                        setReportingPerson({
+                          ...reportingPerson,
+                          gender: value as "Male" | "Female" | "Other",
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="rp_address">Complete Address</Label>
+                    <Textarea
+                      id="rp_address"
+                      value={reportingPerson.complete_address}
+                      onChange={(e) =>
+                        setReportingPerson({
+                          ...reportingPerson,
+                          complete_address: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="rp_contact">Contact Number</Label>
+                    <Input
+                      id="rp_contact"
+                      value={reportingPerson.contact_number}
+                      onChange={(e) =>
+                        setReportingPerson({
+                          ...reportingPerson,
+                          contact_number: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <Label htmlFor="date_reported">Date Reported</Label>
+                    <Input
+                      id="date_reported"
+                      type="date"
+                      value={reportingPerson.date_reported}
+                      onChange={(e) =>
+                        setReportingPerson({
+                          ...reportingPerson,
+                          date_reported: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="time_reported">Time Reported</Label>
+                    <Input
+                      id="time_reported"
+                      type="time"
+                      value={reportingPerson.time_reported}
+                      onChange={(e) =>
+                        setReportingPerson({
+                          ...reportingPerson,
+                          time_reported: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="date_of_incident">Date of Incident</Label>
+                    <Input
+                      id="date_of_incident"
+                      type="date"
+                      value={reportingPerson.date_of_incident}
+                      onChange={(e) =>
+                        setReportingPerson({
+                          ...reportingPerson,
+                          date_of_incident: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="time_of_incident">Time of Incident</Label>
+                    <Input
+                      id="time_of_incident"
+                      type="time"
+                      value={reportingPerson.time_of_incident}
+                      onChange={(e) =>
+                        setReportingPerson({
+                          ...reportingPerson,
+                          time_of_incident: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="place_of_incident">Place of Incident</Label>
+                    <Textarea
+                      id="place_of_incident"
+                      value={reportingPerson.place_of_incident}
+                      onChange={(e) =>
+                        setReportingPerson({
+                          ...reportingPerson,
+                          place_of_incident: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Suspects</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addSuspect}
+                    className="text-sm"
+                  >
+                    Add Another Suspect
+                  </Button>
+                </div>
+                {suspects.map((suspect, index) => (
+                  <div key={index} className="space-y-4 p-4 border rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-medium">Suspect {index + 1}</h4>
+                      {suspects.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => removeSuspect(index)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor={`suspect_${index}_name`}>
+                          Full Name
+                        </Label>
+                        <Input
+                          id={`suspect_${index}_name`}
+                          value={suspect.full_name}
+                          onChange={(e) =>
+                            updateSuspect(index, "full_name", e.target.value)
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`suspect_${index}_age`}>Age</Label>
+                        <Input
+                          id={`suspect_${index}_age`}
+                          type="number"
+                          min="0"
+                          max="150"
+                          value={suspect.age}
+                          onChange={(e) =>
+                            updateSuspect(
+                              index,
+                              "age",
+                              parseInt(e.target.value)
+                            )
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`suspect_${index}_birthday`}>
+                          Birthday
+                        </Label>
+                        <Input
+                          id={`suspect_${index}_birthday`}
+                          type="date"
+                          value={suspect.birthday}
+                          onChange={(e) =>
+                            updateSuspect(index, "birthday", e.target.value)
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`suspect_${index}_gender`}>
+                          Gender
+                        </Label>
+                        <Select
+                          onValueChange={(value) =>
+                            updateSuspect(
+                              index,
+                              "gender",
+                              value as "Male" | "Female" | "Other"
+                            )
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Male">Male</SelectItem>
+                            <SelectItem value="Female">Female</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2">
+                        <Label htmlFor={`suspect_${index}_address`}>
+                          Complete Address
+                        </Label>
+                        <Textarea
+                          id={`suspect_${index}_address`}
+                          value={suspect.complete_address}
+                          onChange={(e) =>
+                            updateSuspect(
+                              index,
+                              "complete_address",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`suspect_${index}_contact`}>
+                          Contact Number
+                        </Label>
+                        <Input
+                          id={`suspect_${index}_contact`}
+                          value={suspect.contact_number}
+                          onChange={(e) =>
+                            updateSuspect(
+                              index,
+                              "contact_number",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -851,10 +1315,35 @@ export default function FolderPage() {
                 onClick={() => {
                   setIsAddingFile(false);
                   setNewFileTitle("");
+                  setNewCaseTitle("");
+                  setNewBlotterNumber("");
                   setNewFileSummary("");
                   setNewInvestigator("");
                   setNewDeskOfficer("");
                   setFileUpload(null);
+                  setReportingPerson({
+                    full_name: "",
+                    age: 0,
+                    birthday: "",
+                    gender: "Male",
+                    complete_address: "",
+                    contact_number: "",
+                    date_reported: "",
+                    time_reported: "",
+                    date_of_incident: "",
+                    time_of_incident: "",
+                    place_of_incident: "",
+                  });
+                  setSuspects([
+                    {
+                      full_name: "",
+                      age: 0,
+                      birthday: "",
+                      gender: "Male",
+                      complete_address: "",
+                      contact_number: "",
+                    },
+                  ]);
                 }}
                 className="mr-2"
               >
@@ -867,6 +1356,62 @@ export default function FolderPage() {
           </form>
         </SheetContent>
       </Sheet>
+
+      {showFileDialog === "details" && selectedFile && (
+        <Dialog
+          open={showFileDialog === "details"}
+          onOpenChange={() => setShowFileDialog(null)}
+        >
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>File Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">File Name</h4>
+                <p className="text-gray-900 text-lg font-medium">
+                  {selectedFile.title}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">Case Title</h4>
+                <p className="text-gray-900 text-lg font-medium">
+                  {selectedFile.case_title}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">
+                  Blotter Number
+                </h4>
+                <p className="text-gray-900">{selectedFile.blotter_number}</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">Investigator</h4>
+                <p className="text-gray-900">{selectedFile.investigator}</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">Desk Officer</h4>
+                <p className="text-gray-900">{selectedFile.desk_officer}</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">
+                  Incident Summary
+                </h4>
+                <Textarea
+                  id="summary"
+                  name="summary"
+                  defaultValue={selectedFile.incident_summary}
+                  readOnly
+                  className="h-32 resize-none border-gray-300 rounded-md"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setShowFileDialog(null)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
