@@ -22,6 +22,7 @@ import {
   AreaChart,
   Area,
   Treemap,
+  Legend,
 } from "recharts";
 import {
   Pagination,
@@ -41,10 +42,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar } from "@/components/ui/avatar";
-import { Users, Archive, Files, FileTextIcon, FileCheck } from "lucide-react";
+import { Users, Archive, Files, FileTextIcon, FileCheck, Calendar } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
+import { DatePicker } from "@/components/ui/date-picker";
 
 // Sample data for different file types
 const regularFilesData = [
@@ -207,6 +209,19 @@ const styles = {
   responsiveContainer: `w-full h-full flex items-center justify-center`,
 };
 
+// Add this interface for the time-based category data
+interface CategoryTimeData {
+  time: string;
+  count: number;
+  category: string;
+}
+
+// Add this interface for category options
+interface CategoryOption {
+  value: string;
+  label: string;
+}
+
 export default function Dashboard() {
   const [selectedData, setSelectedData] = useState("Incident Report");
   const [currentPage, setCurrentPage] = useState(0);
@@ -257,6 +272,29 @@ export default function Dashboard() {
   const [recentEblotters, setRecentEblotters] = useState<RecentEblotter[]>([]);
   const [recentExtractions, setRecentExtractions] = useState<RecentExtraction[]>([]);
   const navigate = useNavigate();
+
+  // Add new state variables for the category time graph
+  const [categoryTimeData, setCategoryTimeData] = useState<CategoryTimeData[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    new Date(new Date().setMonth(new Date().getMonth() - 1))
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  const [isLoadingCategoryData, setIsLoadingCategoryData] = useState<boolean>(false);
+
+  // Handler functions for date pickers
+  const handleStartDateChange = (date: Date | null): void => {
+    if (date) {
+      setStartDate(date);
+    }
+  };
+
+  const handleEndDateChange = (date: Date | null): void => {
+    if (date) {
+      setEndDate(date);
+    }
+  };
 
   // Helper function to format the selected month
   const formatSelectedMonth = (dateString: string) => {
@@ -880,6 +918,164 @@ export default function Dashboard() {
     }
   };
 
+  // Add useEffect to fetch available categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("categories")
+          .select("category_id, title")
+          .order("title");
+
+        if (error) throw error;
+
+        const options: CategoryOption[] = (data || []).map((category) => ({
+          value: category.category_id,
+          label: category.title,
+        }));
+
+        setCategoryOptions(options);
+        if (options.length > 0) {
+          setSelectedCategory(options[0].value);
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Add function to fetch category time data
+  const fetchCategoryTimeData = async () => {
+    if (!selectedCategory || !startDate || !endDate) return;
+
+    try {
+      setIsLoadingCategoryData(true);
+
+      // Format dates for Supabase query
+      const formattedStartDate = startDate.toISOString();
+      const formattedEndDate = endDate.toISOString();
+
+      // First, get folders with the selected category
+      const { data: folderData, error: folderError } = await supabase
+        .from("folder_categories")
+        .select(`
+          folders!inner(
+            folder_id,
+            files(file_id, reporting_person_details(time_of_incident, date_of_incident)),
+            eblotter_file(file_id, reporting_person_details(time_of_incident, date_of_incident)),
+            womenchildren_file(file_id, reporting_person_details(time_of_incident, date_of_incident))
+          )
+        `)
+        .eq("category_id", selectedCategory);
+
+      if (folderError) throw folderError;
+
+      // Process the data to get counts by time
+      const timeCountMap: Map<string, number> = new Map();
+      
+      // Process all folders with the selected category
+      (folderData || []).forEach((folderCategory: any) => {
+        const folder = folderCategory.folders;
+        
+        // Process regular files
+        if (folder && folder.files && Array.isArray(folder.files)) {
+          folder.files.forEach((file: any) => {
+            if (file && file.reporting_person_details && Array.isArray(file.reporting_person_details)) {
+              file.reporting_person_details.forEach((report: any) => {
+                if (report.date_of_incident && 
+                    new Date(report.date_of_incident) >= startDate && 
+                    new Date(report.date_of_incident) <= endDate) {
+                  
+                  // Format the time for display (using just the hour)
+                  const timeOfIncident = report.time_of_incident || "00:00:00";
+                  const hour = timeOfIncident.split(":")[0];
+                  const timeKey = `${hour}:00`;
+                  
+                  // Increment the count for this time
+                  timeCountMap.set(timeKey, (timeCountMap.get(timeKey) || 0) + 1);
+                }
+              });
+            }
+          });
+        }
+        
+        // Process e-blotter files
+        if (folder && folder.eblotter_file && Array.isArray(folder.eblotter_file)) {
+          folder.eblotter_file.forEach((file: any) => {
+            if (file && file.reporting_person_details && Array.isArray(file.reporting_person_details)) {
+              file.reporting_person_details.forEach((report: any) => {
+                if (report.date_of_incident && 
+                    new Date(report.date_of_incident) >= startDate && 
+                    new Date(report.date_of_incident) <= endDate) {
+                  
+                  const timeOfIncident = report.time_of_incident || "00:00:00";
+                  const hour = timeOfIncident.split(":")[0];
+                  const timeKey = `${hour}:00`;
+                  
+                  timeCountMap.set(timeKey, (timeCountMap.get(timeKey) || 0) + 1);
+                }
+              });
+            }
+          });
+        }
+        
+        // Process women and children files
+        if (folder && folder.womenchildren_file && Array.isArray(folder.womenchildren_file)) {
+          folder.womenchildren_file.forEach((file: any) => {
+            if (file && file.reporting_person_details && Array.isArray(file.reporting_person_details)) {
+              file.reporting_person_details.forEach((report: any) => {
+                if (report.date_of_incident && 
+                    new Date(report.date_of_incident) >= startDate && 
+                    new Date(report.date_of_incident) <= endDate) {
+                  
+                  const timeOfIncident = report.time_of_incident || "00:00:00";
+                  const hour = timeOfIncident.split(":")[0];
+                  const timeKey = `${hour}:00`;
+                  
+                  timeCountMap.set(timeKey, (timeCountMap.get(timeKey) || 0) + 1);
+                }
+              });
+            }
+          });
+        }
+      });
+
+      // Get the selected category name
+      const categoryName = categoryOptions.find(
+        (cat) => cat.value === selectedCategory
+      )?.label || "Unknown";
+
+      // Convert the map to an array for the chart
+      const chartData: CategoryTimeData[] = Array.from(timeCountMap.entries())
+        .map(([time, count]) => ({
+          time,
+          count,
+          category: categoryName,
+        }))
+        .sort((a, b) => {
+          // Sort by hour
+          const hourA = parseInt(a.time.split(":")[0]);
+          const hourB = parseInt(b.time.split(":")[0]);
+          return hourA - hourB;
+        });
+
+      setCategoryTimeData(chartData);
+    } catch (error) {
+      console.error("Error fetching category time data:", error);
+    } finally {
+      setIsLoadingCategoryData(false);
+    }
+  };
+
+  // Add useEffect to fetch data when filters change
+  useEffect(() => {
+    if (selectedCategory) {
+      fetchCategoryTimeData();
+    }
+  }, [selectedCategory, startDate, endDate]);
+
   return (
     <div className={styles.container}>
       <h1 className="text-2xl font-medium mb-4 text-blue-900 col-span-full">
@@ -1168,6 +1364,149 @@ export default function Dashboard() {
           </div>
           ) : (
             <span className="text-sm">No data to display</span>
+          )}
+        </CardFooter>
+      </Card>
+
+      {/* Category Time Analysis Card */}
+      <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 h-80 rounded-lg bg-white flex flex-col">
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg font-semibold text-gray-900">
+            Incident Time Analysis by Category
+          </CardTitle>
+          <CardDescription className="text-sm text-gray-600">
+            Number of incidents by time of day when they occurred for selected category
+          </CardDescription>
+          <div className="flex flex-wrap items-center gap-4 mt-3">
+            {/* Category Selector */}
+            <div className="flex items-center">
+              <label className="text-xs font-medium text-gray-700 mr-2">
+                Category:
+              </label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="h-7 text-xs border rounded-lg shadow-none w-[180px]">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryOptions.map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className="text-xs"
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date Range Pickers */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-700">
+                Date Range:
+              </label>
+              <div className="flex items-center gap-2">
+                <DatePicker
+                  selected={startDate}
+                  onSelect={handleStartDateChange}
+                  dateFormat="yyyy-MM-dd"
+                  placeholderText="Start Date"
+                  className="h-7 text-xs"
+                />
+                <span className="text-xs">to</span>
+                <DatePicker
+                  selected={endDate}
+                  onSelect={handleEndDateChange}
+                  dateFormat="yyyy-MM-dd"
+                  placeholderText="End Date"
+                  className="h-7 text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Refresh Button */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={fetchCategoryTimeData}
+              className="h-7 text-xs"
+            >
+              Refresh Data
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="h-36 p-2 flex items-center justify-center flex-grow">
+          {isLoadingCategoryData ? (
+            <div className={styles.responsiveContainer}>
+              <Skeleton className="h-full w-full" />
+            </div>
+          ) : categoryTimeData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%" aspect={3.5}>
+              <LineChart
+                data={categoryTimeData}
+                margin={{
+                  top: 10,
+                  right: 30,
+                  left: 20,
+                  bottom: 5,
+                }}
+              >
+                <XAxis 
+                  dataKey="time" 
+                  stroke="#2563eb"
+                  className="text-sm"
+                />
+                <YAxis 
+                  stroke="#2563eb"
+                  allowDecimals={false}
+                  className="text-sm"
+                />
+                <Tooltip 
+                  formatter={(value) => [`${value} incidents`, "Count"]}
+                  labelFormatter={(label) => `Time of Incident: ${label}`}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  name="Incident Count"
+                  dot={{ stroke: '#2563eb', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, stroke: '#1d4ed8', strokeWidth: 2 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full">
+              <Calendar className="h-12 w-12 text-gray-300 mb-2" />
+              <p className="text-gray-500 text-center">
+                {selectedCategory
+                  ? "No data available for the selected filters"
+                  : "Select a category and date range to view data"}
+              </p>
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="text-xs text-gray-600 p-3 text-center mt-auto">
+          {isLoadingCategoryData ? (
+            <Skeleton className="h-5 w-32 mx-auto" />
+          ) : categoryTimeData.length > 0 ? (
+            <span>
+              Total Incidents: {categoryTimeData.reduce((sum, item) => sum + item.count, 0)}
+              {" | "}
+              Peak Incident Time: {
+                categoryTimeData.reduce(
+                  (peak, item) => item.count > peak.count ? item : peak,
+                  { time: "N/A", count: 0, category: "" }
+                ).time
+              }
+            </span>
+          ) : (
+            <span>Select filters and refresh to view data</span>
           )}
         </CardFooter>
       </Card>
