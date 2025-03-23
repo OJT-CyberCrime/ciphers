@@ -125,7 +125,7 @@ interface RegularFile extends BaseFile {
 }
 
 interface EblotterFile extends BaseFile {
-  blotter_id: number;
+  file_id: number;
 }
 
 interface WomenChildrenFile extends BaseFile {
@@ -173,9 +173,9 @@ interface FileCreator {
 }
 
 interface RecentEblotter {
-  blotter_id: number;
+  file_id: number;
   title: string;
-  entry_num: string | null;
+  blotter_number: string | null;
   created_by: string;
   created_at: string;
   creator: {
@@ -365,7 +365,7 @@ export default function Dashboard() {
             .not("is_archived", "eq", true),
           supabase
             .from("eblotter_file")
-            .select("blotter_id", { count: "exact" })
+            .select("file_id", { count: "exact" })
             .not("is_archived", "eq", true),
           supabase
             .from("womenchildren_file")
@@ -518,7 +518,7 @@ export default function Dashboard() {
             .from("eblotter_file")
             .select(
               `
-              blotter_id,
+              file_id,
               title,
               created_by,
               created_at,
@@ -531,7 +531,7 @@ export default function Dashboard() {
               if (error) throw error;
               return ((data || []) as unknown as FileWithUser[]).map(
                 (file) => ({
-                  id: file.blotter_id!,
+                  id: file.file_id!,
                   title: file.title,
                   uploaded_by: file.creator?.name || file.created_by,
                   created_at: file.created_at,
@@ -714,7 +714,7 @@ export default function Dashboard() {
             .lte("created_at", endOfMonth),
           supabase
             .from("eblotter_file")
-            .select("blotter_id", { count: "exact" })
+            .select("file_id", { count: "exact" })
             .gte("created_at", startOfMonth)
             .lte("created_at", endOfMonth),
           supabase
@@ -746,9 +746,9 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from('eblotter_file')
         .select(`
-          blotter_id,
+          file_id,
           title,
-          entry_num,
+          blotter_number,
           created_by,
           created_at,
           creator:users!created_by(name)
@@ -760,9 +760,9 @@ export default function Dashboard() {
 
       // Format the data to match the RecentEblotter interface
       const formattedData = (data || []).map((item: any) => ({
-        blotter_id: item.blotter_id,
+        file_id: item.file_id,
         title: item.title,
-        entry_num: item.entry_num,
+        blotter_number: item.blotter_number,
         created_by: item.created_by,
         created_at: item.created_at,
         creator: item.creator || { name: item.created_by }
@@ -1402,12 +1402,12 @@ export default function Dashboard() {
               <tbody>
                 {recentEblotters.map((eblotter) => (
                   <tr
-                    key={eblotter.blotter_id}
+                    key={eblotter.file_id}
                     className="hover:bg-blue-50 transition-colors duration-200"
                   >
                     <td className="px-6 py-2 border-b">
                       <span className="font-medium text-blue-900">
-                        {eblotter.entry_num || "N/A"}
+                        {eblotter.blotter_number || "N/A"}
                       </span>
                     </td>
                     <td className="px-6 py-2 border-b">{eblotter.title}</td>
