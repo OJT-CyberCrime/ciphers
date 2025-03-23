@@ -112,7 +112,7 @@ export default function TwoFactorResetPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center font-poppins">
         <div className="text-center">
           <Loader className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-900" />
           <p className="text-gray-600">Verifying reset request...</p>

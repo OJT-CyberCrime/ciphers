@@ -24,7 +24,6 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
-  SheetOverlay,
   SheetTitle,
   SheetDescription,
   SheetFooter,
@@ -39,14 +38,6 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/utils/supa";
 import { Badge } from "@/components/ui/badge";
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogHeader,
-//   DialogTitle,
-//   DialogDescription,
-//   DialogFooter,
-// } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -565,23 +556,18 @@ export default function FolderPage() {
                     <tr
                       key={file.file_id}
                       className="hover:bg-gray-100 cursor-pointer transition-colors"
-                      onClick={() => handleRowClick(file.file_id)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent row click
+                        setSelectedFile(file);
+                        setPreviewStates(prev => ({
+                          ...prev,
+                          [file.file_id]: true
+                        }));
+                      }}
                     >
                       <td className="px-4 py-2 border-b flex items-center gap-2">
                         {getFileIcon(file.file_path)}
-                        <span 
-                          className="cursor-pointer hover:text-blue-600"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent row click
-                            setSelectedFile(file);
-                            setPreviewStates(prev => ({
-                              ...prev,
-                              [file.file_id]: true
-                            }));
-                          }}
-                        >
                           {file.title}
-                        </span>
                       </td>
                       <td className="px-4 py-2 border-b">{file.created_by}</td>
                       <td className="px-4 py-2 border-b">{new Date(file.created_at).toLocaleDateString()}</td>

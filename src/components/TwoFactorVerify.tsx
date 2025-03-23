@@ -49,7 +49,7 @@ export default function TwoFactorVerify({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-poppins">
       <div className="text-center">
         <KeyRound className="h-12 w-12 text-blue-900 mx-auto mb-4" />
         <h3 className="text-xl font-semibold mb-2">Two-Factor Authentication</h3>
