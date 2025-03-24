@@ -709,7 +709,7 @@ export default function IncidentReport() {
                       {showOptions[file.file_id] && (
                         <div
                           ref={contextMenuRef}
-                          className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 context-menu"
+                          className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 context-menu font-poppins text-sm"
                         >
                           <button
                             className="block w-full text-left p-2 hover:bg-gray-100"
@@ -857,7 +857,7 @@ export default function IncidentReport() {
                 {showOptions[file.file_id] && (
                   <div 
                   ref={contextMenuRef}
-                  className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                  className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins">
                     <button
                       className="block w-full text-left p-2 hover:bg-gray-100"
                       onClick={() => {

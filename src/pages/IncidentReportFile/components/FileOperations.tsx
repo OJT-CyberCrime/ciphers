@@ -26,8 +26,10 @@ import {
   Printer,
   X,
   ZoomIn,
+  CheckCircle,
+  Edit,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef} from "react";
 import {
   Select,
   SelectContent,
@@ -36,14 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 interface FileRecord {
   file_id: number;
@@ -1504,76 +1499,91 @@ export default function FileOperations({
             {/* File Activity */}
             <div className="p-4 mr-6 mt-5">
               <h3 className="font-medium">File Activity</h3>
-              <div className="p-1">
-                <div className="flex items-center justify-between text-xs">
-                  <Label className="font-normal">Created</Label>
-                  <p className=" text-gray-600">
-                    {new Date(currentFile.created_at).toLocaleString()} by{" "}
-                    <span className="text-blue-900">
-                      {currentFile.created_by}
-                    </span>
-                  </p>
+              <div className="p-2 space-y-2 text-gray-600">
+                <div className="flex items-center justify-between text-xs ">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4" />
+                    <Label className="font-normal">Created</Label>
+                    <p className="text-gray-600">
+                      {new Date(currentFile.created_at).toLocaleString()} by{" "}
+                      <span className="text-blue-900">
+                        {currentFile.created_by}
+                      </span>
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <Label className="font-normal">Last Updated</Label>
-                  <p className=" text-gray-600">
-                    {currentFile.updated_at ? (
-                      <span>
-                        {new Date(currentFile.updated_at).toLocaleString()} by{" "}
-                        <span className="text-blue-900">
-                          {currentFile.updated_by}
+                  <div className="flex items-center space-x-2">
+                    <Edit className="w-4 h-4" />
+                    <Label className="font-normal">Last Updated</Label>
+                    <p className="text-gray-600">
+                      {currentFile.updated_at ? (
+                        <span>
+                          {new Date(currentFile.updated_at).toLocaleString()} by{" "}
+                          <span className="text-blue-900">
+                            {currentFile.updated_by}
+                          </span>
                         </span>
-                      </span>
-                    ) : (
-                      "Never"
-                    )}
-                  </p>
+                      ) : (
+                        "Never"
+                      )}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <Label className="font-normal">Last Viewed</Label>
-                  <p className="text-gray-600">
-                    {currentFile.viewed_at ? (
-                      <span>
-                        {new Date(currentFile.viewed_at).toLocaleString()} by{" "}
-                        <span className="text-blue-900">
-                          {currentFile.viewed_by}
+                  <div className="flex items-center space-x-2">
+                    <Eye className="w-4 h-4 " />
+                    <Label className="font-normal">Last Viewed</Label>
+                    <p className="text-gray-600">
+                      {currentFile.viewed_at ? (
+                        <span>
+                          {new Date(currentFile.viewed_at).toLocaleString()} by{" "}
+                          <span className="text-blue-900">
+                            {currentFile.viewed_by}
+                          </span>
                         </span>
-                      </span>
-                    ) : (
-                      "Never"
-                    )}
-                  </p>
+                      ) : (
+                        "Never"
+                      )}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <Label className="font-normal">Last Downloaded</Label>
-                  <p className=" text-gray-600">
-                    {currentFile.downloaded_at ? (
-                      <span>
-                        {new Date(currentFile.downloaded_at).toLocaleString()}{" "}
-                        by{" "}
-                        <span className="text-blue-900">
-                          {currentFile.downloaded_by}
+                  <div className="flex items-center space-x-2">
+                    <Download className="w-4 h-4" />
+                    <Label className="font-normal">Last Downloaded</Label>
+                    <p className="text-gray-600">
+                      {currentFile.downloaded_at ? (
+                        <span>
+                          {new Date(currentFile.downloaded_at).toLocaleString()}{" "}
+                          by{" "}
+                          <span className="text-blue-900">
+                            {currentFile.downloaded_by}
+                          </span>
                         </span>
-                      </span>
-                    ) : (
-                      "Never"
-                    )}
-                  </p>
+                      ) : (
+                        "Never"
+                      )}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <Label className="font-normal">Last Printed</Label>
-                  <p className=" text-gray-600">
-                    {currentFile.printed_at ? (
-                      <span>
-                        {new Date(currentFile.printed_at).toLocaleString()} by{" "}
-                        <span className="text-blue-900">
-                          {currentFile.printed_by}
+                  <div className="flex items-center space-x-2">
+                    <Printer className="w-4 h-4" />
+                    <Label className="font-normal">Last Printed</Label>
+                    <p className="text-gray-600">
+                      {currentFile.printed_at ? (
+                        <span>
+                          {new Date(currentFile.printed_at).toLocaleString()} by{" "}
+                          <span className="text-blue-900">
+                            {currentFile.printed_by}
+                          </span>
                         </span>
-                      </span>
-                    ) : (
-                      "Never"
-                    )}
-                  </p>
+                      ) : (
+                        "Never"
+                      )}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

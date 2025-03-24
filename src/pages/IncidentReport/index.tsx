@@ -466,7 +466,7 @@ export default function IncidentReport() {
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                       {contextMenuVisible[folder.folder_id] && (
-                        <div className="absolute bg-white border border-gray-200 rounded-lg shadow-lg z-10 context-menu">
+                        <div className="absolute bg-white border border-gray-200 rounded-lg shadow-lg z-10 context-menu font-poppins text-sm">
                           <Button
                             variant="ghost"
                             className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
