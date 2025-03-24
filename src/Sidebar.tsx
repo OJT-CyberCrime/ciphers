@@ -85,11 +85,7 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
     };
   }, [userRole]);
 
-  // Debug current role
-  console.log('Current userRole state:', userRole);
-
   const isWcpdOrSuperAdmin = (role: string | undefined) => {
-    console.log('Checking role:', role);
     return role === 'wcpd' || role === 'superadmin';
   };
 
