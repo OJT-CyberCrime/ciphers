@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Cookies from "js-cookie";
+import { useEffect, useState } from "react";
 
 interface SidebarProps {
   setIsLoggedIn: (value: boolean) => void;
@@ -23,8 +24,35 @@ interface SidebarProps {
 export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const userData = JSON.parse(Cookies.get('user_data') || '{}');
-  const userRole = userData.role;
+  const [userRole, setUserRole] = useState<string>("");
+  
+  // Get user role from cookies and set up polling to check for changes
+  useEffect(() => {
+    // Function to get the latest user role from cookies
+    const getUserRole = () => {
+      try {
+        const userData = JSON.parse(Cookies.get('user_data') || '{}');
+        return userData.role || "";
+      } catch (error) {
+        console.error("Error parsing user data from cookies:", error);
+        return "";
+      }
+    };
+
+    // Set initial role
+    setUserRole(getUserRole());
+
+    // Set up interval to check for role changes
+    const roleCheckInterval = setInterval(() => {
+      const currentRole = getUserRole();
+      if (currentRole !== userRole) {
+        setUserRole(currentRole);
+      }
+    }, 1000); // Check every second for role changes
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(roleCheckInterval);
+  }, [userRole]);
 
   const isActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + "/");
