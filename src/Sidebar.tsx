@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Cookies from "js-cookie";
 import { useState, useEffect } from "react";
+import { supabase } from "@/utils/supa";
 
 interface SidebarProps {
   setIsLoggedIn: (value: boolean) => void;
@@ -30,21 +31,67 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
   });
 
   useEffect(() => {
+    // Function to fetch current user role from database
+    const fetchUserRole = async () => {
+      try {
+        const userData = JSON.parse(Cookies.get('user_data') || '{}');
+        if (!userData.uuid) return;
+
+        const { data: dbUser, error } = await supabase
+          .from('users')
+          .select('role')
+          .eq('uuid', userData.uuid)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user role:', error);
+          return;
+        }
+
+        if (dbUser && dbUser.role !== userData.role) {
+          // Update cookie if database role is different
+          const updatedUserData = {
+            ...userData,
+            role: dbUser.role
+          };
+          Cookies.set('user_data', JSON.stringify(updatedUserData));
+          setUserRole(dbUser.role);
+        }
+      } catch (error) {
+        console.error('Error in fetchUserRole:', error);
+      }
+    };
+
     // Function to update user role from cookie
     const updateUserRole = () => {
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      setUserRole(userData.role);
+      if (userData.role !== userRole) {
+        setUserRole(userData.role);
+      }
     };
 
-    // Set up an interval to check for cookie changes
-    const interval = setInterval(updateUserRole, 1000);
+    // Set up intervals to check both cookie and database
+    const cookieInterval = setInterval(updateUserRole, 1000);
+    const dbInterval = setInterval(fetchUserRole, 5000);
 
-    // Initial check
+    // Initial checks
     updateUserRole();
+    fetchUserRole();
 
-    // Cleanup interval on unmount
-    return () => clearInterval(interval);
-  }, []);
+    // Cleanup intervals on unmount
+    return () => {
+      clearInterval(cookieInterval);
+      clearInterval(dbInterval);
+    };
+  }, [userRole]);
+
+  // Debug current role
+  console.log('Current userRole state:', userRole);
+
+  const isWcpdOrSuperAdmin = (role: string | undefined) => {
+    console.log('Checking role:', role);
+    return role === 'wcpd' || role === 'superadmin';
+  };
 
   const isActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + "/");
@@ -67,7 +114,7 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
   };
 
   return (
-    <aside className={`fixed top-0 left-0 h-screen w-64 ${userRole === 'wcpd' ? 'bg-indigo-50' : 'bg-white'} shadow-sm p-5 flex flex-col z-50`}>
+    <aside className={`fixed top-0 left-0 h-screen w-64 ${isWcpdOrSuperAdmin(userRole) ? 'bg-indigo-50' : 'bg-white'} shadow-sm p-5 flex flex-col z-50`}>
       <ScrollArea className="h-full">
         <div className="flex flex-col items-center">
           <img
@@ -86,7 +133,7 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
           <SidebarLink to="/extraction" icon={<FileCheck size={20} />} label="Extraction Certifications" />
           <SidebarLink to="/eblotter" icon={<ClipboardList size={20} />} label="Blotter Reports" />
           <SidebarLink to="/archives" icon={<Archive size={20} />} label="Archives" />
-          {userRole === 'wcpd' && (
+          {isWcpdOrSuperAdmin(userRole) && (
             <SidebarLink to="/wcp" icon={<PersonStanding size={20} />} label="Women and Children" />
           )}
         </nav>
