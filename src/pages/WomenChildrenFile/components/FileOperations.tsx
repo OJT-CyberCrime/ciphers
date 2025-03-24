@@ -873,6 +873,25 @@ export default function FileOperations({
             {renderPreviewContent()}
           </div>
 
+          <div className="flex gap-2 justify-center">
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+              onClick={handleFileDownload}
+            >
+              <Download size={16} />
+              Download
+            </Button>
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+              onClick={handleFilePrint}
+            >
+              <Printer size={16} />
+              Print
+            </Button>
+          </div>
+
           <SheetFooter className="flex justify-between items-center mt-auto">
             <div className="flex items-center gap-2 text-xs text-gray-500">
               {currentFile.viewed_at && (
@@ -1316,7 +1335,8 @@ export default function FileOperations({
       {/* New Sheet for Viewing Details without Footer */}
       <Sheet
         open={showFileDialog === "details"}
-        onOpenChange={() => setShowFileDialog(null)}>
+        onOpenChange={() => setShowFileDialog(null)}
+      >
         <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100 pr-0">
           <SheetHeader>
             <SheetTitle>File Details</SheetTitle>
@@ -1557,7 +1577,7 @@ export default function FileOperations({
                     )}
                   </p>
                 </div>
-                </div>
+              </div>
             </div>
           </div>
         </SheetContent>

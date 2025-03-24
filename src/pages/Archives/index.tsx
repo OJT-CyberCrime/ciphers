@@ -604,7 +604,7 @@ export default function Archives() {
 
           {/* Archived Files Section */}
           <div className="mb-8">
-            <h2 className="text-xl font-medium mb-4">Archived Files</h2>
+            {/* <h2 className="text-xl font-medium mb-4">Archived Files</h2> */}
 
             {/* Regular Files */}
             {filteredFiles.filter(file => file.file_type === 'regular').length > 0 && (
