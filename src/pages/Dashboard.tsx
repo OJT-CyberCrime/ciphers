@@ -46,7 +46,7 @@ import { Users, Archive, Files, FileTextIcon, FileCheck, Calendar } from "lucide
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
-import { DatePicker } from "@/components/ui/date-picker";
+import { Input } from "@/components/ui/input";
 
 // Sample data for different file types
 const regularFilesData = [
@@ -1369,22 +1369,22 @@ export default function Dashboard() {
       </Card>
 
       {/* Category Time Analysis Card */}
-      <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 h-80 rounded-lg bg-white flex flex-col">
-        <CardHeader className="p-2">
-          <CardTitle className="text-lg font-semibold text-gray-900">
+      <Card className="p-4 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 h-150 rounded-2xl bg-white flex flex-col">
+        <CardHeader className="p-4">
+          <CardTitle className="text-xl font-semibold text-gray-900">
             Incident Time Analysis by Category
           </CardTitle>
           <CardDescription className="text-sm text-gray-600">
             Number of incidents by time of day when they occurred for selected category
           </CardDescription>
-          <div className="flex flex-wrap items-center gap-4 mt-3">
-            {/* Category Selector */}
-            <div className="flex items-center">
-              <label className="text-xs font-medium text-gray-700 mr-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-medium text-gray-700">
                 Category:
               </label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="h-7 text-xs border rounded-lg shadow-none w-[180px]">
+                <SelectTrigger className="h-9 text-sm border rounded-lg shadow-sm w-full">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1392,7 +1392,7 @@ export default function Dashboard() {
                     <SelectItem
                       key={option.value}
                       value={option.value}
-                      className="text-xs"
+                      className="text-sm"
                     >
                       {option.label}
                     </SelectItem>
@@ -1401,45 +1401,41 @@ export default function Dashboard() {
               </Select>
             </div>
 
-            {/* Date Range Pickers */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2">
               <label className="text-xs font-medium text-gray-700">
                 Date Range:
               </label>
               <div className="flex items-center gap-2">
-                <DatePicker
-                  selected={startDate}
-                  onSelect={handleStartDateChange}
-                  dateFormat="yyyy-MM-dd"
-                  placeholderText="Start Date"
-                  className="h-7 text-xs"
+                <Input
+                  type="date"
+                  value={startDate?.toISOString().split("T")[0]}
+                  onChange={(e) => handleStartDateChange(new Date(e.target.value))}
+                  className="h-9 text-sm w-full"
                 />
                 <span className="text-xs">to</span>
-                <DatePicker
-                  selected={endDate}
-                  onSelect={handleEndDateChange}
-                  dateFormat="yyyy-MM-dd"
-                  placeholderText="End Date"
-                  className="h-7 text-xs"
+                <Input
+                  type="date"
+                  value={endDate?.toISOString().split("T")[0]}
+                  onChange={(e) => handleEndDateChange(new Date(e.target.value))}
+                  className="h-9 text-sm w-full"
                 />
               </div>
             </div>
 
-            {/* Refresh Button */}
             <Button
               size="sm"
               variant="outline"
               onClick={fetchCategoryTimeData}
-              className="h-7 text-xs"
+              className="h-9 text-sm mt-6 w-full"
             >
               Refresh Data
             </Button>
           </div>
         </CardHeader>
 
-        <CardContent className="h-36 p-2 flex items-center justify-center flex-grow">
+        <CardContent className="h-80 p-4 flex items-center justify-center flex-grow">
           {isLoadingCategoryData ? (
-            <div className={styles.responsiveContainer}>
+            <div className="w-full h-full flex items-center justify-center">
               <Skeleton className="h-full w-full" />
             </div>
           ) : categoryTimeData.length > 0 ? (
@@ -1719,7 +1715,7 @@ export default function Dashboard() {
       >
         <CardHeader className="p-2">
           <CardTitle className="text-lg font-semibold text-gray-900">
-            Recent E-Blotter Entries
+            Recent Blotter Entries
           </CardTitle>
         </CardHeader>
 
