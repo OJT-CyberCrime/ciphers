@@ -219,6 +219,7 @@ export default function WomenChildrenFile() {
     return savedView ? JSON.parse(savedView) : false; // Default to grid view if not set
   });
   const contextMenuRef = useRef<HTMLDivElement | null>(null); // Create a ref for the context menu
+  const formRef = useRef<HTMLFormElement | null>(null); // Create a ref for the form
 
   // Function to add a new suspect form
   const addSuspect = () => {
@@ -258,6 +259,9 @@ export default function WomenChildrenFile() {
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !fileUpload?.[0]) return;
+
+    // Close the sheet immediately when the save button is clicked
+    setIsAddingFile(false); // Close the sheet
 
     try {
       const userData = JSON.parse(Cookies.get("user_data") || "{}");
@@ -383,7 +387,7 @@ export default function WomenChildrenFile() {
       // Update the UI with the new file
       setFiles([formattedFile, ...files]);
       toast.success("File uploaded successfully");
-      setIsAddingFile(false);
+      formRef.current?.reset();
 
       // Reset all form fields
       setNewFileTitle("");
@@ -687,7 +691,7 @@ export default function WomenChildrenFile() {
                   >
                     <td className="px-4 py-2 border-b flex items-center gap-2">
                       {getFileIcon(file.file_path)}
-                        {file.title}
+                      {file.title}
                     </td>
                     <td className="px-4 py-2 border-b">{file.created_by}</td>
                     <td className="px-4 py-2 border-b">
@@ -848,16 +852,17 @@ export default function WomenChildrenFile() {
                     }}
                     isListView={isListView} // Pass the isListView prop
                   />
-                  <div className="text-sm text-gray-500 mt-2">
+                  <div className="text-xs text-gray-500 mt-2">
                     Added by {file.created_by} on{" "}
                     {new Date(file.created_at).toLocaleDateString()}
                   </div>
                 </div>
 
                 {showOptions[file.file_id] && (
-                  <div 
-                  ref={contextMenuRef}
-                  className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                  <div
+                    ref={contextMenuRef}
+                    className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10"
+                  >
                     <button
                       className="block w-full text-left p-2 hover:bg-gray-100"
                       onClick={() => {
@@ -912,452 +917,436 @@ export default function WomenChildrenFile() {
 
       {/* Add File Dialog */}
       <Sheet open={isAddingFile} onOpenChange={setIsAddingFile}>
-        <SheetContent className="max-w-4xl w-4/5 p-8 bg-white font-poppins overflow-y-auto">
+        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar scrollbar-thumb-gray-400 scrollbar-track-gray-100 pr-0">
           <SheetHeader>
             <SheetTitle className="text-xl">Add New File</SheetTitle>
             <SheetDescription className="text-sm">
               Upload a file and provide its details.
             </SheetDescription>
           </SheetHeader>
+          <div className="overflow-y-auto">
+            <form ref={formRef} onSubmit={handleFileUpload}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-4 p-4 mr-6 rounded-lg bg-slate-50">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">File Name</Label>
+                    <Input
+                      id="title"
+                      placeholder="Enter file name"
+                      value={newFileTitle}
+                      onChange={(e) => setNewFileTitle(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="case_title">Case Title</Label>
+                    <Input
+                      id="case_title"
+                      placeholder="Enter case title"
+                      value={newCaseTitle}
+                      onChange={(e) => setNewCaseTitle(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="blotter_number">Blotter Number</Label>
+                    <Input
+                      id="blotter_number"
+                      placeholder="Enter blotter number"
+                      value={newBlotterNumber}
+                      onChange={(e) => setNewBlotterNumber(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="investigator">Investigator</Label>
+                    <Input
+                      id="investigator"
+                      placeholder="Enter investigator name"
+                      value={newInvestigator}
+                      onChange={(e) => setNewInvestigator(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="desk_officer">Desk Officer</Label>
+                    <Input
+                      id="desk_officer"
+                      placeholder="Enter desk officer name"
+                      value={newDeskOfficer}
+                      onChange={(e) => setNewDeskOfficer(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="summary">Incident Summary</Label>
+                    <Textarea
+                      id="summary"
+                      name="summary"
+                      value={newFileSummary}
+                      placeholder="Please provide a detailed narrative of the incident..."
+                      onChange={(e) => setNewFileSummary(e.target.value)}
+                      required
+                      className="h-48 resize-none border-gray-300 rounded-md font-poppins"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="file">Upload File</Label>
+                    <Input
+                      id="file"
+                      type="file"
+                      onChange={(e) => setFileUpload(e.target.files)}
+                      required
+                    />
+                  </div>
+                </div>
 
-          <form onSubmit={handleFileUpload}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold">File Details</h3>
-                <div className="space-y-2">
-                  <Label htmlFor="title">File Name</Label>
-                  <Input
-                    id="title"
-                    placeholder="Enter file name"
-                    value={newFileTitle}
-                    onChange={(e) => setNewFileTitle(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="case_title">Case Title</Label>
-                  <Input
-                    id="case_title"
-                    placeholder="Enter case title"
-                    value={newCaseTitle}
-                    onChange={(e) => setNewCaseTitle(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="blotter_number">Blotter Number</Label>
-                  <Input
-                    id="blotter_number"
-                    placeholder="Enter blotter number"
-                    value={newBlotterNumber}
-                    onChange={(e) => setNewBlotterNumber(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="investigator">Investigator</Label>
-                  <Input
-                    id="investigator"
-                    placeholder="Enter investigator name"
-                    value={newInvestigator}
-                    onChange={(e) => setNewInvestigator(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="desk_officer">Desk Officer</Label>
-                  <Input
-                    id="desk_officer"
-                    placeholder="Enter desk officer name"
-                    value={newDeskOfficer}
-                    onChange={(e) => setNewDeskOfficer(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="summary">Incident Summary</Label>
-                  <Textarea
-                    id="summary"
-                    name="summary"
-                    value={newFileSummary}
-                    placeholder="Please provide a detailed narrative of the incident..."
-                    onChange={(e) => setNewFileSummary(e.target.value)}
-                    required
-                    className="h-48 resize-none border-gray-300 rounded-md font-mono"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="file">Upload File</Label>
-                  <Input
-                    id="file"
-                    type="file"
-                    onChange={(e) => setFileUpload(e.target.files)}
-                    required
-                  />
-                </div>
-              </div>
+                <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
+                  <h3 className="text-lg font-semibold">
+                    Reporting Person Details
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="rp_full_name">Full Name</Label>
+                      <Input
+                        id="rp_full_name"
+                        value={reportingPerson.full_name}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            full_name: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_age">Age</Label>
+                      <Input
+                        id="rp_age"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={reportingPerson.age}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            age: parseInt(e.target.value),
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_birthday">Birthday</Label>
+                      <Input
+                        id="rp_birthday"
+                        type="date"
+                        value={reportingPerson.birthday}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            birthday: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_gender">Gender</Label>
+                      <Select
+                        onValueChange={(value) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            gender: value as "Male" | "Female" | "Other",
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="rp_address">Complete Address</Label>
+                      <Textarea
+                        id="rp_address"
+                        value={reportingPerson.complete_address}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            complete_address: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_contact">Contact Number</Label>
+                      <Input
+                        id="rp_contact"
+                        value={reportingPerson.contact_number}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            contact_number: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold">
-                  Reporting Person Details
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="rp_full_name">Full Name</Label>
-                    <Input
-                      id="rp_full_name"
-                      value={reportingPerson.full_name}
-                      onChange={(e) =>
-                        setReportingPerson({
-                          ...reportingPerson,
-                          full_name: e.target.value,
-                        })
-                      }
-                      required
-                    />
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <Label htmlFor="date_reported">Date Reported</Label>
+                      <Input
+                        id="date_reported"
+                        type="date"
+                        value={reportingPerson.date_reported}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            date_reported: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="time_reported">Time Reported</Label>
+                      <Input
+                        id="time_reported"
+                        type="time"
+                        value={reportingPerson.time_reported}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            time_reported: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="date_of_incident">Date of Incident</Label>
+                      <Input
+                        id="date_of_incident"
+                        type="date"
+                        value={reportingPerson.date_of_incident}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            date_of_incident: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="time_of_incident">Time of Incident</Label>
+                      <Input
+                        id="time_of_incident"
+                        type="time"
+                        value={reportingPerson.time_of_incident}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            time_of_incident: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="place_of_incident">
+                        Place of Incident
+                      </Label>
+                      <Textarea
+                        id="place_of_incident"
+                        value={reportingPerson.place_of_incident}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            place_of_incident: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="rp_age">Age</Label>
-                    <Input
-                      id="rp_age"
-                      type="number"
-                      min="0"
-                      max="150"
-                      value={reportingPerson.age}
-                      onChange={(e) =>
-                        setReportingPerson({
-                          ...reportingPerson,
-                          age: parseInt(e.target.value),
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rp_birthday">Birthday</Label>
-                    <Input
-                      id="rp_birthday"
-                      type="date"
-                      value={reportingPerson.birthday}
-                      onChange={(e) =>
-                        setReportingPerson({
-                          ...reportingPerson,
-                          birthday: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rp_gender">Gender</Label>
-                    <Select
-                      onValueChange={(value) =>
-                        setReportingPerson({
-                          ...reportingPerson,
-                          gender: value as "Male" | "Female" | "Other",
-                        })
-                      }
+                </div>
+
+                <div className="space-y-4 bg-slate-50 p-4 mr-6 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-semibold">Suspects</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addSuspect}
+                      className="text-sm"
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      Add Another Suspect
+                    </Button>
                   </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="rp_address">Complete Address</Label>
-                    <Textarea
-                      id="rp_address"
-                      value={reportingPerson.complete_address}
-                      onChange={(e) =>
-                        setReportingPerson({
-                          ...reportingPerson,
-                          complete_address: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rp_contact">Contact Number</Label>
-                    <Input
-                      id="rp_contact"
-                      value={reportingPerson.contact_number}
-                      onChange={(e) =>
-                        setReportingPerson({
-                          ...reportingPerson,
-                          contact_number: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                </div>
+                  {suspects.map((suspect, index) => (
+                    <div
+                      key={index}
+                      className="space-y-4 p-4 border rounded-lg"
+                    >
+                      <div className="flex justify-between items-center">
+                        <h4 className="font-medium">Suspect {index + 1}</h4>
+                        {suspects.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => removeSuspect(index)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
 
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <Label htmlFor="date_reported">Date Reported</Label>
-                    <Input
-                      id="date_reported"
-                      type="date"
-                      value={reportingPerson.date_reported}
-                      onChange={(e) =>
-                        setReportingPerson({
-                          ...reportingPerson,
-                          date_reported: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="time_reported">Time Reported</Label>
-                    <Input
-                      id="time_reported"
-                      type="time"
-                      value={reportingPerson.time_reported}
-                      onChange={(e) =>
-                        setReportingPerson({
-                          ...reportingPerson,
-                          time_reported: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="date_of_incident">Date of Incident</Label>
-                    <Input
-                      id="date_of_incident"
-                      type="date"
-                      value={reportingPerson.date_of_incident}
-                      onChange={(e) =>
-                        setReportingPerson({
-                          ...reportingPerson,
-                          date_of_incident: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="time_of_incident">Time of Incident</Label>
-                    <Input
-                      id="time_of_incident"
-                      type="time"
-                      value={reportingPerson.time_of_incident}
-                      onChange={(e) =>
-                        setReportingPerson({
-                          ...reportingPerson,
-                          time_of_incident: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="place_of_incident">Place of Incident</Label>
-                    <Textarea
-                      id="place_of_incident"
-                      value={reportingPerson.place_of_incident}
-                      onChange={(e) =>
-                        setReportingPerson({
-                          ...reportingPerson,
-                          place_of_incident: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Suspects</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addSuspect}
-                    className="text-sm"
-                  >
-                    Add Another Suspect
-                  </Button>
-                </div>
-                {suspects.map((suspect, index) => (
-                  <div key={index} className="space-y-4 p-4 border rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <h4 className="font-medium">Suspect {index + 1}</h4>
-                      {suspects.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => removeSuspect(index)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor={`suspect_${index}_name`}>
-                          Full Name
-                        </Label>
-                        <Input
-                          id={`suspect_${index}_name`}
-                          value={suspect.full_name}
-                          onChange={(e) =>
-                            updateSuspect(index, "full_name", e.target.value)
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`suspect_${index}_age`}>Age</Label>
-                        <Input
-                          id={`suspect_${index}_age`}
-                          type="number"
-                          min="0"
-                          max="150"
-                          value={suspect.age}
-                          onChange={(e) =>
-                            updateSuspect(
-                              index,
-                              "age",
-                              parseInt(e.target.value)
-                            )
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`suspect_${index}_birthday`}>
-                          Birthday
-                        </Label>
-                        <Input
-                          id={`suspect_${index}_birthday`}
-                          type="date"
-                          value={suspect.birthday}
-                          onChange={(e) =>
-                            updateSuspect(index, "birthday", e.target.value)
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`suspect_${index}_gender`}>
-                          Gender
-                        </Label>
-                        <Select
-                          onValueChange={(value) =>
-                            updateSuspect(
-                              index,
-                              "gender",
-                              value as "Male" | "Female" | "Other"
-                            )
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select gender" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Male">Male</SelectItem>
-                            <SelectItem value="Female">Female</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="col-span-2">
-                        <Label htmlFor={`suspect_${index}_address`}>
-                          Complete Address
-                        </Label>
-                        <Textarea
-                          id={`suspect_${index}_address`}
-                          value={suspect.complete_address}
-                          onChange={(e) =>
-                            updateSuspect(
-                              index,
-                              "complete_address",
-                              e.target.value
-                            )
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`suspect_${index}_contact`}>
-                          Contact Number
-                        </Label>
-                        <Input
-                          id={`suspect_${index}_contact`}
-                          value={suspect.contact_number}
-                          onChange={(e) =>
-                            updateSuspect(
-                              index,
-                              "contact_number",
-                              e.target.value
-                            )
-                          }
-                        />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor={`suspect_${index}_name`}>
+                            Full Name
+                          </Label>
+                          <Input
+                            id={`suspect_${index}_name`}
+                            value={suspect.full_name}
+                            onChange={(e) =>
+                              updateSuspect(index, "full_name", e.target.value)
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`suspect_${index}_age`}>Age</Label>
+                          <Input
+                            id={`suspect_${index}_age`}
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={suspect.age}
+                            onChange={(e) =>
+                              updateSuspect(
+                                index,
+                                "age",
+                                parseInt(e.target.value)
+                              )
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`suspect_${index}_birthday`}>
+                            Birthday
+                          </Label>
+                          <Input
+                            id={`suspect_${index}_birthday`}
+                            type="date"
+                            value={suspect.birthday}
+                            onChange={(e) =>
+                              updateSuspect(index, "birthday", e.target.value)
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`suspect_${index}_gender`}>
+                            Gender
+                          </Label>
+                          <Select
+                            onValueChange={(value) =>
+                              updateSuspect(
+                                index,
+                                "gender",
+                                value as "Male" | "Female" | "Other"
+                              )
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Male">Male</SelectItem>
+                              <SelectItem value="Female">Female</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-2">
+                          <Label htmlFor={`suspect_${index}_address`}>
+                            Complete Address
+                          </Label>
+                          <Textarea
+                            id={`suspect_${index}_address`}
+                            value={suspect.complete_address}
+                            onChange={(e) =>
+                              updateSuspect(
+                                index,
+                                "complete_address",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`suspect_${index}_contact`}>
+                            Contact Number
+                          </Label>
+                          <Input
+                            id={`suspect_${index}_contact`}
+                            value={suspect.contact_number}
+                            onChange={(e) =>
+                              updateSuspect(
+                                index,
+                                "contact_number",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            </form>
+          </div>
 
-            <SheetFooter className="mt-4 flex justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setIsAddingFile(false);
-                  setNewFileTitle("");
-                  setNewCaseTitle("");
-                  setNewBlotterNumber("");
-                  setNewFileSummary("");
-                  setNewInvestigator("");
-                  setNewDeskOfficer("");
-                  setFileUpload(null);
-                  setReportingPerson({
-                    full_name: "",
-                    age: 0,
-                    birthday: "",
-                    gender: "Male",
-                    complete_address: "",
-                    contact_number: "",
-                    date_reported: "",
-                    time_reported: "",
-                    date_of_incident: "",
-                    time_of_incident: "",
-                    place_of_incident: "",
-                  });
-                  setSuspects([
-                    {
-                      full_name: "",
-                      age: 0,
-                      birthday: "",
-                      gender: "Male",
-                      complete_address: "",
-                      contact_number: "",
-                    },
-                  ]);
-                }}
-                className="mr-2"
-              >
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                Upload File
-              </Button>
-            </SheetFooter>
-          </form>
+          <SheetFooter className="mr-6 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsAddingFile(false);
+                formRef.current?.reset();
+              }}
+              className="mr-2"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (formRef.current) {
+                  formRef.current.dispatchEvent(new Event("submit", { bubbles: true }));
+                }
+              }}
+              className="bg-blue-900 hover:bg-blue-800"
+            >
+              Upload File
+            </Button>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
 
-      {showFileDialog === "details" && selectedFile && (
+      {/* {showFileDialog === "details" && selectedFile && (
         <Dialog
           open={showFileDialog === "details"}
           onOpenChange={() => setShowFileDialog(null)}
@@ -1411,7 +1400,7 @@ export default function WomenChildrenFile() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      )}
+      )} */}
     </div>
   );
 }

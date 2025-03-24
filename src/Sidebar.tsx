@@ -47,7 +47,7 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
   };
 
   return (
-    <aside className="fixed top-0 left-0 h-screen w-64 bg-white shadow-sm p-5 flex flex-col z-50">
+    <aside className={`fixed top-0 left-0 h-screen w-64 ${userRole === 'wcpd' ? 'bg-indigo-50' : 'bg-white'} shadow-sm p-5 flex flex-col z-50`}>
       <ScrollArea className="h-full">
         <div className="flex flex-col items-center">
           <img
