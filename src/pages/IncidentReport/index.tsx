@@ -42,6 +42,8 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "@/utils/supa";
 import FolderOperations from "./components/FolderOperations";
 import { Skeleton } from "@/components/ui/skeleton";
+import PermissionDialog from "@/components/PermissionDialog";
+import Cookies from "js-cookie";
 
 interface Category {
   category_id: number;
@@ -102,9 +104,17 @@ export default function IncidentReport() {
     const savedPreference = localStorage.getItem("viewPreference");
     return savedPreference ? JSON.parse(savedPreference) : false;
   });
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [permissionAction, setPermissionAction] = useState("");
   const previousPage = "/dashboard";
   const previousPageName = "Home";
   const [sortCriteria, setSortCriteria] = useState("created_at");
+
+  const userRole = JSON.parse(Cookies.get('user_data') || '{}').role;
+
+  const canEditOrArchive = () => {
+    return userRole === 'admin' || userRole === 'superadmin' || userRole === 'wcpd';
+  };
 
   // Fetch folders with their categories from Supabase
   useEffect(() => {
@@ -224,8 +234,23 @@ export default function IncidentReport() {
   };
 
   const handleEditClick = (folder: Folder) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("edit this folder");
+      setShowPermissionDialog(true);
+      return;
+    }
     setSelectedFolder(folder);
     setIsEditingFolder(true);
+  };
+
+  const handleArchiveClick = (folder: Folder) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("archive this folder");
+      setShowPermissionDialog(true);
+      return;
+    }
+    setSelectedFolder(folder);
+    setDialogContent("Are you sure you want to archive this folder?");
   };
 
   useEffect(() => {
@@ -488,10 +513,7 @@ export default function IncidentReport() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              setSelectedFolder(folder);
-                              setDialogContent(
-                                "Are you sure you want to archive this folder?"
-                              );
+                              handleArchiveClick(folder);
                               setContextMenuVisible((prev) => ({
                                 ...prev,
                                 [folder.folder_id]: false,
@@ -646,10 +668,7 @@ export default function IncidentReport() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setSelectedFolder(folder);
-                        setDialogContent(
-                          "Are you sure you want to archive this folder?"
-                        );
+                        handleArchiveClick(folder);
                         setContextMenuVisible((prev) => ({
                           ...prev,
                           [folder.folder_id]: false,
@@ -697,6 +716,12 @@ export default function IncidentReport() {
         folders={folders}
         setFolders={setFolders}
         availableCategories={availableCategories}
+      />
+
+      <PermissionDialog 
+        isOpen={showPermissionDialog}
+        onClose={() => setShowPermissionDialog(false)}
+        action={permissionAction}
       />
     </div>
   );
