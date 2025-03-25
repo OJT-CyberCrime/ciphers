@@ -54,6 +54,7 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
+import PermissionDialog from "@/components/PermissionDialog";
 
 interface FileRecord {
   file_id: number;
@@ -219,6 +220,34 @@ export default function IncidentReport() {
     return savedView ? JSON.parse(savedView) : false; // Default to grid view if not set
   });
   const contextMenuRef = useRef<HTMLDivElement | null>(null); // Create a ref for the context menu
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [permissionAction, setPermissionAction] = useState("");
+  
+  const userRole = JSON.parse(Cookies.get('user_data') || '{}').role;
+
+  const canEditOrArchive = () => {
+    return userRole === 'admin' || userRole === 'superadmin' || userRole === 'wcpd';
+  };
+
+  const handleEditClick = (file: FileRecord) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("edit this file");
+      setShowPermissionDialog(true);
+      return;
+    }
+    setSelectedFile(file);
+    setShowFileDialog("edit");
+  };
+
+  const handleArchiveClick = (file: FileRecord) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("archive this file");
+      setShowPermissionDialog(true);
+      return;
+    }
+    setSelectedFile(file);
+    setShowFileDialog("archive");
+  };
 
   // Function to add a new suspect form
   const addSuspect = () => {
@@ -709,14 +738,13 @@ export default function IncidentReport() {
                       {showOptions[file.file_id] && (
                         <div
                           ref={contextMenuRef}
-                          className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 context-menu font-poppins text-sm"
-                        >
-                          <button
-                            className="block w-full text-left p-2 hover:bg-gray-100"
+                          className="absolute right-2 top-12 bg-white border border-gray-200 rounded-lg shadow-lg z-10 context-menu font-poppins text-sm w-48">
+                          <Button
+                            variant="ghost"
+                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedFile(file);
-                              setShowFileDialog("edit");
+                              handleEditClick(file);
                               setShowOptions((prev) => ({
                                 ...prev,
                                 [file.file_id]: false,
@@ -724,13 +752,13 @@ export default function IncidentReport() {
                             }}
                           >
                             <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                          </button>
-                          <button
-                            className="block w-full text-left p-2 hover:bg-gray-100"
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedFile(file);
-                              setShowFileDialog("archive");
+                              handleArchiveClick(file);
                               setShowOptions((prev) => ({
                                 ...prev,
                                 [file.file_id]: false,
@@ -738,9 +766,10 @@ export default function IncidentReport() {
                             }}
                           >
                             <Archive className="inline w-4 h-4 mr-2" /> Archive
-                          </button>
-                          <button
-                            className="block w-full text-left p-2 hover:bg-gray-100"
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedFile(file);
@@ -752,7 +781,7 @@ export default function IncidentReport() {
                             }}
                           >
                             <Eye className="inline w-4 h-4 mr-2" /> View Details
-                          </button>
+                          </Button>
                         </div>
                       )}
                     </td>
@@ -855,27 +884,27 @@ export default function IncidentReport() {
                 </div>
 
                 {showOptions[file.file_id] && (
-                  <div 
-                  ref={contextMenuRef}
-                  className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins">
-                    <button
-                      className="block w-full text-left p-2 hover:bg-gray-100"
-                      onClick={() => {
-                        setSelectedFile(file);
-                        setShowFileDialog("edit");
+                  <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins">
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditClick(file);
                         setShowOptions((prev) => ({
                           ...prev,
-                          [file.file_id]: false,
+                          [file.file_id]: false,  
                         }));
                       }}
                     >
                       <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                    </button>
-                    <button
-                      className="block w-full text-left p-2 hover:bg-gray-100"
-                      onClick={() => {
-                        setSelectedFile(file);
-                        setShowFileDialog("archive");
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleArchiveClick(file);
                         setShowOptions((prev) => ({
                           ...prev,
                           [file.file_id]: false,
@@ -883,10 +912,12 @@ export default function IncidentReport() {
                       }}
                     >
                       <Archive className="inline w-4 h-4 mr-2" /> Archive
-                    </button>
-                    <button
-                      className="block w-full text-left p-2 hover:bg-gray-100"
-                      onClick={() => {
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedFile(file);
                         setShowFileDialog("details");
                         setShowOptions((prev) => ({
@@ -896,7 +927,7 @@ export default function IncidentReport() {
                       }}
                     >
                       <Eye className="inline w-4 h-4 mr-2" /> View Details
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1341,61 +1372,12 @@ export default function IncidentReport() {
         </SheetContent>
       </Sheet>
 
-      {/* {showFileDialog === "details" && selectedFile && (
-        <Dialog
-          open={showFileDialog === "details"}
-          onOpenChange={() => setShowFileDialog(null)}
-        >
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>File Details</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">File Name</h4>
-                <p className="text-gray-900 text-lg font-medium">
-                  {selectedFile.title}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">Case Title</h4>
-                <p className="text-gray-900 text-lg font-medium">
-                  {selectedFile.case_title}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">
-                  Blotter Number
-                </h4>
-                <p className="text-gray-900">{selectedFile.blotter_number}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">Investigator</h4>
-                <p className="text-gray-900">{selectedFile.investigator}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">Desk Officer</h4>
-                <p className="text-gray-900">{selectedFile.desk_officer}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">
-                  Incident Summary
-                </h4>
-                <Textarea
-                  id="summary"
-                  name="summary"
-                  defaultValue={selectedFile.incident_summary}
-                  readOnly
-                  className="h-32 resize-none border-gray-300 rounded-md"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => setShowFileDialog(null)}>Close</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )} */}
+      {/* Add the PermissionDialog */}
+      <PermissionDialog 
+        isOpen={showPermissionDialog}
+        onClose={() => setShowPermissionDialog(false)}
+        action={permissionAction}
+      />
     </div>
   );
 }
