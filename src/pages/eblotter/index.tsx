@@ -33,6 +33,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import FileOperations from "./components/FileOperations";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import PermissionDialog from "@/components/PermissionDialog";
 
 interface FileRecord {
   file_id: number;
@@ -175,6 +176,34 @@ export default function EblotterFile() {
     complete_address: '',
     contact_number: ''
   }]);
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [permissionAction, setPermissionAction] = useState("");
+  
+  const userRole = JSON.parse(Cookies.get('user_data') || '{}').role;
+
+  const canEditOrArchive = () => {
+    return userRole === 'admin' || userRole === 'superadmin' || userRole === 'wcpd';
+  };
+
+  const handleEditClick = (file: FileRecord) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("edit this file");
+      setShowPermissionDialog(true);
+      return;
+    }
+    setSelectedFile(file);
+    setShowFileDialog('edit');
+  };
+
+  const handleArchiveClick = (file: FileRecord) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("archive this file");
+      setShowPermissionDialog(true);
+      return;
+    }
+    setSelectedFile(file);
+    setShowFileDialog('archive');
+  };
 
   // Function to add a new suspect form
   const addSuspect = () => {
@@ -576,20 +605,20 @@ export default function EblotterFile() {
                   <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
                     <button
                       className="block w-full text-left p-2 hover:bg-gray-100"
-                      onClick={() => {
-                        setSelectedFile(file);
-                        setShowFileDialog('edit');
-                        setShowOptions(prev => ({ ...prev, [file.file_id]: false }));
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        handleEditClick(file);
+                        setShowOptions((prev) => ({ ...prev, [file.file_id]: false }));
                       }}
                     >
                       <Pencil className="inline w-4 h-4 mr-2" /> Edit
                     </button>
                     <button
                       className="block w-full text-left p-2 hover:bg-gray-100"
-                      onClick={() => {
-                        setSelectedFile(file);
-                        setShowFileDialog('archive');
-                        setShowOptions(prev => ({ ...prev, [file.file_id]: false }));
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        handleArchiveClick(file);
+                        setShowOptions((prev) => ({ ...prev, [file.file_id]: false }));
                       }}
                     >
                       <Archive className="inline w-4 h-4 mr-2" /> Archive
@@ -1011,6 +1040,12 @@ export default function EblotterFile() {
           </DialogContent>
         </Dialog>
       )}
+
+      <PermissionDialog 
+        isOpen={showPermissionDialog}
+        onClose={() => setShowPermissionDialog(false)}
+        action={permissionAction}
+      />
     </div>
   );
 } 
