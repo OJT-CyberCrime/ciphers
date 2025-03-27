@@ -44,6 +44,7 @@ import { supabase } from "@/utils/supa";
 import { Skeleton } from "@/components/ui/skeleton";
 import Cookies from "js-cookie";
 import { toast } from "sonner";
+import PermissionDialog from "@/components/PermissionDialog";
 
 interface Category {
   category_id: number;
@@ -104,6 +105,14 @@ export default function Eblotter() {
   const [editFolderTitle, setEditFolderTitle] = useState("");
   const [editFolderStatus, setEditFolderStatus] = useState("");
   const [editSelectedCategories, setEditSelectedCategories] = useState<string[]>([]);
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [permissionAction, setPermissionAction] = useState("");
+
+  const userRole = JSON.parse(Cookies.get('user_data') || '{}').role;
+
+  const canEditOrArchive = () => {
+    return userRole === 'admin' || userRole === 'superadmin' || userRole === 'wcpd';
+  };
 
   // Fetch folders with their categories from Supabase
   useEffect(() => {
@@ -196,8 +205,23 @@ export default function Eblotter() {
   };
 
   const handleEditClick = (folder: Folder) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("edit this folder");
+      setShowPermissionDialog(true);
+      return;
+    }
     setSelectedFolder(folder);
     setIsEditingFolder(true);
+  };
+
+  const handleArchiveClick = (folder: Folder) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("archive this folder");
+      setShowPermissionDialog(true);
+      return;
+    }
+    setSelectedFolder(folder);
+    setDialogContent("Are you sure you want to archive this folder?");
   };
 
   // Add new folder
@@ -649,8 +673,7 @@ export default function Eblotter() {
                   <button
                     className="block w-full text-left p-2 hover:bg-gray-100"
                     onClick={() => {
-                      setSelectedFolder(folder);
-                      setDialogContent("Are you sure you want to archive this folder?");
+                      handleArchiveClick(folder);
                       setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
                     }}
                   >
@@ -1074,6 +1097,13 @@ export default function Eblotter() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Permission Dialog */}
+      <PermissionDialog 
+        isOpen={showPermissionDialog}
+        onClose={() => setShowPermissionDialog(false)}
+        action={permissionAction}
+      />
     </div>
   );
 }
