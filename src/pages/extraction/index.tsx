@@ -20,6 +20,7 @@ import SearchBar from "@/Search";
 import { supabase } from "@/utils/supa";
 import CertificationOperations from "./components/FolderOperation";
 import { Skeleton } from "@/components/ui/skeleton";
+import PermissionDialog from "@/components/PermissionDialog";
 
 interface Category {
   category_id: number;
@@ -75,6 +76,14 @@ export default function Certifications() {
   const location = useLocation();
   const previousPage = "/dashboard";
   const previousPageName = "Home";
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [permissionAction, setPermissionAction] = useState("");
+  
+  const userRole = JSON.parse(Cookies.get('user_data') || '{}').role;
+
+  const canEditOrArchive = () => {
+    return userRole === 'admin' || userRole === 'superadmin' || userRole === 'wcpd';
+  };
 
   // Fetch folders with their categories from Supabase
   useEffect(() => {
@@ -168,9 +177,26 @@ export default function Certifications() {
     setDialogContent("Folder Details");
   };
 
-  const handleEditClick = (folder: Folder) => {
+  const handleEditClick = (folder: Folder, e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent folder click
+    if (!canEditOrArchive()) {
+      setPermissionAction("edit this folder");
+      setShowPermissionDialog(true);
+      return;
+    }
     setSelectedFolder(folder);
     setIsEditingFolder(true);
+  };
+
+  const handleArchiveClick = (folder: Folder, e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent folder click
+    if (!canEditOrArchive()) {
+      setPermissionAction("archive this folder");
+      setShowPermissionDialog(true);
+      return;
+    }
+    setSelectedFolder(folder);
+    setDialogContent("Archive");
   };
 
   return (
@@ -283,43 +309,28 @@ export default function Certifications() {
               {/* Context menu */}
               {contextMenuVisible[folder.folder_id] && (
                 <div className="absolute top-10 right-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                  <Button
-                    variant="ghost"
+                  <button
                     className="block w-full text-left p-2 hover:bg-gray-100"
-                    onClick={(e) => {
-                      e.preventDefault(); // Prevent default
-                      e.stopPropagation(); // Stop event from bubbling up
-                      handleEditClick(folder);
-                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
-                    }}
+                    onClick={(e) => handleEditClick(folder, e)}
                   >
                     <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
+                  </button>
+                  <button
                     className="block w-full text-left p-2 hover:bg-gray-100"
-                    onClick={(e) => {
-                      e.preventDefault(); // Prevent default
-                      e.stopPropagation(); // Stop event from bubbling up
-                      setSelectedFolder(folder);
-                      setDialogContent("Are you sure you want to archive this case?");
-                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
-                    }}
+                    onClick={(e) => handleArchiveClick(folder, e)}
                   >
                     <Archive className="inline w-4 h-4 mr-2" /> Archive
-                  </Button>
-                  <Button
-                    variant="ghost"
+                  </button>
+                  <button
                     className="block w-full text-left p-2 hover:bg-gray-100"
                     onClick={(e) => {
-                      e.preventDefault(); // Prevent default
-                      e.stopPropagation(); // Stop event from bubbling up
+                      e.preventDefault(); // Prevent folder click
                       handleViewDetails(folder);
-                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
+                      setContextMenuVisible((prev) => ({ ...prev, [folder.folder_id]: false }));
                     }}
                   >
                     <Eye className="inline w-4 h-4 mr-2" /> View Details
-                  </Button>
+                  </button>
                 </div>
               )}
               <div className="flex flex-wrap gap-2 mt-2">
@@ -356,6 +367,12 @@ export default function Certifications() {
         folders={folders}
         setFolders={setFolders}
         availableCategories={availableCategories}
+      />
+
+      <PermissionDialog 
+        isOpen={showPermissionDialog}
+        onClose={() => setShowPermissionDialog(false)}
+        action={permissionAction}
       />
     </div>
   );
