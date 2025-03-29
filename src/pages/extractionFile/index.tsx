@@ -33,6 +33,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import FileOperations from "./components/FileOperations";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import PermissionDialog from "@/components/PermissionDialog";
 
 interface Extraction {
   extraction_id: number;
@@ -133,6 +134,34 @@ export default function extractionFile() {
   const location = useLocation();
   const previousPage = "/extraction"; // Path to extraction page
   const previousPageName = "Certification of Extraction"; // Name for breadcrumb
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [permissionAction, setPermissionAction] = useState("");
+  
+  const userRole = JSON.parse(Cookies.get('user_data') || '{}').role;
+
+  const canEditOrArchive = () => {
+    return userRole === 'admin' || userRole === 'superadmin' || userRole === 'wcpd';
+  };
+
+  const handleEditClick = (file: Extraction) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("edit this file");
+      setShowPermissionDialog(true);
+      return;
+    }
+    setSelectedFile(file);
+    setShowFileDialog("edit");
+  };
+
+  const handleArchiveClick = (file: Extraction) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("archive this file");
+      setShowPermissionDialog(true);
+      return;
+    }
+    setSelectedFile(file);
+    setShowFileDialog("archive");
+  };
 
   // Handle file upload
   const handleFileUpload = async (e: React.FormEvent) => {
@@ -408,21 +437,13 @@ export default function extractionFile() {
                   <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
                     <button
                       className="block w-full text-left p-2 hover:bg-gray-100"
-                      onClick={() => {
-                        setSelectedFile(file);
-                        setShowFileDialog('edit');
-                        setShowOptions(prev => ({ ...prev, [file.extraction_id]: false }));
-                      }}
+                      onClick={() => handleEditClick(file)}
                     >
                       <Pencil className="inline w-4 h-4 mr-2" /> Edit
                     </button>
                     <button
                       className="block w-full text-left p-2 hover:bg-gray-100"
-                      onClick={() => {
-                        setSelectedFile(file);
-                        setShowFileDialog('archive');
-                        setShowOptions(prev => ({ ...prev, [file.extraction_id]: false }));
-                      }}
+                      onClick={() => handleArchiveClick(file)}
                     >
                       <Archive className="inline w-4 h-4 mr-2" /> Archive
                     </button>
@@ -633,6 +654,13 @@ export default function extractionFile() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Add the PermissionDialog */}
+      <PermissionDialog 
+        isOpen={showPermissionDialog}
+        onClose={() => setShowPermissionDialog(false)}
+        action={permissionAction}
+      />
     </div>
   );
 } 
