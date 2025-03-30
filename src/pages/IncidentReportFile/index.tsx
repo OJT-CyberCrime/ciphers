@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/sheet";
 import PermissionDialog from "@/components/PermissionDialog";
 import { Switch } from "@/components/ui/switch";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 interface FileRecord {
   file_id: number;
@@ -846,8 +847,8 @@ export default function IncidentReport() {
           </div>
         </div>
 
-        {/* Loading Skeleton or Files Grid */}
-        {isLoading ? (
+      {/* Loading Skeleton or Files Grid */}
+      {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <Skeleton className="h-32 w-full rounded-lg" />
             <Skeleton className="h-32 w-full rounded-lg" />
@@ -856,138 +857,152 @@ export default function IncidentReport() {
           </div>
         ) : isListView ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-gray-50 font-poppins">
-              <thead>
-                <tr>
-                  <th className="font-semibold text-md px-4 py-2 border-b text-left">
-                    File Name
-                  </th>
-                  <th className="font-semibold text-md px-4 py-2 border-b text-left">
-                    Added By
-                  </th>
-                  <th className="font-semibold text-md px-4 py-2 border-b text-left">
-                    Date Added
-                  </th>
-                  <th className="font-semibold text-md px-4 py-2 border-b text-left">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {files.map((file) => (
-                  <tr
-                    key={file.file_id}
-                    className="hover:bg-gray-100 cursor-pointer transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent row click
-                      setSelectedFile(file);
-                      setPreviewStates((prev) => ({
-                        ...prev,
-                        [file.file_id]: true,
-                      }));
-                    }}
-                  >
-                    <td className="px-4 py-2 border-b flex items-center gap-2">
-                      {getFileIcon(file.file_path)}
-                        {file.title}
-                    </td>
-                    <td className="px-4 py-2 border-b">{file.created_by}</td>
-                    <td className="px-4 py-2 border-b">
-                      {new Date(file.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-2 border-b flex space-x-2">
-                      <button
-                        className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent row click
-                          setShowOptions((prev) => ({
-                            ...prev,
-                            [file.file_id]: !prev[file.file_id],
-                          }));
-                        }}
-                      >
-                        <MoreVertical size={16} color="black" />
-                      </button>
-                      {showOptions[file.file_id] && (
-                        <div
-                          ref={contextMenuRef}
-                          className="absolute right-2 top-12 bg-white border border-gray-200 rounded-lg shadow-lg z-10 context-menu font-poppins text-sm w-48">
-                          <Button
-                            variant="ghost"
-                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditClick(file);
-                              setShowOptions((prev) => ({
-                                ...prev,
-                                [file.file_id]: false,
-                              }));
-                            }}
-                          >
-                            <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleArchiveClick(file);
-                              setShowOptions((prev) => ({
-                                ...prev,
-                                [file.file_id]: false,
-                              }));
-                            }}
-                          >
-                            <Archive className="inline w-4 h-4 mr-2" /> Archive
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedFile(file);
-                              setShowFileDialog("details");
-                              setShowOptions((prev) => ({
-                                ...prev,
-                                [file.file_id]: false,
-                              }));
-                            }}
-                          >
-                            <Eye className="inline w-4 h-4 mr-2" /> View Details
-                          </Button>
-                        </div>
-                      )}
-                    </td>
+            {files.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 font-poppins">
+                <DotLottieReact
+                  src="/assets/NoFiles.lottie"
+                  loop
+                  autoplay
+                  className="w-6/12"
+                />
+                No files found in this folder
+              </div>
+            ) : (
+              <table className="min-w-full bg-gray-50 font-poppins">
+                <thead>
+                  <tr>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                      File Name
+                    </th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                      Added By
+                    </th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                      Date Added
+                    </th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <FileOperations
-              file={selectedFile || files[0]}
-              showPreview={previewStates[selectedFile?.file_id || 0] || false}
-              setShowPreview={(show) => {
-                setPreviewStates((prev) => ({
-                  ...prev,
-                  [selectedFile?.file_id || 0]: show,
-                }));
-              }}
-              showFileDialog={showFileDialog}
-              setShowFileDialog={setShowFileDialog}
-              selectedFile={selectedFile}
-              setSelectedFile={setSelectedFile}
-              onFileUpdate={() => {
-                // Remove the file from the UI if it was archived
-                if (showFileDialog === "archive") {
-                  setFiles(
-                    files.filter((f) => f.file_id !== selectedFile?.file_id)
-                  );
-                } else {
-                  // Refresh the files list
-                  window.location.reload();
-                }
-              }}
-              isListView={isListView} // Pass the isListView prop
-            />
+                </thead>
+                <tbody>
+                  {files.map((file) => (
+                    <tr
+                      key={file.file_id}
+                      className="hover:bg-gray-100 cursor-pointer transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent row click
+                        setSelectedFile(file);
+                        setPreviewStates((prev) => ({
+                          ...prev,
+                          [file.file_id]: true,
+                        }));
+                      }}
+                    >
+                      <td className="px-4 py-2 border-b flex items-center gap-2">
+                        {getFileIcon(file.file_path)}
+                        {file.title}
+                      </td>
+                      <td className="px-4 py-2 border-b">{file.created_by}</td>
+                      <td className="px-4 py-2 border-b">
+                        {new Date(file.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-2 border-b flex space-x-2">
+                        <button
+                          className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent row click
+                            setShowOptions((prev) => ({
+                              ...prev,
+                              [file.file_id]: !prev[file.file_id],
+                            }));
+                          }}
+                        >
+                          <MoreVertical size={16} color="black" />
+                        </button>
+                        {showOptions[file.file_id] && (
+                          <div
+                            ref={contextMenuRef}
+                            className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 context-menu font-poppins"
+                          >
+                            <button
+                              className="block w-full text-left p-2 hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedFile(file);
+                                setShowFileDialog("edit");
+                                setShowOptions((prev) => ({
+                                  ...prev,
+                                  [file.file_id]: false,
+                                }));
+                              }}
+                            >
+                              <Pencil className="inline w-4 h-4 mr-2" /> Edit
+                            </button>
+                            <button
+                              className="block w-full text-left p-2 hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedFile(file);
+                                setShowFileDialog("archive");
+                                setShowOptions((prev) => ({
+                                  ...prev,
+                                  [file.file_id]: false,
+                                }));
+                              }}
+                            >
+                              <Archive className="inline w-4 h-4 mr-2" /> Archive
+                            </button>
+                            <button
+                              className="block w-full text-left p-2 hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedFile(file);
+                                setShowFileDialog("details");
+                                setShowOptions((prev) => ({
+                                  ...prev,
+                                  [file.file_id]: false,
+                                }));
+                              }}
+                            >
+                              <Eye className="inline w-4 h-4 mr-2" /> View Details
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {selectedFile && (
+              <FileOperations
+                file={selectedFile}
+                showPreview={previewStates[selectedFile.file_id] || false}
+                setShowPreview={(show) => {
+                  setPreviewStates((prev) => ({
+                    ...prev,
+                    [selectedFile.file_id]: show,
+                  }));
+                }}
+                showFileDialog={showFileDialog}
+                setShowFileDialog={setShowFileDialog}
+                selectedFile={selectedFile}
+                setSelectedFile={setSelectedFile}
+                onFileUpdate={() => {
+                  // Remove the file from the UI if it was archived
+                  if (showFileDialog === "archive") {
+                    setFiles(
+                      files.filter((f) => f.file_id !== selectedFile?.file_id)
+                    );
+                  } else {
+                    // Refresh the files list
+                    window.location.reload();
+                  }
+                }}
+                isListView={isListView} // Pass the isListView prop
+              />
+            )}
           </div>
         ) : filteredFiles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 font-poppins">
@@ -1050,34 +1065,35 @@ export default function IncidentReport() {
                     }}
                     isListView={isListView} // Pass the isListView prop
                   />
-                  <div className="text-sm text-gray-500 mt-2">
+                  <div className="text-xs text-gray-500 mt-2">
                     Added by {file.created_by} on{" "}
                     {new Date(file.created_at).toLocaleDateString()}
                   </div>
                 </div>
 
                 {showOptions[file.file_id] && (
-                  <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins">
-                    <Button
-                      variant="ghost"
-                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditClick(file);
+                  <div
+                    ref={contextMenuRef}
+                    className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins"
+                  >
+                    <button
+                      className="block w-full text-left p-2 hover:bg-gray-100"
+                      onClick={() => {
+                        setSelectedFile(file);
+                        setShowFileDialog("edit");
                         setShowOptions((prev) => ({
                           ...prev,
-                          [file.file_id]: false,  
+                          [file.file_id]: false,
                         }));
                       }}
                     >
                       <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleArchiveClick(file);
+                    </button>
+                    <button
+                      className="block w-full text-left p-2 hover:bg-gray-100"
+                      onClick={() => {
+                        setSelectedFile(file);
+                        setShowFileDialog("archive");
                         setShowOptions((prev) => ({
                           ...prev,
                           [file.file_id]: false,
@@ -1085,12 +1101,10 @@ export default function IncidentReport() {
                       }}
                     >
                       <Archive className="inline w-4 h-4 mr-2" /> Archive
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
+                    </button>
+                    <button
+                      className="block w-full text-left p-2 hover:bg-gray-100"
+                      onClick={() => {
                         setSelectedFile(file);
                         setShowFileDialog("details");
                         setShowOptions((prev) => ({
@@ -1100,17 +1114,22 @@ export default function IncidentReport() {
                       }}
                     >
                       <Eye className="inline w-4 h-4 mr-2" /> View Details
-                    </Button>
+                    </button>
                   </div>
                 )}
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center text-gray-500 py-8">
-            <File className="mx-auto mb-4 text-gray-400" size={48} />
-            No files found in this folder
-          </div>
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8">
+          <DotLottieReact
+            src="/assets/NoFiles.lottie"
+            loop
+            autoplay
+            className="w-6/12"
+          />
+          No files found in this folder
+        </div>
         )}
       </div>
 
