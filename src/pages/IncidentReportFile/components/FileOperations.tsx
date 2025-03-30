@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 
 interface FileRecord {
   file_id: number;
@@ -67,6 +68,8 @@ interface FileRecord {
   viewer?: { name: string };
   downloader?: { name: string };
   printer?: { name: string };
+  is_collage?: boolean;
+  collage_photos?: string[];
 }
 
 interface ReportingPersonDetails {
@@ -103,6 +106,12 @@ interface FileOperationsProps {
   selectedFile?: FileRecord | null;
   setSelectedFile: (file: FileRecord | null) => void;
   isListView: boolean;
+}
+
+interface CollageState {
+  files: File[];
+  previewUrls: string[];
+  layout: string;
 }
 
 // Helper function to get file type icon
@@ -155,6 +164,14 @@ export default function FileOperations({
     useState<ReportingPersonDetails | null>(null);
   const [suspects, setSuspects] = useState<Suspect[]>([]);
 
+  // Add state for collage
+  const [isCollageMode, setIsCollageMode] = useState(false);
+  const [collageState, setCollageState] = useState<CollageState>({
+    files: [],
+    previewUrls: [],
+    layout: '2x2'
+  });
+
   // Fetch reporting person and suspects when viewing or editing a file
   useEffect(() => {
     const fetchFileDetails = async () => {
@@ -187,6 +204,20 @@ export default function FileOperations({
 
     fetchFileDetails();
   }, [showFileDialog, currentFile]);
+
+  // Initialize collage mode when editing
+  useEffect(() => {
+    if (showFileDialog === "edit" && (selectedFile || file).is_collage) {
+      setIsCollageMode(true);
+      // If there are existing collage photos, load their previews
+      const existingPhotos = (selectedFile || file).collage_photos || [];
+      setCollageState({
+        files: [],
+        previewUrls: existingPhotos,
+        layout: '2x2'
+      });
+    }
+  }, [showFileDialog, selectedFile, file]);
 
   // Function to add a new suspect form
   const addSuspect = () => {
@@ -526,9 +557,95 @@ export default function FileOperations({
 
       let filePath = fileToEdit.file_path;
       let publicUrl = fileToEdit.public_url;
+      let collagePhotos: string[] = [];
 
-      // Only handle file upload if a new file was actually uploaded
-      if (
+      if (isCollageMode) {
+        // Upload each new photo in the collage
+        for (const file of collageState.files) {
+          const fileExt = file.name.split(".").pop();
+          const fileName = `${Math.random()}.${fileExt}`;
+          const photoPath = `folder_${fileToEdit.folder_id}/collage_photos/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from("files")
+            .upload(photoPath, file, {
+              cacheControl: "3600",
+              upsert: false,
+            });
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl: photoUrl } } = supabase.storage
+            .from("files")
+            .getPublicUrl(photoPath);
+
+          collagePhotos.push(photoUrl);
+        }
+
+        // Keep existing photos that weren't removed
+        if (fileToEdit.collage_photos) {
+          const existingUrls = fileToEdit.collage_photos.filter(url => 
+            collageState.previewUrls.includes(url)
+          );
+          collagePhotos = [...existingUrls, ...collagePhotos];
+        }
+
+        if (collagePhotos.length > 0) {
+          // Create a collage preview image using HTML Canvas
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const [cols, rows] = collageState.layout.split('x').map(Number);
+          const photoWidth = 800 / cols;
+          const photoHeight = 800 / rows;
+          
+          canvas.width = 800;
+          canvas.height = 800;
+
+          // Load all images and draw them on the canvas
+          const images = await Promise.all(
+            collageState.previewUrls.map(url => {
+              return new Promise<HTMLImageElement>((resolve) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => resolve(img);
+                img.src = url;
+              });
+            })
+          );
+
+          images.forEach((img, index) => {
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            ctx?.drawImage(
+              img,
+              col * photoWidth,
+              row * photoHeight,
+              photoWidth,
+              photoHeight
+            );
+          });
+
+          // Convert canvas to blob and upload
+          const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!)));
+          const collageFileName = `collage_${Math.random()}.png`;
+          filePath = `folder_${fileToEdit.folder_id}/${collageFileName}`;
+
+          const { error: collageUploadError } = await supabase.storage
+            .from("files")
+            .upload(filePath, blob, {
+              cacheControl: "3600",
+              upsert: false,
+            });
+
+          if (collageUploadError) throw collageUploadError;
+
+          const { data: { publicUrl: collagePublicUrl } } = supabase.storage
+            .from("files")
+            .getPublicUrl(filePath);
+
+          publicUrl = collagePublicUrl;
+        }
+      } else if (
         uploadedFile &&
         uploadedFile instanceof globalThis.File &&
         uploadedFile.size > 0
@@ -572,15 +689,10 @@ export default function FileOperations({
           investigator,
           desk_officer: deskOfficer,
           incident_summary: summary,
-          ...(uploadedFile &&
-          uploadedFile instanceof globalThis.File &&
-          uploadedFile.size > 0
-            ? {
-                file_path: filePath,
-                public_url: publicUrl,
-                file_name: uploadedFile.name,
-              }
-            : {}),
+          file_path: filePath,
+          public_url: publicUrl,
+          is_collage: isCollageMode,
+          collage_photos: isCollageMode ? collagePhotos : null,
           updated_by: userData2.user_id,
           updated_at: new Date().toISOString(),
         })
@@ -590,18 +702,23 @@ export default function FileOperations({
 
       // Update reporting person details
       if (reportingPerson) {
+        const cleanedReportingPerson = {
+          full_name: reportingPerson.full_name || null,
+          age: reportingPerson.age || null,
+          birthday: reportingPerson.birthday ? new Date(reportingPerson.birthday).toISOString() : null,
+          gender: reportingPerson.gender || null,
+          complete_address: reportingPerson.complete_address || null,
+          contact_number: reportingPerson.contact_number || null,
+          date_reported: reportingPerson.date_reported ? new Date(reportingPerson.date_reported).toISOString() : null,
+          time_reported: reportingPerson.time_reported || null,
+          date_of_incident: reportingPerson.date_of_incident ? new Date(reportingPerson.date_of_incident).toISOString() : null,
+          time_of_incident: reportingPerson.time_of_incident || null,
+          place_of_incident: reportingPerson.place_of_incident || null,
+        };
+
         const { error: reportingError } = await supabase
           .from("reporting_person_details")
-          .update({
-            ...reportingPerson,
-            birthday: new Date(reportingPerson.birthday).toISOString(),
-            date_reported: new Date(
-              reportingPerson.date_reported
-            ).toISOString(),
-            date_of_incident: new Date(
-              reportingPerson.date_of_incident
-            ).toISOString(),
-          })
+          .update(cleanedReportingPerson)
           .eq("file_id", fileToEdit.file_id);
 
         if (reportingError) throw reportingError;
@@ -724,7 +841,6 @@ export default function FileOperations({
   };
 
   // Render card preview
-  // Render card preview
   const renderCardPreview = () => {
     if (isLoading) {
       return (
@@ -834,6 +950,51 @@ export default function FileOperations({
     );
   };
   const formRef = useRef<HTMLFormElement | null>(null);
+
+  // Add CollagePreview component
+  const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
+    collageState: CollageState;
+    onLayoutChange: (layout: string) => void;
+    onPhotoRemove: (index: number) => void;
+  }) => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <Label>Layout:</Label>
+        <Select value={collageState.layout} onValueChange={onLayoutChange}>
+          <SelectTrigger className="w-32">
+            <SelectValue placeholder="Choose layout" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1x1">1 x 1</SelectItem>
+            <SelectItem value="2x2">2 x 2</SelectItem>
+            <SelectItem value="3x3">3 x 3</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className={`grid gap-2 ${
+        collageState.layout === '1x1' ? 'grid-cols-1' :
+        collageState.layout === '2x2' ? 'grid-cols-2' :
+        'grid-cols-3'
+      }`}>
+        {Array.isArray(collageState.previewUrls) && collageState.previewUrls.map((url, index) => (
+          <div key={index} className="relative group">
+            <img 
+              src={url} 
+              alt={`Collage photo ${index + 1}`} 
+              className="w-full h-40 object-cover rounded-md"
+            />
+            <button
+              onClick={() => onPhotoRemove(index)}
+              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <>
       {/* Preview Sheet */}
@@ -967,17 +1128,69 @@ export default function FileOperations({
                         className="border-gray-300 rounded-md"
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="file">Update File (Optional)</Label>
-                      <Input
-                        id="file"
-                        name="file"
-                        type="file"
-                        className="border-gray-300 rounded-md text-sm"
-                      />
-                      <p className="text-xs text-gray-500">
-                        Leave empty to keep the current file
-                      </p>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label>Create Collage</Label>
+                        <Switch
+                          checked={isCollageMode}
+                          onCheckedChange={(checked) => {
+                            setIsCollageMode(checked);
+                            if (!checked) {
+                              setCollageState({
+                                files: [],
+                                previewUrls: [],
+                                layout: '2x2'
+                              });
+                            }
+                          }}
+                        />
+                      </div>
+                      {isCollageMode ? (
+                        <div className="space-y-4">
+                          <Input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              if (!files) return;
+                              
+                              const newFiles = Array.from(files);
+                              const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
+                              
+                              setCollageState(prev => ({
+                                ...prev,
+                                files: [...prev.files, ...newFiles],
+                                previewUrls: [...prev.previewUrls, ...newPreviewUrls]
+                              }));
+                            }}
+                          />
+                          <CollagePreview
+                            collageState={collageState}
+                            onLayoutChange={(layout) => setCollageState(prev => ({ ...prev, layout }))}
+                            onPhotoRemove={(index) => {
+                              setCollageState(prev => ({
+                                ...prev,
+                                files: prev.files.filter((_, i) => i !== index),
+                                previewUrls: prev.previewUrls.filter((_, i) => i !== index)
+                              }));
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <Label htmlFor="file">Update File (Optional)</Label>
+                          <Input
+                            id="file"
+                            name="file"
+                            type="file"
+                            className="border-gray-300 rounded-md text-sm"
+                          />
+                          <p className="text-xs text-gray-500">
+                            Leave empty to keep the current file
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
@@ -1011,7 +1224,6 @@ export default function FileOperations({
                             full_name: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1026,7 +1238,6 @@ export default function FileOperations({
                             age: Number(e.target.value),
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1041,7 +1252,6 @@ export default function FileOperations({
                             birthday: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1054,7 +1264,6 @@ export default function FileOperations({
                             gender: value as "Male" | "Female" | "Other",
                           })
                         }
-                        required
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select gender" />
@@ -1079,7 +1288,6 @@ export default function FileOperations({
                             complete_address: e.target.value,
                           })
                         }
-                        required
                         className="h-24 resize-none border-gray-300 rounded-md"
                       />
                     </div>
@@ -1094,7 +1302,6 @@ export default function FileOperations({
                             contact_number: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1111,7 +1318,6 @@ export default function FileOperations({
                             date_reported: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1125,7 +1331,6 @@ export default function FileOperations({
                             time_reported: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1144,7 +1349,6 @@ export default function FileOperations({
                             date_of_incident: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1160,7 +1364,6 @@ export default function FileOperations({
                             time_of_incident: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div className="col-span-2">
@@ -1176,7 +1379,6 @@ export default function FileOperations({
                             place_of_incident: e.target.value,
                           })
                         }
-                        required
                         className="h-24 resize-none border-gray-300 rounded-md"
                       />
                     </div>
