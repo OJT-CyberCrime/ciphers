@@ -150,21 +150,14 @@ export default function FileOperations({
   setSelectedFile,
   isListView,
 }: FileOperationsProps) {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | undefined>();
   const currentFile = showFileDialog ? selectedFile || file : file;
-
-  // Add a check to ensure currentFile is defined
-  if (!currentFile) {
-    return null; // or return a placeholder component/message
-  }
-
   const ext = currentFile.file_path.split(".").pop()?.toLowerCase() || "";
   const imageTypes = ["jpg", "jpeg", "png", "gif", "bmp", "webp"];
   const pdfType = ["pdf"];
   const officeTypes = ["doc", "docx", "xls", "xlsx", "ppt", "pptx"];
-
-  const [signedUrl, setSignedUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | undefined>();
 
   // Add state for reporting person and suspects
   const [reportingPerson, setReportingPerson] =
