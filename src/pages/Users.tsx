@@ -128,6 +128,8 @@ export default function Users() {
     null
   );
   const [activeTab, setActiveTab] = useState<"info" | "password">("info");
+  const [isNameChanged, setIsNameChanged] = useState(false);
+  const [isEmailChanged, setIsEmailChanged] = useState(false);
 
   // Initialize add form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -145,8 +147,8 @@ export default function Users() {
   const editForm = useForm<z.infer<typeof editFormSchema>>({
     resolver: zodResolver(editFormSchema),
     defaultValues: {
-      name: "",
-      email: "",
+      name: currentUser?.name || "",
+      email: currentUser?.email || "",
       password: "",
       role: "",
     },
@@ -194,6 +196,14 @@ export default function Users() {
         role: userData?.role || user.user_metadata?.role || "",
         name: userData?.name || user.user_metadata?.name || "",
         public_url: publicUrl,
+      });
+
+      // Update edit form default values after fetching current user
+      editForm.reset({
+        name: userData?.name || "",
+        email: userData?.email || "",
+        password: "",
+        role: userData?.role || "",
       });
     } catch (error) {
       console.error("Error in fetchCurrentUser:", error);
@@ -702,6 +712,16 @@ export default function Users() {
     }
   };
 
+  const handleNameChange = (value: string) => {
+    setIsNameChanged(value !== currentUser?.name);
+    editForm.setValue("name", value);
+  };
+
+  const handleEmailChange = (value: string) => {
+    setIsEmailChanged(value !== currentUser?.email);
+    editForm.setValue("email", value);
+  };
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-medium text-blue-900 mb-20">
@@ -752,8 +772,8 @@ export default function Users() {
           <p className="text-gray-600 font-poppins">{currentUser?.email}</p>
         </div>
 
-        {/* Right Column: Tabbed Card for  Information and Password */}
-        <Card className="flex flex-col w-full md:w-2/3 shadow-sm font-poppins">
+        {/* Right Column: Tabbed Card for Information and Password */}
+        <Card className="flex flex-col w-full md:w-2/3 shadow-sm font-poppins p-5">
           <CardHeader>
             <Tabs defaultValue="info">
               <TabsList className="flex justify-around w-full mb-10">
@@ -783,7 +803,14 @@ export default function Users() {
                         <FormItem>
                           <FormLabel>Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter name" {...field} />
+                            <Input
+                              placeholder="Enter name"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e); // Update the form state
+                                handleNameChange(e.target.value); // Track changes
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -800,6 +827,10 @@ export default function Users() {
                               type="email"
                               placeholder="Enter email"
                               {...field}
+                              onChange={(e) => {
+                                field.onChange(e); // Update the form state
+                                handleEmailChange(e.target.value); // Track changes
+                              }}
                             />
                           </FormControl>
                           <FormMessage />
@@ -810,6 +841,7 @@ export default function Users() {
                       <Button
                         type="submit"
                         className="bg-blue-900 hover:bg-blue-800"
+                        disabled={!isNameChanged && !isEmailChanged}
                       >
                         Save Changes
                       </Button>
@@ -1186,7 +1218,14 @@ export default function Users() {
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter name" {...field} />
+                      <Input
+                        placeholder="Enter name"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e); // Update the form state
+                          handleNameChange(e.target.value); // Track changes
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1203,6 +1242,10 @@ export default function Users() {
                         type="email"
                         placeholder="Enter email"
                         {...field}
+                        onChange={(e) => {
+                          field.onChange(e); // Update the form state
+                          handleEmailChange(e.target.value); // Track changes
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
