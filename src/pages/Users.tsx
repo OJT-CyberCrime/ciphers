@@ -9,6 +9,9 @@ import {
   ShieldAlert,
   Info,
   UserPlus2,
+  Lock,
+  IdCard,
+  Edit,
 } from "lucide-react";
 import {
   Dialog,
@@ -57,6 +60,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Define the form schema
 const formSchema = z.object({
@@ -120,7 +124,10 @@ export default function Users() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
-  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(
+    null
+  );
+  const [activeTab, setActiveTab] = useState<"info" | "password">("info");
 
   // Initialize add form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -172,7 +179,7 @@ export default function Users() {
       if (userData?.file_path) {
         try {
           const { data } = supabase.storage
-            .from('profilepic')
+            .from("profilepic")
             .getPublicUrl(userData.file_path);
 
           publicUrl = data.publicUrl;
@@ -234,30 +241,32 @@ export default function Users() {
       }
 
       // Map the data and get public URLs for avatars
-      const mappedUsers = await Promise.all(userData.map(async (user: Record<string, any>) => {
-        let publicUrl = null;
-        if (user.file_path) {
-          try {
-            const { data } = supabase.storage
-              .from('profilepic')
-              .getPublicUrl(user.file_path);
+      const mappedUsers = await Promise.all(
+        userData.map(async (user: Record<string, any>) => {
+          let publicUrl = null;
+          if (user.file_path) {
+            try {
+              const { data } = supabase.storage
+                .from("profilepic")
+                .getPublicUrl(user.file_path);
 
-            publicUrl = data.publicUrl;
-          } catch (storageError) {
-            // Handle storage error silently
+              publicUrl = data.publicUrl;
+            } catch (storageError) {
+              // Handle storage error silently
+            }
           }
-        }
 
-        return {
-          user_id: user.user_id || user.id,
-          uuid: user.uuid,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          file_path: user.file_path,
-          public_url: publicUrl,
-        };
-      }));
+          return {
+            user_id: user.user_id || user.id,
+            uuid: user.uuid,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            file_path: user.file_path,
+            public_url: publicUrl,
+          };
+        })
+      );
 
       setUsers(mappedUsers);
     } catch (fetchError: unknown) {
@@ -313,20 +322,20 @@ export default function Users() {
         return;
       }
 
-      let filePath = '';
-      let publicUrl = '';
+      let filePath = "";
+      let publicUrl = "";
 
       // Handle avatar upload if a file was selected
       if (avatarFile) {
-        const fileExt = avatarFile.name.split('.').pop();
+        const fileExt = avatarFile.name.split(".").pop();
         const fileName = `${Math.random()}.${fileExt}`;
         filePath = `${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('profilepic')
+          .from("profilepic")
           .upload(filePath, avatarFile, {
-            cacheControl: '3600',
-            upsert: false
+            cacheControl: "3600",
+            upsert: false,
           });
 
         if (uploadError) {
@@ -335,7 +344,7 @@ export default function Users() {
 
         // Get a public URL for the avatar
         const { data } = supabase.storage
-          .from('profilepic')
+          .from("profilepic")
           .getPublicUrl(filePath);
 
         publicUrl = data.publicUrl;
@@ -471,20 +480,20 @@ export default function Users() {
         // Delete old avatar if it exists
         if (selectedUser.file_path) {
           await supabase.storage
-            .from('profilepic')
+            .from("profilepic")
             .remove([selectedUser.file_path]);
         }
 
         // Upload new avatar
-        const fileExt = editAvatarFile.name.split('.').pop();
+        const fileExt = editAvatarFile.name.split(".").pop();
         const fileName = `${Math.random()}.${fileExt}`;
         filePath = `${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('profilepic')
+          .from("profilepic")
           .upload(filePath, editAvatarFile, {
-            cacheControl: '3600',
-            upsert: false
+            cacheControl: "3600",
+            upsert: false,
           });
 
         if (uploadError) {
@@ -493,7 +502,7 @@ export default function Users() {
 
         // Get a public URL for the new avatar
         const { data } = supabase.storage
-          .from('profilepic')
+          .from("profilepic")
           .getPublicUrl(filePath);
 
         publicUrl = data.publicUrl;
@@ -677,7 +686,10 @@ export default function Users() {
   );
 
   // Add function to handle avatar upload
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>, isEdit: boolean = false) => {
+  const handleAvatarChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    isEdit: boolean = false
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
       if (isEdit) {
@@ -692,170 +704,109 @@ export default function Users() {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-12">
-        <h1 className="text-2xl font-medium font-poppins text-blue-900">
-          Account Information
-        </h1>
-      </div>
+      <h1 className="text-2xl font-medium text-blue-900 mb-20">
+        Account Information
+      </h1>
 
-      <div className="mt-4">
-        {currentUser ? (
-          <div className="mt-4 grid grid-cols-1 gap-2 items-start">
-            {/* Left Column: Smaller Profile Card */}
-            <div className="flex flex-col items-center w-full">
-              <Avatar className="w-24 h-24 mb-2">
-                {currentUser?.public_url ? (
-                  <AvatarImage 
-                    src={currentUser.public_url} 
-                    alt={currentUser.name}
-                    className="w-full h-full object-cover rounded-full"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-2xl font-poppins w-full h-full">
-                    {currentUser?.name
-                      ? currentUser.name.split(" ")[0][0].toUpperCase()
-                      : "?"}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-
-              <div className="flex flex-col items-center text-center">
-                <span className="text-lg font-semibold font-poppins text-gray-800">
-                  {currentUser.name}
-                </span>
-                <span className="text-sm font-poppins text-gray-600">
-                  {currentUser.email}
-                </span>
-                {/* <span className="text-[10px] font-poppins text-white mt-1 px-2 py-1 bg-blue-500 rounded-full inline-block w-fit">
-                  {currentUser.role}
-                </span> */}
-              </div>
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Left Column: Profile Avatar */}
+        <div className="flex flex-col items-center w-full md:w-1/3">
+          <div className="relative">
+            <Avatar
+              className="w-32 h-32 cursor-pointer"
+              onClick={() => document.getElementById("avatar-upload")?.click()}
+            >
+              {currentUser?.public_url ? (
+                <AvatarImage
+                  src={currentUser.public_url}
+                  alt={currentUser.name}
+                  className="w-full h-full object-cover rounded-full"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              ) : (
+                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-3xl">
+                  {currentUser?.name
+                    ? currentUser.name.split(" ")[0][0].toUpperCase()
+                    : "?"}
+                </AvatarFallback>
+              )}
+            </Avatar>
+            {/* Edit Icon */}
+            <div
+              onClick={() => document.getElementById("avatar-upload")?.click()}
+              className="absolute bottom-0 right-0 bg-white p-2 rounded-full cursor-pointer shadow-md hover:bg-blue-100"
+            >
+              <Edit className="w-5 h-5 text-blue-600" />
             </div>
+          </div>
+          <input
+            type="file"
+            id="avatar-upload"
+            accept="image/*"
+            onChange={(e) => handleAvatarChange(e)}
+            className="hidden"
+          />
+          <h2 className="text-xl font-semibold mt-4 font-poppins">{currentUser?.name}</h2>
+          <p className="text-gray-600 font-poppins">{currentUser?.email}</p>
+        </div>
 
-            {/* Right Column: Larger Personal Details Card */}
-            <Card className="flex flex-col w-full border-gray-300 bg-white shadow-sm mt-5 p-7">
-              <CardContent>
+        {/* Right Column: Tabbed Card for  Information and Password */}
+        <Card className="flex flex-col w-full md:w-2/3 shadow-sm font-poppins">
+          <CardHeader>
+            <Tabs defaultValue="info">
+              <TabsList className="flex justify-around w-full mb-10">
+                <TabsTrigger value="info" className="flex items-center gap-2">
+                  <IdCard className="w-5 h-5" />
+                  Personal Information
+                </TabsTrigger>
+                <TabsTrigger
+                  value="password"
+                  className="flex items-center gap-2"
+                >
+                  <Lock className="w-4 h-4" />
+                  Change Password
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="info">
                 <Form {...editForm}>
                   <form
                     onSubmit={editForm.handleSubmit(onSubmitEdit)}
-                    className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8"
+                    className="space-y-4"
                   >
-                    {/* Left Column: Name and Email */}
-                    <div className="space-y-4">
-                      <FormField
-                        control={editForm.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Name</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Enter name"
-                                {...field}
-                                defaultValue={currentUser?.name || ""}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={editForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="email"
-                                placeholder="Enter email"
-                                {...field}
-                                defaultValue={currentUser?.email || ""}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Right Column: Password and Role */}
-                    <div className="space-y-4">
-                      <FormField
-                        control={editForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Password
-                              <span className="ml-1 text-xs text-gray-500 font-normal">
-                                (optional)
-                              </span>
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="password"
-                                placeholder="Enter new password"
-                                {...field}
-                                value={field.value || ""}
-                              />
-                            </FormControl>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Only enter a password if you want to change it.
-                              Leave empty to keep the current password.
-                            </p>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={editForm.control}
-                        name="role"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Role</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={currentUser?.role || ""}
-                              disabled={!isSuperAdmin()}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a role" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="superadmin">
-                                  Super Admin
-                                </SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="user">User</SelectItem>
-                                <SelectItem value="wcpd">WCPD</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {!isSuperAdmin() && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Only superadmins can change roles.
-                              </p>
-                            )}
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Footer: Buttons */}
-                    <div className="col-span-2 flex justify-end gap-4 mt-6">
-                      <Button
-                        variant="outline"
-                        type="button"
-                        onClick={handleCancelEdit}
-                      >
-                        Cancel
-                      </Button>
+                    <FormField
+                      control={editForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="Enter email"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex justify-end">
                       <Button
                         type="submit"
                         className="bg-blue-900 hover:bg-blue-800"
@@ -865,12 +816,54 @@ export default function Users() {
                     </div>
                   </form>
                 </Form>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <span className="text-sm font-poppins text-gray-600">Loading...</span>
-        )}
+              </TabsContent>
+
+              <TabsContent value="password">
+                <Form {...editForm}>
+                  <form
+                    onSubmit={editForm.handleSubmit(onSubmitEdit)}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={editForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Password
+                            <span className="ml-1 text-xs text-gray-500 font-normal">
+                              (optional)
+                            </span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="Enter new password"
+                              {...field}
+                            />
+                          </FormControl>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Only enter a password if you want to change it.
+                            Leave empty to keep the current password.
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        type="submit"
+                        className="bg-blue-900 hover:bg-blue-800"
+                      >
+                        Update Password
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </TabsContent>
+            </Tabs>
+          </CardHeader>
+        </Card>
       </div>
 
       {/* Display all users if superadmin */}
@@ -911,17 +904,19 @@ export default function Users() {
                       <td className="px-6 py-2 whitespace-nowrap">
                         <Avatar className="w-10 h-10">
                           {user.public_url ? (
-                            <AvatarImage 
-                              src={user.public_url} 
+                            <AvatarImage
+                              src={user.public_url}
                               alt={user.name}
                               className="w-full h-full object-cover rounded-full"
                               onError={(e) => {
-                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.style.display = "none";
                               }}
                             />
                           ) : (
                             <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-lg font-poppins w-full h-full">
-                              {user.name ? user.name.split(" ")[0][0].toUpperCase() : "?"}
+                              {user.name
+                                ? user.name.split(" ")[0][0].toUpperCase()
+                                : "?"}
                             </AvatarFallback>
                           )}
                         </Avatar>
@@ -1016,9 +1011,9 @@ export default function Users() {
               <div className="flex flex-col items-center mb-4">
                 <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200 mb-2">
                   {avatarPreview ? (
-                    <img 
-                      src={avatarPreview} 
-                      alt="Avatar preview" 
+                    <img
+                      src={avatarPreview}
+                      alt="Avatar preview"
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -1033,7 +1028,9 @@ export default function Users() {
                   onChange={(e) => handleAvatarChange(e)}
                   className="max-w-[200px]"
                 />
-                <p className="text-xs text-gray-500 mt-1">Upload profile picture</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Upload profile picture
+                </p>
               </div>
 
               <FormField
@@ -1154,15 +1151,15 @@ export default function Users() {
               <div className="flex flex-col items-center mb-4">
                 <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200 mb-2">
                   {editAvatarPreview ? (
-                    <img 
-                      src={editAvatarPreview} 
-                      alt="Avatar preview" 
+                    <img
+                      src={editAvatarPreview}
+                      alt="Avatar preview"
                       className="w-full h-full object-cover"
                     />
                   ) : selectedUser?.public_url ? (
-                    <img 
-                      src={selectedUser.public_url} 
-                      alt="Current avatar" 
+                    <img
+                      src={selectedUser.public_url}
+                      alt="Current avatar"
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -1177,7 +1174,9 @@ export default function Users() {
                   onChange={(e) => handleAvatarChange(e, true)}
                   className="max-w-[200px]"
                 />
-                <p className="text-xs text-gray-500 mt-1">Update profile picture</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Update profile picture
+                </p>
               </div>
 
               <FormField
