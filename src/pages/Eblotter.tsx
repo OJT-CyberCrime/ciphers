@@ -8,8 +8,13 @@ import {
   Plus,
   ChevronRight,
   MoreVertical,
+  SortAsc,
+  Grid,
+  List,
+  ClockIcon,
+  RefreshCwIcon,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -113,6 +118,31 @@ export default function Eblotter() {
   const canEditOrArchive = () => {
     return userRole === 'admin' || userRole === 'superadmin' || userRole === 'wcpd';
   };
+
+  const [sortCriteria, setSortCriteria] = useState("created_at");
+  
+  const statusOptions = [
+    "pending",
+    "resolved",
+    "dismissed",
+    "under investigation"
+  ];
+
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
+        setContextMenuVisible({});
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Fetch folders with their categories from Supabase
   useEffect(() => {
@@ -528,10 +558,40 @@ export default function Eblotter() {
       );
     }
   }, [selectedFolder, isEditingFolder]);
+  const [isListView, setIsListView] = useState(() => {
+    const savedPreference = localStorage.getItem("viewPreference");
+    return savedPreference ? JSON.parse(savedPreference) : false;
+  });
+
+  const sortedFolders = [...filteredFolders].sort((a, b) => {
+    switch (sortCriteria) {
+      case "title":
+        return a.title.localeCompare(b.title);
+      case "status":
+        return a.status.localeCompare(b.status);
+      case "created_at":
+      default:
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+    }
+  });
+
+  const handleFolderClick = (folder: Folder) => {
+    navigate(`/eblotter/${folder.folder_id}`, {
+      state: { from: location.pathname, fromName: "Blotter Report" }
+    });
+  };
+  
+  
+  const handleViewChange = (view: boolean) => {
+    setIsListView(view);
+    localStorage.setItem("viewPreference", JSON.stringify(view));
+  };
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row gap-4 mb-4">
+    <div className="p-6 max-w-screen-xl mx-auto">
+      <div className="flex flex-col md:flex-row gap-4 mb-4 items-center justify-between">
         <SearchBar
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -539,14 +599,14 @@ export default function Eblotter() {
         />
 
         <Select onValueChange={setFilter} defaultValue="all">
-          <SelectTrigger className="w-48 p-5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+          <SelectTrigger className="w-full md:w-48 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             <SelectValue placeholder="Filter by category" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
             {availableCategories.map((category) => (
-              <SelectItem 
-                key={category.category_id} 
+              <SelectItem
+                key={category.category_id}
                 value={category.category_id.toString()}
               >
                 {category.title}
@@ -555,9 +615,21 @@ export default function Eblotter() {
           </SelectContent>
         </Select>
 
+        <Select onValueChange={setSortCriteria} defaultValue="created_at">
+          <SelectTrigger className="w-full md:w-48 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
+            <SortAsc size={16} className="text-gray-600" />
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="created_at">Date Created</SelectItem>
+            <SelectItem value="title">Title</SelectItem>
+            <SelectItem value="status">Status</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Button
           onClick={() => setIsAddingFolder(true)}
-          className="bg-blue-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-800"
+          className="bg-blue-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-800 transition-colors"
         >
           <Plus size={16} /> Add Folder
         </Button>
@@ -577,51 +649,272 @@ export default function Eblotter() {
           <ChevronRight size={16} />
         </BreadcrumbSeparator>
         <BreadcrumbItem>
-          <span className="text-gray-900">eBlotter</span>
+          <span className="text-gray-900">Blotter Report</span>
         </BreadcrumbItem>
       </Breadcrumb>
 
-      <h1 className="text-2xl font-medium font-poppins mb-6 text-blue-900">
-        eBlotter
-      </h1>
+      <div className="flex justify-between items-center mb-6 ">
+        <h1 className="text-2xl font-medium font-poppins text-blue-900">
+         Blotter Report
+        </h1>
+        <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
+          <Button
+            onClick={() => handleViewChange(true)}
+            className={`flex items-center justify-center w-10 h-8 rounded-s-full ${
+              isListView ? "bg-blue-200" : "bg-white"
+            } transition-colors hover:${
+              isListView ? "bg-blue-300" : "bg-gray-100"
+            }`}
+          >
+            <List size={16} color="black" />
+          </Button>
+          <Button
+            onClick={() => handleViewChange(false)}
+            className={`flex items-center justify-center w-10 h-8 rounded-e-full ${
+              !isListView ? "bg-blue-200" : "bg-white"
+            } transition-colors hover:${
+              !isListView ? "bg-blue-300" : "bg-gray-100"
+            }`}
+          >
+            <Grid size={16} color="black" />
+          </Button>
+        </div>
+      </div>
+      
+      {isListView ? (
+        <div className="overflow-x-auto font-poppins">
+          <table className="min-w-full bg-gray-50">
+            <thead>
+              <tr>
+                <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                  Name
+                </th>
+                <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                  Status
+                </th>
+                <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                  Categories
+                </th>
+                <th className="font-semibold text-md  px-4 py-2 border-b text-left">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                Array.from({ length: 4 }).map((_, index) => (
+                  <tr key={index}>
+                    <td className="px-4 py-2 border-b">
+                      <Skeleton className="h-4 w-1/2" />
+                    </td>
+                    <td className="px-4 py-2 border-b">
+                      <Skeleton className="h-4 w-1/4" />
+                    </td>
+                    <td className="px-4 py-2 border-b">
+                      <Skeleton className="h-4 w-1/4" />
+                    </td>
+                    <td className="px-4 py-2 border-b">
+                      <Skeleton className="h-4 w-1/4" />
+                    </td>
+                  </tr>
+                ))
+              ) : sortedFolders.length > 0 ? (
+                sortedFolders.map((folder) => (
+                  <tr
+                    key={folder.folder_id}
+                    className="hover:bg-gray-100 cursor-pointer transition-colors"
+                  >
+                    <td
+                      className="px-4 py-2 border-b"
+                      onClick={() => handleFolderClick(folder)}
+                    >
+                      <FolderClosed
+                        style={{
+                          width: "20px",
+                          height: "20px",
+                          display: "inline-block",
+                        }} // Make the icon inline
+                        className="text-gray-600 mr-2"
+                        fill="#4b5563"
+                      />
+                      <span>{folder.title}</span>{" "}
+                      {/* Add a span to ensure proper text rendering */}
+                    </td>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {isLoading ? (
-          Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-32 w-full rounded-lg" />
-          ))
-        ) : filteredFolders.length > 0 ? (
-          filteredFolders.map((folder) => (
-            <div key={folder.folder_id} className="relative">
-              <Button
-                className="flex flex-col items-start bg-white border border-gray-300 rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full min-h-[120px] relative"
-                onClick={() => navigate(`/eblotter/${folder.folder_id}`, { 
-                  state: { 
-                    from: '/eblotter', 
-                    fromName: 'eBlotter' 
-                  } 
-                })}
+                    <td className="px-4 py-2 border-b">
+                      <Badge
+                        variant="outline"
+                        className={`rounded-full text-xs font-poppins px-3 py-1 ${
+                          getStatusBadgeClass(folder.status).class
+                        }`}
+                      >
+                        {getStatusBadgeClass(folder.status).label}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-2 border-b">
+                      {folder.categories && folder.categories.length > 0 ? (
+                        folder.categories.slice(0, 3).map((category) => (
+                          <Badge
+                            key={category.category_id}
+                            variant="outline"
+                            className="bg-gray-200 text-black mr-2 font-medium"
+                          >
+                            {category.title}
+                          </Badge>
+                        ))
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="bg-gray-200 text-black"
+                        >
+                          No categories
+                        </Badge>
+                      )}
+                      {folder.categories.length > 3 && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Badge
+                                variant="outline"
+                                className="bg-gray-200 cursor-pointer"
+                              >
+                                +{folder.categories.length - 3}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {folder.categories
+                                .slice(3)
+                                .map((cat) => cat.title)
+                                .join(", ")}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 border-b ">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setContextMenuVisible((prev) => ({
+                            ...prev,
+                            [folder.folder_id]: !prev[folder.folder_id],
+                          }));
+                        }}
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                      {contextMenuVisible[folder.folder_id] && (
+                        <div
+                          ref={contextMenuRef}
+                          className="absolute bg-white border border-gray-200 rounded-lg shadow-lg z-10 context-menu"
+                        >
+                          <Button
+                            variant="ghost"
+                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleEditClick(folder);
+                              setContextMenuVisible((prev) => ({
+                                ...prev,
+                                [folder.folder_id]: false,
+                              }));
+                            }}
+                          >
+                            <Pencil className="inline w-4 h-4 mr-2" /> Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleArchiveClick(folder);
+                              setContextMenuVisible((prev) => ({
+                                ...prev,
+                                [folder.folder_id]: false,
+                              }));
+                            }}
+                          >
+                            <Archive className="inline w-4 h-4 mr-2" /> Archive
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleViewDetails(folder);
+                              setContextMenuVisible((prev) => ({
+                                ...prev,
+                                [folder.folder_id]: false,
+                              }));
+                            }}
+                          >
+                            <Eye className="inline w-4 h-4 mr-2" /> View Details
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="text-center text-gray-500 py-8">
+                    No folders found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-32 w-full rounded-lg" />
+            ))
+          ) : sortedFolders.length > 0 ? (
+            sortedFolders.map((folder) => (
+              <div
+                key={folder.folder_id}
+                className="relative bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-500 cursor-pointer transition-all duration-200 aspect-w-1 aspect-h-1"
+                onClick={(e) => {
+                  if (!e.defaultPrevented) {
+                    handleFolderClick(folder);
+                  }
+                }}
               >
-                <div className="flex items-center gap-x-3 w-full">
+                <div className="flex items-center justify-between gap-x-3 w-full text-lg">
                   <FolderClosed
                     style={{ width: "40px", height: "40px" }}
                     className="text-gray-600"
                     fill="#4b5563"
                   />
-                  <span className="font-poppins font-medium text-lg text-gray-900 text-left overflow-hidden whitespace-nowrap text-ellipsis">
+                  <span className="flex-1 font-poppins font-medium text-gray-900 text-left overflow-hidden whitespace-nowrap text-ellipsis pr-4">
                     {folder.title}
                   </span>
-                  <Badge 
-                    variant="outline" 
-                    className={`absolute top-2 right-9 mt-1 rounded-full text-xs font-poppins ${getStatusBadgeClass(folder.status).class}`}
+                  <Badge
+                    variant="outline"
+                    className={`rounded-full mr-5 text-xs font-poppins ${
+                      getStatusBadgeClass(folder.status).class
+                    }`}
                   >
                     {getStatusBadgeClass(folder.status).label}
                   </Badge>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {folder.categories.length > 0 ? (
+                <div className="flex flex-wrap gap-2 mt-2 overflow-hidden">
+                  {folder.categories && folder.categories.length > 0 ? (
                     folder.categories.slice(0, 3).map((category) => (
-                      <Badge key={category.category_id} variant="outline" className="bg-gray-200 text-black">
+                      <Badge
+                        key={category.category_id}
+                        variant="outline"
+                        className="bg-gray-200 text-black"
+                      >
                         {category.title}
                       </Badge>
                     ))
@@ -634,68 +927,105 @@ export default function Eblotter() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger>
-                          <Badge variant="outline" className="bg-gray-200 cursor-pointer">
+                          <Badge
+                            variant="outline"
+                            className="bg-gray-200 cursor-pointer"
+                          >
                             +{folder.categories.length - 3}
                           </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
-                          {folder.categories.slice(3).map(cat => cat.title).join(", ")}
+                          {folder.categories
+                            .slice(3)
+                            .map((cat) => cat.title)
+                            .join(", ")}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   )}
                 </div>
-              </Button>
 
-              {/* Kebab button with standing icon */}
-              <button
-                className="absolute top-2 right-2 p-2 rounded-full hover:bg-gray-200"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent click from triggering the folder button
-                  setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: !prev[folder.folder_id] }));
-                }}
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
-
-              {/* Context menu for the kebab button */}
-              {contextMenuVisible[folder.folder_id] && (
-                <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-                  <button
-                    className="block w-full text-left p-2 hover:bg-gray-100"
-                    onClick={() => {
-                      handleEditClick(folder);
-                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
+                {/* Kebab menu button */}
+                <div className="absolute top-4 right-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setContextMenuVisible((prev) => ({
+                        ...prev,
+                        [folder.folder_id]: !prev[folder.folder_id],
+                      }));
                     }}
                   >
-                    <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                  </button>
-                  <button
-                    className="block w-full text-left p-2 hover:bg-gray-100"
-                    onClick={() => {
-                      handleArchiveClick(folder);
-                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
-                    }}
-                  >
-                    <Archive className="inline w-4 h-4 mr-2" /> Archive
-                  </button>
-                  <button
-                    className="block w-full text-left p-2 hover:bg-gray-100"
-                    onClick={() => {
-                      handleViewDetails(folder);
-                      setContextMenuVisible(prev => ({ ...prev, [folder.folder_id]: false }));
-                    }}
-                  >
-                    <Eye className="inline w-4 h-4 mr-2" /> View Details
-                  </button>
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
                 </div>
-              )}
+
+                {/* Context menu */}
+                {contextMenuVisible[folder.folder_id] && (
+                  <div
+                    ref={contextMenuRef}
+                    className="absolute top-10 right-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10 context-menu"
+                  >
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleEditClick(folder);
+                        setContextMenuVisible((prev) => ({
+                          ...prev,
+                          [folder.folder_id]: false,
+                        }));
+                      }}
+                    >
+                      <Pencil className="inline w-4 h-4 mr-2" /> Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleArchiveClick(folder);
+                        setContextMenuVisible((prev) => ({
+                          ...prev,
+                          [folder.folder_id]: false,
+                        }));
+                      }}
+                    >
+                      <Archive className="inline w-4 h-4 mr-2" /> Archive
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleViewDetails(folder);
+                        setContextMenuVisible((prev) => ({
+                          ...prev,
+                          [folder.folder_id]: false,
+                        }));
+                      }}
+                    >
+                      <Eye className="inline w-4 h-4 mr-2" /> View Details
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-gray-500 py-8">
+              No folders found
             </div>
-          ))
-        ) : (
-          <div>No folders found</div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Add Folder Dialog */}
       <Dialog open={isAddingFolder} onOpenChange={setIsAddingFolder}>
@@ -712,7 +1042,6 @@ export default function Eblotter() {
                 <Label htmlFor="title">Folder Title</Label>
                 <Input
                   id="title"
-                  name="title"
                   placeholder="Enter folder title"
                   value={newFolderTitle}
                   onChange={(e) => setNewFolderTitle(e.target.value)}
@@ -784,7 +1113,6 @@ export default function Eblotter() {
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select 
-                  name="status"
                   value={newFolderStatus}
                   onValueChange={setNewFolderStatus}
                 >
@@ -792,7 +1120,7 @@ export default function Eblotter() {
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {['pending', 'resolved', 'dismissed', 'under investigation'].map((status) => (
+                    {statusOptions.map((status) => (
                       <SelectItem 
                         key={status} 
                         value={status}
@@ -871,13 +1199,13 @@ export default function Eblotter() {
 
       {/* Edit Folder Dialog */}
       <Dialog open={isEditingFolder} onOpenChange={setIsEditingFolder}>
-          <DialogContent>
-            <DialogHeader>
+        <DialogContent>
+          <DialogHeader>
             <DialogTitle>Edit Folder</DialogTitle>
             <DialogDescription>
-              Update the folder details.
+              Make changes to your folder here.
             </DialogDescription>
-            </DialogHeader>
+          </DialogHeader>
           <form onSubmit={handleEditFolder}>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -892,37 +1220,30 @@ export default function Eblotter() {
               </div>
               <div className="space-y-2">
                 <Label>Categories</Label>
-                <div className="flex gap-2">
-                  <Select 
-                    onValueChange={(value) => {
-                      if (value === "new") {
-                        setIsAddingCategory(true);
-                      } else if (!editSelectedCategories.includes(value)) {
-                        setEditSelectedCategories([...editSelectedCategories, value]);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="new" className="text-blue-600">
-                        <div className="flex items-center gap-2">
-                          <Plus size={16} />
-                          Create new category
-                        </div>
+                <Select 
+                  key={categorySelectKey}
+                  onValueChange={(value) => {
+                    if (!editSelectedCategories.includes(value)) {
+                      setEditSelectedCategories([...editSelectedCategories, value]);
+                      // Reset the select component
+                      setCategorySelectKey(prev => prev + 1);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCategories.map((category) => (
+                      <SelectItem 
+                        key={category.category_id} 
+                        value={category.category_id.toString()}
+                      >
+                        {category.title}
                       </SelectItem>
-                      {availableCategories.map((category) => (
-                        <SelectItem 
-                          key={category.category_id} 
-                          value={category.category_id.toString()}
-                        >
-                          {category.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {editSelectedCategories.map((categoryId) => {
                     const category = availableCategories.find(
@@ -959,7 +1280,7 @@ export default function Eblotter() {
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {['pending', 'resolved', 'dismissed', 'under investigation'].map((status) => (
+                    {statusOptions.map((status) => (
                       <SelectItem 
                         key={status} 
                         value={status}
@@ -994,7 +1315,7 @@ export default function Eblotter() {
       </Dialog>
 
       {/* Archive Confirmation Dialog */}
-      <Dialog open={dialogContent?.includes("archive")} onOpenChange={() => setDialogContent(null)}>
+      {/* <Dialog open={dialogContent?.includes("archive")} onOpenChange={() => setDialogContent(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Archive Folder</DialogTitle>
@@ -1023,10 +1344,10 @@ export default function Eblotter() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </Dialog> */}
 
       {/* View Details Dialog */}
-      <Dialog open={dialogContent === "Folder Details"} onOpenChange={() => setDialogContent(null)}>
+      {/* <Dialog open={dialogContent === "Folder Details"} onOpenChange={() => setDialogContent(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Folder Details</DialogTitle>
@@ -1096,8 +1417,159 @@ export default function Eblotter() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
+{dialogContent && (
+        <Dialog
+          open={dialogContent !== null}
+          onOpenChange={() => {
+            setDialogContent(null);
+            setSelectedFolder(null);
+          }}
+        >
+          <DialogContent className="p-6 font-poppins">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-semibold text-gray-900">
+                {dialogContent}
+              </DialogTitle>
+            </DialogHeader>
+
+            {dialogContent === "Folder Details" && selectedFolder ? (
+              <div className="space-y-6">
+                {/* Folder Info Section */}
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                    Folder Information
+                  </h4>
+                  <div className="space-y-2">
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-600">
+                        Folder Title
+                      </h5>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {selectedFolder.title}
+                      </p>
+                    </div>
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-600">
+                        Status
+                      </h5>
+                      <Badge
+                        variant="outline"
+                        className={`${
+                          getStatusBadgeClass(selectedFolder.status).class
+                        } py-1 px-2`}
+                      >
+                        {selectedFolder.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Categories Section */}
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                    Categories
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedFolder.categories.map((category) => (
+                      <Badge
+                        key={category.category_id}
+                        variant="outline"
+                        className="bg-gray-200 py-1 px-3"
+                      >
+                        {category.title}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Folder Activity Section */}
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                    Folder Activity
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <ClockIcon className="h-4 w-4 text-gray-600" />
+                      <p className="text-sm text-gray-600">
+                        Created:{" "}
+                        <span className="text-gray-900">
+                          {new Date(selectedFolder.created_at).toLocaleString()}
+                        </span>{" "}
+                        by{" "}
+                        <span className="font-semibold text-gray-900">
+                          {selectedFolder.created_by}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RefreshCwIcon className="h-4 w-4 text-gray-600" />
+                      <p className="text-sm text-gray-600">
+                        Last updated:{" "}
+                        {selectedFolder.updated_at ? (
+                          <span className="text-gray-900">
+                            {new Date(
+                              selectedFolder.updated_at
+                            ).toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="italic text-gray-600">Never</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer with Close Button
+                <DialogFooter className="flex justify-end mt-6">
+                  <Button
+                    className="bg-blue-600 text-white hover:bg-blue-700"
+                    onClick={() => setDialogContent(null)}
+                  >
+                    Close
+                  </Button>
+                </DialogFooter> */}
+              </div>
+            ) : dialogContent ===
+              "Are you sure you want to archive this folder?" ? (
+              <div className="space-y-6">
+                <DialogDescription className="text-sm text-gray-700">
+                  This action will archive the folder and remove it from the
+                  active folders list. You can access it later in the Archives
+                  section.
+                </DialogDescription>
+                <div className="flex justify-end gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setDialogContent(null);
+                      setSelectedFolder(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    onClick={async () => {
+                      if (selectedFolder) {
+                        await handleArchiveFolder();
+                      } else {
+                        toast.error("No folder selected for archiving");
+                      }
+                    }}
+                  >
+                    Yes, Archive
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </DialogContent>
+        </Dialog>
+      )}
+      
       {/* Permission Dialog */}
       <PermissionDialog 
         isOpen={showPermissionDialog}

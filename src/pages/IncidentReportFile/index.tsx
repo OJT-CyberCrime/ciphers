@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/sheet";
 import PermissionDialog from "@/components/PermissionDialog";
 import { Switch } from "@/components/ui/switch";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 interface FileRecord {
   file_id: number;
@@ -171,7 +172,11 @@ const getStatusBadgeClass = (status: string) => {
   }
 };
 
-const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
+const CollagePreview = ({
+  collageState,
+  onLayoutChange,
+  onPhotoRemove,
+}: {
   collageState: CollageState;
   onLayoutChange: (layout: string) => void;
   onPhotoRemove: (index: number) => void;
@@ -191,16 +196,20 @@ const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
           </SelectContent>
         </Select>
       </div>
-      <div className={`grid gap-2 ${
-        collageState.layout === '1x1' ? 'grid-cols-1' :
-        collageState.layout === '2x2' ? 'grid-cols-2' :
-        'grid-cols-3'
-      }`}>
+      <div
+        className={`grid gap-2 ${
+          collageState.layout === "1x1"
+            ? "grid-cols-1"
+            : collageState.layout === "2x2"
+            ? "grid-cols-2"
+            : "grid-cols-3"
+        }`}
+      >
         {collageState.previewUrls.map((url, index) => (
           <div key={index} className="relative group">
-            <img 
-              src={url} 
-              alt={`Collage photo ${index + 1}`} 
+            <img
+              src={url}
+              alt={`Collage photo ${index + 1}`}
               className="w-full h-40 object-cover rounded-md"
             />
             <button
@@ -243,7 +252,7 @@ export default function IncidentReport() {
   );
   const navigate = useNavigate();
   const location = useLocation();
-  const previousPage = "/incident-report"; 
+  const previousPage = "/incident-report";
   const previousPageName = "Incident Report"; // Update to correct page name
   const [sortCriteria, setSortCriteria] = useState("created_at");
   const [reportingPerson, setReportingPerson] =
@@ -281,14 +290,16 @@ export default function IncidentReport() {
   const [collageState, setCollageState] = useState<CollageState>({
     files: [],
     previewUrls: [],
-    layout: '2x2' // default layout
+    layout: "2x2", // default layout
   });
   const [isCollageMode, setIsCollageMode] = useState(false);
-  
-  const userRole = JSON.parse(Cookies.get('user_data') || '{}').role;
+
+  const userRole = JSON.parse(Cookies.get("user_data") || "{}").role;
 
   const canEditOrArchive = () => {
-    return userRole === 'admin' || userRole === 'superadmin' || userRole === 'wcpd';
+    return (
+      userRole === "admin" || userRole === "superadmin" || userRole === "wcpd"
+    );
   };
 
   const handleEditClick = async (file: FileRecord) => {
@@ -301,26 +312,26 @@ export default function IncidentReport() {
       }
 
       // Server-side permission validation
-      const editUserData = JSON.parse(Cookies.get('user_data') || '{}');
+      const editUserData = JSON.parse(Cookies.get("user_data") || "{}");
       const { data: editUserDetails, error: editUserError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('email', editUserData.email)
+        .from("users")
+        .select("role")
+        .eq("email", editUserData.email)
         .single();
 
       if (editUserError) throw editUserError;
-      if (!editUserDetails) throw new Error('User not found');
+      if (!editUserDetails) throw new Error("User not found");
 
-      if (!['admin', 'superadmin', 'wcpd'].includes(editUserDetails.role)) {
-        toast.error('You do not have permission to perform this action');
+      if (!["admin", "superadmin", "wcpd"].includes(editUserDetails.role)) {
+        toast.error("You do not have permission to perform this action");
         return;
       }
 
       setSelectedFile(file);
       setShowFileDialog("edit");
     } catch (error: any) {
-      console.error('Error checking permissions:', error);
-      toast.error('Failed to verify permissions');
+      console.error("Error checking permissions:", error);
+      toast.error("Failed to verify permissions");
     }
   };
 
@@ -334,26 +345,27 @@ export default function IncidentReport() {
       }
 
       // Server-side permission validation
-      const archiveUserData = JSON.parse(Cookies.get('user_data') || '{}');
-      const { data: archiveUserDetails, error: archiveUserError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('email', archiveUserData.email)
-        .single();
+      const archiveUserData = JSON.parse(Cookies.get("user_data") || "{}");
+      const { data: archiveUserDetails, error: archiveUserError } =
+        await supabase
+          .from("users")
+          .select("role")
+          .eq("email", archiveUserData.email)
+          .single();
 
       if (archiveUserError) throw archiveUserError;
-      if (!archiveUserDetails) throw new Error('User not found');
+      if (!archiveUserDetails) throw new Error("User not found");
 
-      if (!['admin', 'superadmin', 'wcpd'].includes(archiveUserDetails.role)) {
-        toast.error('You do not have permission to perform this action');
+      if (!["admin", "superadmin", "wcpd"].includes(archiveUserDetails.role)) {
+        toast.error("You do not have permission to perform this action");
         return;
       }
 
       setSelectedFile(file);
       setShowFileDialog("archive");
     } catch (error: any) {
-      console.error('Error checking permissions:', error);
-      toast.error('Failed to verify permissions');
+      console.error("Error checking permissions:", error);
+      toast.error("Failed to verify permissions");
     }
   };
 
@@ -397,31 +409,31 @@ export default function IncidentReport() {
     if (!id || !fileUpload?.[0]) return;
 
     try {
-      const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+      const userData = JSON.parse(Cookies.get("user_data") || "{}");
+
       // Get user data and validate permissions
       const { data: userData2, error: userError } = await supabase
-        .from('users')
-        .select('user_id, role')
-        .eq('email', userData.email)
+        .from("users")
+        .select("user_id, role")
+        .eq("email", userData.email)
         .single();
 
       if (userError) throw userError;
-      if (!userData2) throw new Error('User not found');
+      if (!userData2) throw new Error("User not found");
 
       // Server-side permission check
-      if (!['admin', 'superadmin', 'wcpd'].includes(userData2.role)) {
-        toast.error('You do not have permission to perform this action');
+      if (!["admin", "superadmin", "wcpd"].includes(userData2.role)) {
+        toast.error("You do not have permission to perform this action");
         return;
       }
 
-      let publicUrl = '';
-      let filePath = '';
+      let publicUrl = "";
+      let filePath = "";
       let collagePhotos: string[] = [];
 
       // Upload file to storage
       const file = fileUpload[0];
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const fileName = `${Math.random()}.${fileExt}`;
       filePath = `folder_${id}/${fileName}`;
 
@@ -441,26 +453,26 @@ export default function IncidentReport() {
 
           if (uploadError) throw uploadError;
 
-          const { data: { publicUrl: photoUrl } } = supabase.storage
-            .from("files")
-            .getPublicUrl(photoPath);
+          const {
+            data: { publicUrl: photoUrl },
+          } = supabase.storage.from("files").getPublicUrl(photoPath);
 
           collagePhotos.push(photoUrl);
         }
 
         // Create a collage preview image using HTML Canvas
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const [cols, rows] = collageState.layout.split('x').map(Number);
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        const [cols, rows] = collageState.layout.split("x").map(Number);
         const photoWidth = 800 / cols;
         const photoHeight = 800 / rows;
-        
+
         canvas.width = 800;
         canvas.height = 800;
 
         // Load all images and draw them on the canvas
         const images = await Promise.all(
-          collageState.previewUrls.map(url => {
+          collageState.previewUrls.map((url) => {
             return new Promise<HTMLImageElement>((resolve) => {
               const img = new Image();
               img.crossOrigin = "anonymous";
@@ -483,7 +495,9 @@ export default function IncidentReport() {
         });
 
         // Convert canvas to blob and upload
-        const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!)));
+        const blob = await new Promise<Blob>((resolve) =>
+          canvas.toBlob((blob) => resolve(blob!))
+        );
         const collageFileName = `collage_${Math.random()}.png`;
         filePath = `folder_${id}/${collageFileName}`;
 
@@ -496,9 +510,9 @@ export default function IncidentReport() {
 
         if (collageUploadError) throw collageUploadError;
 
-        const { data: { publicUrl: collagePublicUrl } } = supabase.storage
-          .from("files")
-          .getPublicUrl(filePath);
+        const {
+          data: { publicUrl: collagePublicUrl },
+        } = supabase.storage.from("files").getPublicUrl(filePath);
 
         publicUrl = collagePublicUrl;
       } else {
@@ -512,9 +526,9 @@ export default function IncidentReport() {
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl: singleFileUrl } } = supabase.storage
-          .from("files")
-          .getPublicUrl(filePath);
+        const {
+          data: { publicUrl: singleFileUrl },
+        } = supabase.storage.from("files").getPublicUrl(filePath);
 
         publicUrl = singleFileUrl;
       }
@@ -546,7 +560,7 @@ export default function IncidentReport() {
 
       // Only insert reporting person details if at least one field is filled
       const hasReportingPersonData = Object.values(reportingPerson).some(
-        value => value !== "" && value !== 0
+        (value) => value !== "" && value !== 0
       );
 
       if (hasReportingPersonData) {
@@ -558,10 +572,16 @@ export default function IncidentReport() {
           gender: reportingPerson.gender || null,
           complete_address: reportingPerson.complete_address || null,
           contact_number: reportingPerson.contact_number || null,
-          birthday: reportingPerson.birthday ? new Date(reportingPerson.birthday).toISOString() : null,
-          date_reported: reportingPerson.date_reported ? new Date(reportingPerson.date_reported).toISOString() : null,
+          birthday: reportingPerson.birthday
+            ? new Date(reportingPerson.birthday).toISOString()
+            : null,
+          date_reported: reportingPerson.date_reported
+            ? new Date(reportingPerson.date_reported).toISOString()
+            : null,
           time_reported: reportingPerson.time_reported || null,
-          date_of_incident: reportingPerson.date_of_incident ? new Date(reportingPerson.date_of_incident).toISOString() : null,
+          date_of_incident: reportingPerson.date_of_incident
+            ? new Date(reportingPerson.date_of_incident).toISOString()
+            : null,
           time_of_incident: reportingPerson.time_of_incident || null,
           place_of_incident: reportingPerson.place_of_incident || null,
         };
@@ -588,7 +608,9 @@ export default function IncidentReport() {
           file_id: fileData.file_id,
           full_name: suspect.full_name || null,
           age: suspect.age || null,
-          birthday: suspect.birthday ? new Date(suspect.birthday).toISOString() : null,
+          birthday: suspect.birthday
+            ? new Date(suspect.birthday).toISOString()
+            : null,
           gender: suspect.gender || null,
           complete_address: suspect.complete_address || null,
           contact_number: suspect.contact_number || null,
@@ -665,12 +687,11 @@ export default function IncidentReport() {
       setCollageState({
         files: [],
         previewUrls: [],
-        layout: '2x2'
+        layout: "2x2",
       });
-
     } catch (error: any) {
-      console.error('Error adding file:', error);
-      toast.error(error.message || 'Failed to add file');
+      console.error("Error adding file:", error);
+      toast.error(error.message || "Failed to add file");
     }
   };
 
@@ -906,138 +927,156 @@ export default function IncidentReport() {
           </div>
         ) : isListView ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-gray-50 font-poppins">
-              <thead>
-                <tr>
-                  <th className="font-semibold text-md px-4 py-2 border-b text-left">
-                    File Name
-                  </th>
-                  <th className="font-semibold text-md px-4 py-2 border-b text-left">
-                    Added By
-                  </th>
-                  <th className="font-semibold text-md px-4 py-2 border-b text-left">
-                    Date Added
-                  </th>
-                  <th className="font-semibold text-md px-4 py-2 border-b text-left">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {files.map((file) => (
-                  <tr
-                    key={file.file_id}
-                    className="hover:bg-gray-100 cursor-pointer transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent row click
-                      setSelectedFile(file);
-                      setPreviewStates((prev) => ({
-                        ...prev,
-                        [file.file_id]: true,
-                      }));
-                    }}
-                  >
-                    <td className="px-4 py-2 border-b flex items-center gap-2">
-                      {getFileIcon(file.file_path)}
-                        {file.title}
-                    </td>
-                    <td className="px-4 py-2 border-b">{file.created_by}</td>
-                    <td className="px-4 py-2 border-b">
-                      {new Date(file.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-2 border-b flex space-x-2">
-                      <button
-                        className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent row click
-                          setShowOptions((prev) => ({
-                            ...prev,
-                            [file.file_id]: !prev[file.file_id],
-                          }));
-                        }}
-                      >
-                        <MoreVertical size={16} color="black" />
-                      </button>
-                      {showOptions[file.file_id] && (
-                        <div
-                          ref={contextMenuRef}
-                          className="absolute right-2 top-12 bg-white border border-gray-200 rounded-lg shadow-lg z-10 context-menu font-poppins text-sm w-48">
-                          <Button
-                            variant="ghost"
-                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditClick(file);
-                              setShowOptions((prev) => ({
-                                ...prev,
-                                [file.file_id]: false,
-                              }));
-                            }}
-                          >
-                            <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleArchiveClick(file);
-                              setShowOptions((prev) => ({
-                                ...prev,
-                                [file.file_id]: false,
-                              }));
-                            }}
-                          >
-                            <Archive className="inline w-4 h-4 mr-2" /> Archive
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedFile(file);
-                              setShowFileDialog("details");
-                              setShowOptions((prev) => ({
-                                ...prev,
-                                [file.file_id]: false,
-                              }));
-                            }}
-                          >
-                            <Eye className="inline w-4 h-4 mr-2" /> View Details
-                          </Button>
-                        </div>
-                      )}
-                    </td>
+            {files.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 font-poppins">
+                <DotLottieReact
+                  src="/assets/NoFiles.lottie"
+                  loop
+                  autoplay
+                  className="w-6/12"
+                />
+                No files found in this folder
+              </div>
+            ) : (
+              <table className="min-w-full bg-gray-50 font-poppins">
+                <thead>
+                  <tr>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                      File Name
+                    </th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                      Added By
+                    </th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                      Date Added
+                    </th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <FileOperations
-              file={selectedFile || files[0]}
-              showPreview={previewStates[selectedFile?.file_id || 0] || false}
-              setShowPreview={(show) => {
-                setPreviewStates((prev) => ({
-                  ...prev,
-                  [selectedFile?.file_id || 0]: show,
-                }));
-              }}
-              showFileDialog={showFileDialog}
-              setShowFileDialog={setShowFileDialog}
-              selectedFile={selectedFile}
-              setSelectedFile={setSelectedFile}
-              onFileUpdate={() => {
-                // Remove the file from the UI if it was archived
-                if (showFileDialog === "archive") {
-                  setFiles(
-                    files.filter((f) => f.file_id !== selectedFile?.file_id)
-                  );
-                } else {
-                  // Refresh the files list
-                  window.location.reload();
-                }
-              }}
-              isListView={isListView} // Pass the isListView prop
-            />
+                </thead>
+                <tbody>
+                  {files.map((file) => (
+                    <tr
+                      key={file.file_id}
+                      className="hover:bg-gray-100 cursor-pointer transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent row click
+                        setSelectedFile(file);
+                        setPreviewStates((prev) => ({
+                          ...prev,
+                          [file.file_id]: true,
+                        }));
+                      }}
+                    >
+                      <td className="px-4 py-2 border-b flex items-center gap-2">
+                        {getFileIcon(file.file_path)}
+                        {file.title}
+                      </td>
+                      <td className="px-4 py-2 border-b">{file.created_by}</td>
+                      <td className="px-4 py-2 border-b">
+                        {new Date(file.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-2 border-b flex space-x-2">
+                        <button
+                          className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent row click
+                            setShowOptions((prev) => ({
+                              ...prev,
+                              [file.file_id]: !prev[file.file_id],
+                            }));
+                          }}
+                        >
+                          <MoreVertical size={16} color="black" />
+                        </button>
+                        {showOptions[file.file_id] && (
+                          <div
+                            ref={contextMenuRef}
+                            className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 context-menu font-poppins"
+                          >
+                            <button
+                              className="block w-full text-left p-2 hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // setSelectedFile(file);
+                                // setShowFileDialog("edit");
+                                handleEditClick(file);
+                                setShowOptions((prev) => ({
+                                  ...prev,
+                                  [file.file_id]: false,
+                                }));
+                              }}
+                            >
+                              <Pencil className="inline w-4 h-4 mr-2" /> Edit
+                            </button>
+                            <button
+                              className="block w-full text-left p-2 hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // setSelectedFile(file);
+                                // setShowFileDialog("archive");
+                                handleArchiveClick(file);
+                                setShowOptions((prev) => ({
+                                  ...prev,
+                                  [file.file_id]: false,
+                                }));
+                              }}
+                            >
+                              <Archive className="inline w-4 h-4 mr-2" />{" "}
+                              Archive
+                            </button>
+                            <button
+                              className="block w-full text-left p-2 hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedFile(file);
+                                setShowFileDialog("details");
+                                setShowOptions((prev) => ({
+                                  ...prev,
+                                  [file.file_id]: false,
+                                }));
+                              }}
+                            >
+                              <Eye className="inline w-4 h-4 mr-2" /> View
+                              Details
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {selectedFile && (
+              <FileOperations
+                file={selectedFile}
+                showPreview={previewStates[selectedFile.file_id] || false}
+                setShowPreview={(show) => {
+                  setPreviewStates((prev) => ({
+                    ...prev,
+                    [selectedFile.file_id]: show,
+                  }));
+                }}
+                showFileDialog={showFileDialog}
+                setShowFileDialog={setShowFileDialog}
+                selectedFile={selectedFile}
+                setSelectedFile={setSelectedFile}
+                onFileUpdate={() => {
+                  // Remove the file from the UI if it was archived
+                  if (showFileDialog === "archive") {
+                    setFiles(
+                      files.filter((f) => f.file_id !== selectedFile?.file_id)
+                    );
+                  } else {
+                    // Refresh the files list
+                    window.location.reload();
+                  }
+                }}
+                isListView={isListView} // Pass the isListView prop
+              />
+            )}
           </div>
         ) : filteredFiles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 font-poppins">
@@ -1116,7 +1155,7 @@ export default function IncidentReport() {
                         handleEditClick(file);
                         setShowOptions((prev) => ({
                           ...prev,
-                          [file.file_id]: false,  
+                          [file.file_id]: false,
                         }));
                       }}
                     >
@@ -1157,8 +1196,13 @@ export default function IncidentReport() {
             ))}
           </div>
         ) : (
-          <div className="text-center text-gray-500 py-8">
-            <File className="mx-auto mb-4 text-gray-400" size={48} />
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8">
+            <DotLottieReact
+              src="/assets/NoFiles.lottie"
+              loop
+              autoplay
+              className="w-6/12"
+            />
             No files found in this folder
           </div>
         )}
@@ -1249,15 +1293,20 @@ export default function IncidentReport() {
                       onChange={(e) => {
                         const files = e.target.files;
                         if (!files) return;
-                        
+
                         if (isCollageMode) {
                           const newFiles = Array.from(files);
-                          const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
-                          
-                          setCollageState(prev => ({
+                          const newPreviewUrls = newFiles.map((file) =>
+                            URL.createObjectURL(file)
+                          );
+
+                          setCollageState((prev) => ({
                             ...prev,
                             files: [...prev.files, ...newFiles],
-                            previewUrls: [...prev.previewUrls, ...newPreviewUrls]
+                            previewUrls: [
+                              ...prev.previewUrls,
+                              ...newPreviewUrls,
+                            ],
                           }));
                         } else {
                           setFileUpload(files);
@@ -1271,16 +1320,20 @@ export default function IncidentReport() {
                         onCheckedChange={setIsCollageMode}
                       />
                     </div>
-                    
+
                     {isCollageMode && (
                       <CollagePreview
                         collageState={collageState}
-                        onLayoutChange={(layout) => setCollageState(prev => ({ ...prev, layout }))}
+                        onLayoutChange={(layout) =>
+                          setCollageState((prev) => ({ ...prev, layout }))
+                        }
                         onPhotoRemove={(index) => {
-                          setCollageState(prev => ({
+                          setCollageState((prev) => ({
                             ...prev,
                             files: prev.files.filter((_, i) => i !== index),
-                            previewUrls: prev.previewUrls.filter((_, i) => i !== index)
+                            previewUrls: prev.previewUrls.filter(
+                              (_, i) => i !== index
+                            ),
                           }));
                         }}
                       />
@@ -1442,7 +1495,9 @@ export default function IncidentReport() {
                       />
                     </div>
                     <div className="col-span-2">
-                      <Label htmlFor="place_of_incident">Place of Incident</Label>
+                      <Label htmlFor="place_of_incident">
+                        Place of Incident
+                      </Label>
                       <Textarea
                         id="place_of_incident"
                         value={reportingPerson.place_of_incident}
@@ -1610,7 +1665,9 @@ export default function IncidentReport() {
               type="button"
               onClick={() => {
                 if (formRef.current) {
-                  formRef.current.dispatchEvent(new Event("submit", { bubbles: true }));
+                  formRef.current.dispatchEvent(
+                    new Event("submit", { bubbles: true })
+                  );
                 }
               }}
               className="bg-blue-900 hover:bg-blue-800"
@@ -1622,7 +1679,7 @@ export default function IncidentReport() {
       </Sheet>
 
       {/* Add the PermissionDialog */}
-      <PermissionDialog 
+      <PermissionDialog
         isOpen={showPermissionDialog}
         onClose={() => setShowPermissionDialog(false)}
         action={permissionAction}
