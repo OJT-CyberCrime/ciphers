@@ -900,6 +900,41 @@ export default function FileOperations({
 
       toast.success("File updated successfully");
       onFileUpdate(); // Refresh the files list
+      
+      // Reset all states after successful save
+      setReportingPerson({
+        full_name: "",
+        age: 0,
+        birthday: "",
+        gender: "Male",
+        complete_address: "",
+        contact_number: "",
+        date_reported: "",
+        time_reported: "",
+        date_of_incident: "",
+        time_of_incident: "",
+        place_of_incident: "",
+      });
+      
+      setSuspects([{
+        full_name: "",
+        age: 0,
+        birthday: "",
+        gender: "Male",
+        complete_address: "",
+        contact_number: "",
+      }]);
+      
+      setIsCollageMode(false);
+      setCollageState({
+        files: [],
+        previewUrls: [],
+        layout: '2x2'
+      });
+      
+      if (formRef.current) {
+        formRef.current.reset();
+      }
     } catch (error: any) {
       console.error("Error updating file:", error);
       toast.error(error.message || "Failed to update file");
