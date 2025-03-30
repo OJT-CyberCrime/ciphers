@@ -136,7 +136,25 @@ const getFileIcon = (filePath: string) => {
 // Add this helper function at the top level
 const formatDateForInput = (dateString: string) => {
   if (!dateString) return "";
-  return new Date(dateString).toISOString().split("T")[0];
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return ""; // Return empty string for invalid dates
+    return date.toISOString().split("T")[0];
+  } catch (error) {
+    return ""; // Return empty string if date parsing fails
+  }
+};
+
+// Add a new helper function for converting dates to ISO format
+const toISOString = (dateString: string | null) => {
+  if (!dateString) return null;
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return null; // Return null for invalid dates
+    return date.toISOString();
+  } catch (error) {
+    return null; // Return null if date parsing fails
+  }
 };
 
 export default function FileOperations({
@@ -167,9 +185,27 @@ export default function FileOperations({
   const [error, setError] = useState<string | undefined>();
 
   // Add state for reporting person and suspects
-  const [reportingPerson, setReportingPerson] =
-    useState<ReportingPersonDetails | null>(null);
-  const [suspects, setSuspects] = useState<Suspect[]>([]);
+  const [reportingPerson, setReportingPerson] = useState<ReportingPersonDetails>({
+    full_name: "",
+    age: 0,
+    birthday: "",
+    gender: "Male",
+    complete_address: "",
+    contact_number: "",
+    date_reported: "",
+    time_reported: "",
+    date_of_incident: "",
+    time_of_incident: "",
+    place_of_incident: "",
+  });
+  const [suspects, setSuspects] = useState<Suspect[]>([{
+    full_name: "",
+    age: 0,
+    birthday: "",
+    gender: "Male",
+    complete_address: "",
+    contact_number: "",
+  }]);
 
   // Add state for collage
   const [isCollageMode, setIsCollageMode] = useState(false);
@@ -185,15 +221,39 @@ export default function FileOperations({
       if (!showFileDialog || !currentFile) return;
 
       try {
+        // Reset states first to avoid showing stale data
+        setReportingPerson({
+          full_name: "",
+          age: 0,
+          birthday: "",
+          gender: "Male",
+          complete_address: "",
+          contact_number: "",
+          date_reported: "",
+          time_reported: "",
+          date_of_incident: "",
+          time_of_incident: "",
+          place_of_incident: "",
+        });
+        setSuspects([{
+          full_name: "",
+          age: 0,
+          birthday: "",
+          gender: "Male",
+          complete_address: "",
+          contact_number: "",
+        }]);
+        
         // Fetch reporting person details
         const { data: reportingData, error: reportingError } = await supabase
           .from("reporting_person_details")
           .select("*")
           .eq("file_id", currentFile.file_id)
-          .single();
+          .maybeSingle();
 
-        if (reportingError) throw reportingError;
-        setReportingPerson(reportingData);
+        if (reportingData) {
+          setReportingPerson(reportingData);
+        }
 
         // Fetch suspects
         const { data: suspectsData, error: suspectsError } = await supabase
@@ -201,11 +261,11 @@ export default function FileOperations({
           .select("*")
           .eq("file_id", currentFile.file_id);
 
-        if (suspectsError) throw suspectsError;
-        setSuspects(suspectsData || []);
+        if (!suspectsError && suspectsData && suspectsData.length > 0) {
+          setSuspects(suspectsData);
+        }
       } catch (error) {
         console.error("Error fetching file details:", error);
-        toast.error("Failed to load file details");
       }
     };
 
@@ -537,6 +597,8 @@ export default function FileOperations({
   // Function to handle file editing
   const handleEditFile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setShowFileDialog(null);
+    setIsLoading(true);
     try {
       const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
@@ -590,7 +652,7 @@ export default function FileOperations({
         }
 
         // Keep existing photos that weren't removed
-        if (fileToEdit.collage_photos) {
+        if (fileToEdit.collage_photos && Array.isArray(fileToEdit.collage_photos)) {
           const existingUrls = fileToEdit.collage_photos.filter(url => 
             collageState.previewUrls.includes(url)
           );
@@ -712,13 +774,13 @@ export default function FileOperations({
         const cleanedReportingPerson = {
           full_name: reportingPerson.full_name || null,
           age: reportingPerson.age || null,
-          birthday: reportingPerson.birthday ? new Date(reportingPerson.birthday).toISOString() : null,
+          birthday: toISOString(reportingPerson.birthday),
           gender: reportingPerson.gender || null,
           complete_address: reportingPerson.complete_address || null,
           contact_number: reportingPerson.contact_number || null,
-          date_reported: reportingPerson.date_reported ? new Date(reportingPerson.date_reported).toISOString() : null,
+          date_reported: toISOString(reportingPerson.date_reported),
           time_reported: reportingPerson.time_reported || null,
-          date_of_incident: reportingPerson.date_of_incident ? new Date(reportingPerson.date_of_incident).toISOString() : null,
+          date_of_incident: toISOString(reportingPerson.date_of_incident),
           time_of_incident: reportingPerson.time_of_incident || null,
           place_of_incident: reportingPerson.place_of_incident || null,
         };
@@ -750,7 +812,7 @@ export default function FileOperations({
             suspect_id: suspect.suspect_id,
             file_id: fileToEdit.file_id,
             ...suspect,
-            birthday: new Date(suspect.birthday).toISOString(),
+            birthday: toISOString(suspect.birthday),
           }))
         );
 
@@ -763,7 +825,7 @@ export default function FileOperations({
           newSuspects.map((suspect) => ({
             file_id: fileToEdit.file_id,
             ...suspect,
-            birthday: new Date(suspect.birthday).toISOString(),
+            birthday: toISOString(suspect.birthday),
           }))
         );
 
@@ -771,11 +833,47 @@ export default function FileOperations({
       }
 
       toast.success("File updated successfully");
-      setShowFileDialog(null);
       onFileUpdate(); // Refresh the files list
+      
+      // Reset all states after successful save
+      setReportingPerson({
+        full_name: "",
+        age: 0,
+        birthday: "",
+        gender: "Male",
+        complete_address: "",
+        contact_number: "",
+        date_reported: "",
+        time_reported: "",
+        date_of_incident: "",
+        time_of_incident: "",
+        place_of_incident: "",
+      });
+      
+      setSuspects([{
+        full_name: "",
+        age: 0,
+        birthday: "",
+        gender: "Male",
+        complete_address: "",
+        contact_number: "",
+      }]);
+      
+      setIsCollageMode(false);
+      setCollageState({
+        files: [],
+        previewUrls: [],
+        layout: '2x2'
+      });
+      
+      if (formRef.current) {
+        formRef.current.reset();
+      }
     } catch (error: any) {
       console.error("Error updating file:", error);
       toast.error(error.message || "Failed to update file");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1331,6 +1429,7 @@ export default function FileOperations({
                       <Label htmlFor="rp_time_reported">Time Reported</Label>
                       <Input
                         id="rp_time_reported"
+                        type="time"
                         value={reportingPerson.time_reported}
                         onChange={(e) =>
                           setReportingPerson({
@@ -1364,6 +1463,7 @@ export default function FileOperations({
                       </Label>
                       <Input
                         id="rp_time_of_incident"
+                        type="time"
                         value={reportingPerson.time_of_incident}
                         onChange={(e) =>
                           setReportingPerson({
