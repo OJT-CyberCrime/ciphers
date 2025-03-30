@@ -19,6 +19,7 @@ import {
   List,
   Grid,
   SortAsc,
+  X,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -47,6 +48,7 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { Switch } from "@/components/ui/switch";
 
 interface FileRecord {
   file_id: number;
@@ -108,6 +110,12 @@ interface Suspect {
   contact_number: string;
 }
 
+interface CollageState {
+  files: File[];
+  previewUrls: string[];
+  layout: string;
+}
+
 // Helper function to get file type icon
 const getFileIcon = (filePath: string) => {
   const ext = filePath.split(".").pop()?.toLowerCase() || "";
@@ -150,6 +158,15 @@ const getStatusBadgeClass = (status: string) => {
     default:
       return { class: "bg-gray-200 text-black", label: "N/A" }; // Default case
   }
+};
+
+// Helper function to safely convert date and time to ISO string
+const formatDateTime = (date: string, time: string = '00:00') => {
+  if (!date) return null;
+  const [year, month, day] = date.split('-').map(Number);
+  const [hours, minutes] = time.split(':').map(Number);
+  const dateObj = new Date(year, month - 1, day, hours, minutes);
+  return dateObj.toISOString();
 };
 
 export default function WomenChildrenFile() {
@@ -213,6 +230,12 @@ export default function WomenChildrenFile() {
   });
   const contextMenuRef = useRef<HTMLDivElement | null>(null); // Create a ref for the context menu
   const formRef = useRef<HTMLFormElement | null>(null); // Create a ref for the form
+  const [isCollageMode, setIsCollageMode] = useState(false);
+  const [collageState, setCollageState] = useState<CollageState>({
+    files: [],
+    previewUrls: [],
+    layout: '2x2'
+  });
 
   // Function to add a new suspect form
   const addSuspect = () => {
@@ -248,13 +271,54 @@ export default function WomenChildrenFile() {
     }
   };
 
-  // Handle file upload
+  // Add CollagePreview component
+  const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
+    collageState: CollageState;
+    onLayoutChange: (layout: string) => void;
+    onPhotoRemove: (index: number) => void;
+  }) => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <Label>Layout:</Label>
+        <Select value={collageState.layout} onValueChange={onLayoutChange}>
+          <SelectTrigger className="w-32">
+            <SelectValue placeholder="Choose layout" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1x1">1 x 1</SelectItem>
+            <SelectItem value="2x2">2 x 2</SelectItem>
+            <SelectItem value="3x3">3 x 3</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className={`grid gap-2 ${
+        collageState.layout === '1x1' ? 'grid-cols-1' :
+        collageState.layout === '2x2' ? 'grid-cols-2' :
+        'grid-cols-3'
+      }`}>
+        {Array.isArray(collageState.previewUrls) && collageState.previewUrls.map((url, index) => (
+          <div key={index} className="relative group">
+            <img 
+              src={url} 
+              alt={`Collage photo ${index + 1}`} 
+              className="w-full h-40 object-cover rounded-md"
+            />
+            <button
+              onClick={() => onPhotoRemove(index)}
+              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Function to handle file upload
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !fileUpload?.[0]) return;
-
-    // Close the sheet immediately when the save button is clicked
-    setIsAddingFile(false); // Close the sheet
+    if (!id) return;
 
     try {
       const userData = JSON.parse(Cookies.get("user_data") || "{}");
@@ -269,25 +333,110 @@ export default function WomenChildrenFile() {
       if (userError) throw userError;
       if (!userData2) throw new Error("User not found");
 
-      // Upload file to storage
-      const file = fileUpload[0];
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `folder_${id}/${fileName}`;
+      let filePath = "";
+      let publicUrl = "";
+      let collagePhotos: string[] = [];
 
-      const { error: uploadError } = await supabase.storage
-        .from("files")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
+      if (isCollageMode) {
+        // Upload each photo in the collage
+        for (const file of collageState.files) {
+          const fileExt = file.name.split(".").pop();
+          const fileName = `${Math.random()}.${fileExt}`;
+          const photoPath = `folder_${id}/collage_photos/${fileName}`;
 
-      if (uploadError) throw uploadError;
+          const { error: uploadError } = await supabase.storage
+            .from("files")
+            .upload(photoPath, file, {
+              cacheControl: "3600",
+              upsert: false,
+            });
 
-      // Get the public URL for the uploaded file
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("files").getPublicUrl(filePath);
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl: photoUrl } } = supabase.storage
+            .from("files")
+            .getPublicUrl(photoPath);
+
+          collagePhotos.push(photoUrl);
+        }
+
+        if (collagePhotos.length > 0) {
+          // Create a collage preview image using HTML Canvas
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const [cols, rows] = collageState.layout.split('x').map(Number);
+          const photoWidth = 800 / cols;
+          const photoHeight = 800 / rows;
+          
+          canvas.width = 800;
+          canvas.height = 800;
+
+          // Load all images and draw them on the canvas
+          const images = await Promise.all(
+            collageState.previewUrls.map(url => {
+              return new Promise<HTMLImageElement>((resolve) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => resolve(img);
+                img.src = url;
+              });
+            })
+          );
+
+          images.forEach((img, index) => {
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            ctx?.drawImage(
+              img,
+              col * photoWidth,
+              row * photoHeight,
+              photoWidth,
+              photoHeight
+            );
+          });
+
+          // Convert canvas to blob and upload
+          const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!)));
+          const collageFileName = `collage_${Math.random()}.png`;
+          filePath = `folder_${id}/${collageFileName}`;
+
+          const { error: collageUploadError } = await supabase.storage
+            .from("files")
+            .upload(filePath, blob, {
+              cacheControl: "3600",
+              upsert: false,
+            });
+
+          if (collageUploadError) throw collageUploadError;
+
+          const { data: { publicUrl: collagePublicUrl } } = supabase.storage
+            .from("files")
+            .getPublicUrl(filePath);
+
+          publicUrl = collagePublicUrl;
+        }
+      } else if (fileUpload?.[0]) {
+        // Handle regular file upload
+        const file = fileUpload[0];
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        filePath = `folder_${id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("files")
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl: filePublicUrl } } = supabase.storage
+          .from("files")
+          .getPublicUrl(filePath);
+
+        publicUrl = filePublicUrl;
+      }
 
       // Create file record in database
       const { data: fileData, error: fileError } = await supabase
@@ -305,6 +454,8 @@ export default function WomenChildrenFile() {
             public_url: publicUrl,
             investigator: newInvestigator,
             desk_officer: newDeskOfficer,
+            is_collage: isCollageMode,
+            collage_photos: isCollageMode ? collagePhotos : null
           },
         ])
         .select()
@@ -312,26 +463,42 @@ export default function WomenChildrenFile() {
 
       if (fileError) throw fileError;
 
-      // Insert reporting person details
-      const { error: reportingError } = await supabase
-        .from("reporting_person_details")
-        .insert([
-          {
-            wc_file_id: fileData.file_id,
-            ...reportingPerson,
-            birthday: new Date(reportingPerson.birthday).toISOString(),
-            date_reported: new Date(
-              reportingPerson.date_reported
-            ).toISOString(),
-            date_of_incident: new Date(
-              reportingPerson.date_of_incident
-            ).toISOString(),
-          },
-        ]);
+      // Only insert reporting person details if at least one field is filled out
+      const hasReportingPersonData = 
+        reportingPerson.full_name ||
+        reportingPerson.age ||
+        reportingPerson.birthday ||
+        reportingPerson.complete_address ||
+        reportingPerson.contact_number ||
+        reportingPerson.date_reported ||
+        reportingPerson.time_reported ||
+        reportingPerson.date_of_incident ||
+        reportingPerson.time_of_incident ||
+        reportingPerson.place_of_incident;
 
-      if (reportingError) throw reportingError;
+      if (hasReportingPersonData) {
+        // Format dates properly before inserting
+        const formattedReportingPerson = {
+          ...reportingPerson,
+          birthday: formatDateTime(reportingPerson.birthday),
+          date_reported: formatDateTime(reportingPerson.date_reported, reportingPerson.time_reported),
+          date_of_incident: formatDateTime(reportingPerson.date_of_incident, reportingPerson.time_of_incident),
+        };
 
-      // Insert suspects
+        // Insert reporting person details
+        const { error: reportingError } = await supabase
+          .from("reporting_person_details")
+          .insert([
+            {
+              wc_file_id: fileData.file_id,
+              ...formattedReportingPerson,
+            },
+          ]);
+
+        if (reportingError) throw reportingError;
+      }
+
+      // Insert suspects with proper date formatting
       const suspectsWithData = suspects.filter(
         (suspect) =>
           suspect.full_name ||
@@ -342,15 +509,15 @@ export default function WomenChildrenFile() {
       );
 
       if (suspectsWithData.length > 0) {
-        const { error: suspectsError } = await supabase.from("suspects").insert(
-          suspectsWithData.map((suspect) => ({
-            wc_file_id: fileData.file_id,
-            ...suspect,
-            birthday: suspect.birthday
-              ? new Date(suspect.birthday).toISOString()
-              : null,
-          }))
-        );
+        const formattedSuspects = suspectsWithData.map(suspect => ({
+          wc_file_id: fileData.file_id,
+          ...suspect,
+          birthday: formatDateTime(suspect.birthday),
+        }));
+
+        const { error: suspectsError } = await supabase
+          .from("suspects")
+          .insert(formattedSuspects);
 
         if (suspectsError) throw suspectsError;
       }
@@ -379,10 +546,13 @@ export default function WomenChildrenFile() {
 
       // Update the UI with the new file
       setFiles([formattedFile, ...files]);
+      
+      // Close the dialog and show success message
+      setIsAddingFile(false);
       toast.success("File uploaded successfully");
+      
+      // Reset form and all states
       formRef.current?.reset();
-
-      // Reset all form fields
       setNewFileTitle("");
       setNewCaseTitle("");
       setNewBlotterNumber("");
@@ -416,6 +586,7 @@ export default function WomenChildrenFile() {
     } catch (error: any) {
       console.error("Error uploading file:", error);
       toast.error(error.message || "Failed to upload file");
+      // Do not close dialog on error
     }
   };
 
@@ -1003,13 +1174,65 @@ export default function WomenChildrenFile() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="file">Upload File</Label>
-                    <Input
-                      id="file"
-                      type="file"
-                      onChange={(e) => setFileUpload(e.target.files)}
-                      required
-                    />
+                    <div className="flex items-center gap-2">
+                      <Label>Create Collage</Label>
+                      <Switch
+                        checked={isCollageMode}
+                        onCheckedChange={(checked) => {
+                          setIsCollageMode(checked);
+                          if (!checked) {
+                            setCollageState({
+                              files: [],
+                              previewUrls: [],
+                              layout: '2x2'
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                    {isCollageMode ? (
+                      <div className="space-y-4">
+                        <Input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            if (!files) return;
+                            
+                            const newFiles = Array.from(files);
+                            const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
+                            
+                            setCollageState(prev => ({
+                              ...prev,
+                              files: [...prev.files, ...newFiles],
+                              previewUrls: [...prev.previewUrls, ...newPreviewUrls]
+                            }));
+                          }}
+                        />
+                        <CollagePreview
+                          collageState={collageState}
+                          onLayoutChange={(layout) => setCollageState(prev => ({ ...prev, layout }))}
+                          onPhotoRemove={(index) => {
+                            setCollageState(prev => ({
+                              ...prev,
+                              files: prev.files.filter((_, i) => i !== index),
+                              previewUrls: prev.previewUrls.filter((_, i) => i !== index)
+                            }));
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <Label htmlFor="file">Upload File</Label>
+                        <Input
+                          id="file"
+                          type="file"
+                          onChange={(e) => setFileUpload(e.target.files)}
+                          required
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1029,7 +1252,6 @@ export default function WomenChildrenFile() {
                             full_name: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1046,7 +1268,6 @@ export default function WomenChildrenFile() {
                             age: parseInt(e.target.value),
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1061,7 +1282,6 @@ export default function WomenChildrenFile() {
                             birthday: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1095,7 +1315,6 @@ export default function WomenChildrenFile() {
                             complete_address: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1109,7 +1328,6 @@ export default function WomenChildrenFile() {
                             contact_number: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                   </div>
@@ -1127,7 +1345,6 @@ export default function WomenChildrenFile() {
                             date_reported: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1142,7 +1359,6 @@ export default function WomenChildrenFile() {
                             time_reported: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1157,7 +1373,6 @@ export default function WomenChildrenFile() {
                             date_of_incident: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1172,7 +1387,6 @@ export default function WomenChildrenFile() {
                             time_of_incident: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div className="col-span-2">
@@ -1188,7 +1402,6 @@ export default function WomenChildrenFile() {
                             place_of_incident: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                   </div>
@@ -1357,62 +1570,6 @@ export default function WomenChildrenFile() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
-
-      {/* {showFileDialog === "details" && selectedFile && (
-        <Dialog
-          open={showFileDialog === "details"}
-          onOpenChange={() => setShowFileDialog(null)}
-        >
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>File Details</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">File Name</h4>
-                <p className="text-gray-900 text-lg font-medium">
-                  {selectedFile.title}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">Case Title</h4>
-                <p className="text-gray-900 text-lg font-medium">
-                  {selectedFile.case_title}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">
-                  Blotter Number
-                </h4>
-                <p className="text-gray-900">{selectedFile.blotter_number}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">Investigator</h4>
-                <p className="text-gray-900">{selectedFile.investigator}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">Desk Officer</h4>
-                <p className="text-gray-900">{selectedFile.desk_officer}</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">
-                  Incident Summary
-                </h4>
-                <Textarea
-                  id="summary"
-                  name="summary"
-                  defaultValue={selectedFile.incident_summary}
-                  readOnly
-                  className="h-32 resize-none border-gray-300 rounded-md"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => setShowFileDialog(null)}>Close</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )} */}
     </div>
   );
 }
