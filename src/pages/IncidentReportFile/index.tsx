@@ -19,6 +19,7 @@ import {
   List,
   Grid,
   SortAsc,
+  X,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -55,6 +56,7 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import PermissionDialog from "@/components/PermissionDialog";
+import { Switch } from "@/components/ui/switch";
 
 interface FileRecord {
   file_id: number;
@@ -83,6 +85,8 @@ interface FileRecord {
   viewer?: { name: string };
   downloader?: { name: string };
   printer?: { name: string };
+  is_collage?: boolean;
+  collage_photos?: string[];
 }
 
 interface Folder {
@@ -114,6 +118,13 @@ interface Suspect {
   gender: "Male" | "Female" | "Other";
   complete_address: string;
   contact_number: string;
+}
+
+// Add new interface for collage state
+interface CollageState {
+  files: File[];
+  previewUrls: string[];
+  layout: string;
 }
 
 // Helper function to get file type icon
@@ -158,6 +169,51 @@ const getStatusBadgeClass = (status: string) => {
     default:
       return { class: "bg-gray-200 text-black", label: "N/A" }; // Default case
   }
+};
+
+const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
+  collageState: CollageState;
+  onLayoutChange: (layout: string) => void;
+  onPhotoRemove: (index: number) => void;
+}) => {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <Label>Layout:</Label>
+        <Select value={collageState.layout} onValueChange={onLayoutChange}>
+          <SelectTrigger className="w-32">
+            <SelectValue placeholder="Choose layout" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1x1">1 x 1</SelectItem>
+            <SelectItem value="2x2">2 x 2</SelectItem>
+            <SelectItem value="3x3">3 x 3</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className={`grid gap-2 ${
+        collageState.layout === '1x1' ? 'grid-cols-1' :
+        collageState.layout === '2x2' ? 'grid-cols-2' :
+        'grid-cols-3'
+      }`}>
+        {collageState.previewUrls.map((url, index) => (
+          <div key={index} className="relative group">
+            <img 
+              src={url} 
+              alt={`Collage photo ${index + 1}`} 
+              className="w-full h-40 object-cover rounded-md"
+            />
+            <button
+              onClick={() => onPhotoRemove(index)}
+              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 export default function IncidentReport() {
@@ -222,6 +278,12 @@ export default function IncidentReport() {
   const contextMenuRef = useRef<HTMLDivElement | null>(null); // Create a ref for the context menu
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [permissionAction, setPermissionAction] = useState("");
+  const [collageState, setCollageState] = useState<CollageState>({
+    files: [],
+    previewUrls: [],
+    layout: '2x2' // default layout
+  });
+  const [isCollageMode, setIsCollageMode] = useState(false);
   
   const userRole = JSON.parse(Cookies.get('user_data') || '{}').role;
 
@@ -286,7 +348,10 @@ export default function IncidentReport() {
   // Handle file upload
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !fileUpload?.[0]) return;
+    if (!id) return;
+    
+    if (!isCollageMode && !fileUpload?.[0]) return;
+    if (isCollageMode && collageState.files.length === 0) return;
 
     try {
       const userData = JSON.parse(Cookies.get("user_data") || "{}");
@@ -301,25 +366,108 @@ export default function IncidentReport() {
       if (userError) throw userError;
       if (!userData2) throw new Error("User not found");
 
-      // Upload file to storage
-      const file = fileUpload[0];
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `folder_${id}/${fileName}`;
+      let publicUrl = '';
+      let filePath = '';
+      let collagePhotos: string[] = [];
 
-      const { error: uploadError } = await supabase.storage
-        .from("files")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
+      if (isCollageMode) {
+        // Upload each photo in the collage
+        for (const file of collageState.files) {
+          const fileExt = file.name.split(".").pop();
+          const fileName = `${Math.random()}.${fileExt}`;
+          const photoPath = `folder_${id}/collage_photos/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from("files")
+            .upload(photoPath, file, {
+              cacheControl: "3600",
+              upsert: false,
+            });
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl: photoUrl } } = supabase.storage
+            .from("files")
+            .getPublicUrl(photoPath);
+
+          collagePhotos.push(photoUrl);
+        }
+
+        // Create a collage preview image using HTML Canvas
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const [cols, rows] = collageState.layout.split('x').map(Number);
+        const photoWidth = 800 / cols;
+        const photoHeight = 800 / rows;
+        
+        canvas.width = 800;
+        canvas.height = 800;
+
+        // Load all images and draw them on the canvas
+        const images = await Promise.all(
+          collageState.previewUrls.map(url => {
+            return new Promise<HTMLImageElement>((resolve) => {
+              const img = new Image();
+              img.crossOrigin = "anonymous";
+              img.onload = () => resolve(img);
+              img.src = url;
+            });
+          })
+        );
+
+        images.forEach((img, index) => {
+          const row = Math.floor(index / cols);
+          const col = index % cols;
+          ctx?.drawImage(
+            img,
+            col * photoWidth,
+            row * photoHeight,
+            photoWidth,
+            photoHeight
+          );
         });
 
-      if (uploadError) throw uploadError;
+        // Convert canvas to blob and upload
+        const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!)));
+        const collageFileName = `collage_${Math.random()}.png`;
+        filePath = `folder_${id}/${collageFileName}`;
 
-      // Get the public URL for the uploaded file
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("files").getPublicUrl(filePath);
+        const { error: collageUploadError } = await supabase.storage
+          .from("files")
+          .upload(filePath, blob, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (collageUploadError) throw collageUploadError;
+
+        const { data: { publicUrl: collagePublicUrl } } = supabase.storage
+          .from("files")
+          .getPublicUrl(filePath);
+
+        publicUrl = collagePublicUrl;
+      } else {
+        // Handle single file upload
+        const file = fileUpload![0];
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        filePath = `folder_${id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("files")
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl: singleFileUrl } } = supabase.storage
+          .from("files")
+          .getPublicUrl(filePath);
+
+        publicUrl = singleFileUrl;
+      }
 
       // Create file record in database
       const { data: fileData, error: fileError } = await supabase
@@ -337,6 +485,8 @@ export default function IncidentReport() {
             public_url: publicUrl,
             investigator: newInvestigator,
             desk_officer: newDeskOfficer,
+            is_collage: isCollageMode,
+            collage_photos: isCollageMode ? collagePhotos : null,
           },
         ])
         .select()
@@ -344,26 +494,36 @@ export default function IncidentReport() {
 
       if (fileError) throw fileError;
 
-      // Insert reporting person details
-      const { error: reportingError } = await supabase
-        .from("reporting_person_details")
-        .insert([
-          {
-            file_id: fileData.file_id,
-            ...reportingPerson,
-            birthday: new Date(reportingPerson.birthday).toISOString(),
-            date_reported: new Date(
-              reportingPerson.date_reported
-            ).toISOString(),
-            date_of_incident: new Date(
-              reportingPerson.date_of_incident
-            ).toISOString(),
-          },
-        ]);
+      // Only insert reporting person details if at least one field is filled
+      const hasReportingPersonData = Object.values(reportingPerson).some(
+        value => value !== "" && value !== 0
+      );
 
-      if (reportingError) throw reportingError;
+      if (hasReportingPersonData) {
+        // Create a cleaned version of reporting person data
+        const cleanedReportingPerson = {
+          file_id: fileData.file_id,
+          full_name: reportingPerson.full_name || null,
+          age: reportingPerson.age || null,
+          gender: reportingPerson.gender || null,
+          complete_address: reportingPerson.complete_address || null,
+          contact_number: reportingPerson.contact_number || null,
+          birthday: reportingPerson.birthday ? new Date(reportingPerson.birthday).toISOString() : null,
+          date_reported: reportingPerson.date_reported ? new Date(reportingPerson.date_reported).toISOString() : null,
+          time_reported: reportingPerson.time_reported || null,
+          date_of_incident: reportingPerson.date_of_incident ? new Date(reportingPerson.date_of_incident).toISOString() : null,
+          time_of_incident: reportingPerson.time_of_incident || null,
+          place_of_incident: reportingPerson.place_of_incident || null,
+        };
 
-      // Insert suspects
+        const { error: reportingError } = await supabase
+          .from("reporting_person_details")
+          .insert([cleanedReportingPerson]);
+
+        if (reportingError) throw reportingError;
+      }
+
+      // Update the suspects handling as well
       const suspectsWithData = suspects.filter(
         (suspect) =>
           suspect.full_name ||
@@ -374,17 +534,21 @@ export default function IncidentReport() {
       );
 
       if (suspectsWithData.length > 0) {
-        const { error: suspectsError } = await supabase.from("suspects").insert(
-          suspectsWithData.map((suspect) => ({
-            file_id: fileData.file_id,
-            ...suspect,
-            birthday: suspect.birthday
-              ? new Date(suspect.birthday).toISOString()
-              : null,
-          }))
-        );
+        const cleanedSuspects = suspectsWithData.map((suspect) => ({
+          file_id: fileData.file_id,
+          full_name: suspect.full_name || null,
+          age: suspect.age || null,
+          birthday: suspect.birthday ? new Date(suspect.birthday).toISOString() : null,
+          gender: suspect.gender || null,
+          complete_address: suspect.complete_address || null,
+          contact_number: suspect.contact_number || null,
+        }));
 
-        if (suspectsError) throw suspectsError;
+        const { error: insertSuspectsError } = await supabase
+          .from("suspects")
+          .insert(cleanedSuspects);
+
+        if (insertSuspectsError) throw insertSuspectsError;
       }
 
       // Fetch the complete file data with user information
@@ -445,6 +609,15 @@ export default function IncidentReport() {
           contact_number: "",
         },
       ]);
+
+      // Reset collage state
+      setIsCollageMode(false);
+      setCollageState({
+        files: [],
+        previewUrls: [],
+        layout: '2x2'
+      });
+
     } catch (error: any) {
       console.error("Error uploading file:", error);
       toast.error(error.message || "Failed to upload file");
@@ -1016,14 +1189,52 @@ export default function IncidentReport() {
                       className="h-48 resize-none border-gray-300 rounded-md font-poppins"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="file">Upload File</Label>
+                  <div className="grid w-full max-w-sm items-center gap-1.5">
+                    <Label htmlFor="file">Upload File(s)</Label>
                     <Input
                       id="file"
                       type="file"
-                      onChange={(e) => setFileUpload(e.target.files)}
-                      required
+                      multiple={isCollageMode}
+                      accept={isCollageMode ? "image/*" : undefined}
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        if (!files) return;
+                        
+                        if (isCollageMode) {
+                          const newFiles = Array.from(files);
+                          const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
+                          
+                          setCollageState(prev => ({
+                            ...prev,
+                            files: [...prev.files, ...newFiles],
+                            previewUrls: [...prev.previewUrls, ...newPreviewUrls]
+                          }));
+                        } else {
+                          setFileUpload(files);
+                        }
+                      }}
                     />
+                    <div className="flex items-center gap-2 mt-2">
+                      <Label>Create Collage</Label>
+                      <Switch
+                        checked={isCollageMode}
+                        onCheckedChange={setIsCollageMode}
+                      />
+                    </div>
+                    
+                    {isCollageMode && (
+                      <CollagePreview
+                        collageState={collageState}
+                        onLayoutChange={(layout) => setCollageState(prev => ({ ...prev, layout }))}
+                        onPhotoRemove={(index) => {
+                          setCollageState(prev => ({
+                            ...prev,
+                            files: prev.files.filter((_, i) => i !== index),
+                            previewUrls: prev.previewUrls.filter((_, i) => i !== index)
+                          }));
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -1043,7 +1254,6 @@ export default function IncidentReport() {
                             full_name: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1057,10 +1267,9 @@ export default function IncidentReport() {
                         onChange={(e) =>
                           setReportingPerson({
                             ...reportingPerson,
-                            age: parseInt(e.target.value),
+                            age: parseInt(e.target.value) || 0,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1075,7 +1284,6 @@ export default function IncidentReport() {
                             birthday: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1109,7 +1317,6 @@ export default function IncidentReport() {
                             complete_address: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1123,7 +1330,6 @@ export default function IncidentReport() {
                             contact_number: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                   </div>
@@ -1141,7 +1347,6 @@ export default function IncidentReport() {
                             date_reported: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1156,7 +1361,6 @@ export default function IncidentReport() {
                             time_reported: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1171,7 +1375,6 @@ export default function IncidentReport() {
                             date_of_incident: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1186,13 +1389,10 @@ export default function IncidentReport() {
                             time_of_incident: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div className="col-span-2">
-                      <Label htmlFor="place_of_incident">
-                        Place of Incident
-                      </Label>
+                      <Label htmlFor="place_of_incident">Place of Incident</Label>
                       <Textarea
                         id="place_of_incident"
                         value={reportingPerson.place_of_incident}
@@ -1202,7 +1402,6 @@ export default function IncidentReport() {
                             place_of_incident: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                   </div>
