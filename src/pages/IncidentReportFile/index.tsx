@@ -406,36 +406,24 @@ export default function IncidentReport() {
   // Handle file upload
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !fileUpload?.[0]) return;
+    if (!id) return;
 
     try {
       const userData = JSON.parse(Cookies.get("user_data") || "{}");
 
-      // Get user data and validate permissions
+      // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
         .from("users")
-        .select("user_id, role")
+        .select("user_id")
         .eq("email", userData.email)
         .single();
 
       if (userError) throw userError;
       if (!userData2) throw new Error("User not found");
 
-      // Server-side permission check
-      if (!["admin", "superadmin", "wcpd"].includes(userData2.role)) {
-        toast.error("You do not have permission to perform this action");
-        return;
-      }
-
-      let publicUrl = "";
       let filePath = "";
+      let publicUrl = "";
       let collagePhotos: string[] = [];
-
-      // Upload file to storage
-      const file = fileUpload[0];
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      filePath = `folder_${id}/${fileName}`;
 
       if (isCollageMode) {
         // Upload each photo in the collage
@@ -515,8 +503,13 @@ export default function IncidentReport() {
         } = supabase.storage.from("files").getPublicUrl(filePath);
 
         publicUrl = collagePublicUrl;
-      } else {
-        // Handle single file upload
+      } else if (fileUpload?.[0]) {
+        // Handle regular file upload
+        const file = fileUpload[0];
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        filePath = `folder_${id}/${fileName}`;
+
         const { error: uploadError } = await supabase.storage
           .from("files")
           .upload(filePath, file, {
@@ -526,11 +519,13 @@ export default function IncidentReport() {
 
         if (uploadError) throw uploadError;
 
-        const {
-          data: { publicUrl: singleFileUrl },
-        } = supabase.storage.from("files").getPublicUrl(filePath);
+        const { data: { publicUrl: filePublicUrl } } = supabase.storage
+          .from("files")
+          .getPublicUrl(filePath);
 
-        publicUrl = singleFileUrl;
+        publicUrl = filePublicUrl;
+      } else {
+        throw new Error("No file selected for upload");
       }
 
       // Create file record in database
@@ -690,8 +685,9 @@ export default function IncidentReport() {
         layout: "2x2",
       });
     } catch (error: any) {
-      console.error("Error adding file:", error);
-      toast.error(error.message || "Failed to add file");
+      console.error("Error uploading file:", error);
+      toast.error(error.message || "Failed to upload file");
+      // Do not close dialog on error
     }
   };
 
