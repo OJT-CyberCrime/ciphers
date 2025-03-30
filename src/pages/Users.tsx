@@ -54,8 +54,7 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card";
-import { Avatar, AvatarImage } from "@radix-ui/react-avatar";
-import { AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Pagination,
   PaginationContent,
@@ -75,6 +74,8 @@ const formSchema = z.object({
     .or(z.literal(""))
     .optional(),
   role: z.string().min(1, "Role is required"),
+  file_path: z.string().optional(),
+  public_url: z.string().optional(),
 });
 
 // Define the edit form schema (password is optional for editing)
@@ -87,15 +88,19 @@ const editFormSchema = z.object({
     .or(z.literal(""))
     .optional(),
   role: z.string().min(1, "Role is required"),
+  file_path: z.string().optional(),
+  public_url: z.string().optional(),
 });
 
 // Define the type for user data
 interface UserData {
-  user_id?: number | string; // Could be either number or string depending on DB
+  user_id?: number | string;
   uuid?: string;
   name: string;
   email: string;
   role?: string;
+  file_path?: string;
+  public_url?: string | null;
 }
 
 // Current user type
@@ -104,6 +109,7 @@ interface CurrentUser {
   email: string;
   role: string;
   name: string;
+  public_url?: string | null;
 }
 
 export default function Users() {
@@ -117,6 +123,10 @@ export default function Users() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
 
   // Initialize add form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -144,18 +154,15 @@ export default function Users() {
 
   const fetchCurrentUser = async () => {
     try {
-      // Get current user from auth
       const {
         data: { user },
         error: authError,
       } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        console.error("Error fetching current user:", authError);
         return;
       }
 
-      // Get user details from users table
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("*")
@@ -163,8 +170,21 @@ export default function Users() {
         .single();
 
       if (userError) {
-        console.error("Error fetching user details:", userError);
         return;
+      }
+
+      // Get the signed URL for the avatar if file_path exists
+      let publicUrl = null;
+      if (userData?.file_path) {
+        try {
+          const { data } = supabase.storage
+            .from('profilepic')
+            .getPublicUrl(userData.file_path);
+
+          publicUrl = data.publicUrl;
+        } catch (storageError) {
+          // Handle storage error silently
+        }
       }
 
       setCurrentUser({
@@ -172,6 +192,7 @@ export default function Users() {
         email: user.email || "",
         role: userData?.role || user.user_metadata?.role || "",
         name: userData?.name || user.user_metadata?.name || "",
+        public_url: publicUrl,
       });
     } catch (error) {
       console.error("Error in fetchCurrentUser:", error);
@@ -180,41 +201,35 @@ export default function Users() {
 
   const fetchUsers = async () => {
     try {
-      // First, check the users table structure
       const { data: checkData, error: checkError } = await supabase
         .from("users")
         .select("*")
         .limit(1);
 
       if (checkError) {
-        console.error("Error checking users table:", checkError);
         toast.error("Failed to check users table structure");
         return;
       }
 
-      // Determine what columns exist in the table
       const firstUser = checkData?.[0] as Record<string, unknown> | undefined;
       const hasUserId = firstUser && "user_id" in firstUser;
       const hasId = firstUser && "id" in firstUser;
 
-      // Build select query based on available columns
       let selectQuery = "";
       if (hasUserId) {
         selectQuery = "user_id";
       } else if (hasId) {
         selectQuery = "id";
       } else {
-        selectQuery = "*"; // Fallback to all columns
+        selectQuery = "*";
       }
-      selectQuery += ", uuid, name, email, role";
+      selectQuery += ", uuid, name, email, role, file_path";
 
-      // Get all users if superadmin, otherwise fetch only the current user
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select(selectQuery);
 
       if (userError) {
-        console.error("Error fetching users:", userError);
         toast.error("Failed to fetch users");
         return;
       }
@@ -224,18 +239,34 @@ export default function Users() {
         return;
       }
 
-      // Map the data to ensure consistent UserData interface
-      const mappedUsers = userData.map((user: Record<string, any>) => ({
-        user_id: user.user_id || user.id, // Use either user_id or id
-        uuid: user.uuid,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+      // Map the data and get public URLs for avatars
+      const mappedUsers = await Promise.all(userData.map(async (user: Record<string, any>) => {
+        let publicUrl = null;
+        if (user.file_path) {
+          try {
+            const { data } = supabase.storage
+              .from('profilepic')
+              .getPublicUrl(user.file_path);
+
+            publicUrl = data.publicUrl;
+          } catch (storageError) {
+            // Handle storage error silently
+          }
+        }
+
+        return {
+          user_id: user.user_id || user.id,
+          uuid: user.uuid,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          file_path: user.file_path,
+          public_url: publicUrl,
+        };
       }));
 
       setUsers(mappedUsers);
     } catch (fetchError: unknown) {
-      console.error("Error in fetchUsers:", fetchError);
       toast.error("An unexpected error occurred while fetching users");
     }
   };
@@ -288,6 +319,34 @@ export default function Users() {
         return;
       }
 
+      let filePath = '';
+      let publicUrl = '';
+
+      // Handle avatar upload if a file was selected
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('profilepic')
+          .upload(filePath, avatarFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        // Get a public URL for the avatar
+        const { data } = supabase.storage
+          .from('profilepic')
+          .getPublicUrl(filePath);
+
+        publicUrl = data.publicUrl;
+      }
+
       // Create user in Supabase Auth first
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: values.email,
@@ -307,26 +366,30 @@ export default function Users() {
         throw new Error("Failed to create user");
       }
 
-      // Create user in your custom users table with the UUID
+      // Create user in your custom users table with the UUID and avatar info
       const { error: dbError } = await supabase.from("users").insert([
         {
           name: values.name,
           email: values.email,
-          password: values.password, // This will be hashed by the trigger
+          password: values.password,
           role: values.role,
-          uuid: authData.user.id, // Link to the auth user
+          uuid: authData.user.id,
+          file_path: filePath || null,
+          public_url: publicUrl || null,
         },
       ]);
 
       if (dbError) {
-        console.error("Database error:", dbError);
+        toast.error("Failed to add user to database");
         throw dbError;
       }
 
       toast.success("User added successfully");
       setIsDialogOpen(false);
       form.reset();
-      fetchUsers(); // Refresh the users list
+      setAvatarFile(null);
+      setAvatarPreview(null);
+      fetchUsers();
       if (captchaRef.current) {
         captchaRef.current.resetCaptcha();
       }
@@ -395,45 +458,72 @@ export default function Users() {
 
   const onSubmitEdit = async (values: z.infer<typeof editFormSchema>) => {
     try {
-      // Ensure selectedUser is set and has required properties
       if (!selectedUser || !selectedUser.user_id || !selectedUser.uuid) {
         toast.error("User information is incomplete");
-        return; // Prevent further execution
+        return;
       }
 
-      // Check permissions again before submitting
       if (!canEditUser(selectedUser)) {
         showPermissionDenied();
         return;
       }
 
-      // Non-superadmin users can't change their role
       const updateRole = isSuperAdmin() ? values.role : selectedUser.role;
+      let filePath = selectedUser.file_path;
+      let publicUrl = selectedUser.public_url;
 
-      // Update user in your custom users table first
+      // Handle avatar update if a new file was selected
+      if (editAvatarFile) {
+        // Delete old avatar if it exists
+        if (selectedUser.file_path) {
+          await supabase.storage
+            .from('profilepic')
+            .remove([selectedUser.file_path]);
+        }
+
+        // Upload new avatar
+        const fileExt = editAvatarFile.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('profilepic')
+          .upload(filePath, editAvatarFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        // Get a public URL for the new avatar
+        const { data } = supabase.storage
+          .from('profilepic')
+          .getPublicUrl(filePath);
+
+        publicUrl = data.publicUrl;
+      }
+
+      // Update user in your custom users table
       const updateData: any = {
         name: values.name,
         email: values.email,
         role: updateRole,
+        file_path: filePath,
+        public_url: publicUrl,
       };
 
-      // Only add password to update if it's not empty
-      const hasProvidedPassword =
-        values.password && values.password.trim().length > 0;
-      if (hasProvidedPassword) {
+      if (values.password && values.password.trim().length > 0) {
         updateData.password = values.password;
       }
 
-      // Update the database record
       const { error: dbError } = await supabase
         .from("users")
         .update(updateData)
         .eq("user_id", selectedUser.user_id);
 
-      if (dbError) {
-        console.error("Database error:", dbError);
-        throw dbError;
-      }
+      if (dbError) throw dbError;
 
       // If user is updating their own account, update the auth metadata and cookies
       // This works because a user can update their own auth record
@@ -448,7 +538,7 @@ export default function Users() {
         };
 
         // Only include password in update if it's actually provided
-        if (hasProvidedPassword) {
+        if (values.password && values.password.trim().length > 0) {
           authUpdateData.password = values.password;
         }
 
@@ -458,7 +548,6 @@ export default function Users() {
         );
 
         if (authError) {
-          console.error("Auth update error:", authError);
           toast.warning(
             "User details updated but authentication profile could not be updated."
           );
@@ -476,7 +565,7 @@ export default function Users() {
             };
             Cookies.set("user_data", JSON.stringify(updatedUserData));
           } catch (cookieError) {
-            console.error("Error updating user cookie:", cookieError);
+            // Handle cookie error silently
           }
         }
       } else if (isSuperAdmin()) {
@@ -511,7 +600,6 @@ export default function Users() {
             );
           }
         } catch (cookieError) {
-          console.error("Error checking/updating user cookie:", cookieError);
           toast.info(
             "User database record updated. Auth record may need server-side update.",
             {
@@ -532,6 +620,8 @@ export default function Users() {
       }
 
       setSelectedUser(null);
+      setEditAvatarFile(null);
+      setEditAvatarPreview(null);
     } catch (error: any) {
       console.error("Error updating user:", error);
       toast.error(error.message || "Failed to update user");
@@ -561,7 +651,7 @@ export default function Users() {
         .eq("user_id", selectedUser.user_id);
 
       if (dbError) {
-        console.error("Database error:", dbError);
+        toast.error("Failed to delete user from database");
         throw dbError;
       }
 
@@ -592,6 +682,20 @@ export default function Users() {
     (currentPage + 1) * entriesPerPage
   );
 
+  // Add function to handle avatar upload
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>, isEdit: boolean = false) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (isEdit) {
+        setEditAvatarFile(file);
+        setEditAvatarPreview(URL.createObjectURL(file));
+      } else {
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(file));
+      }
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-12">
@@ -606,11 +710,22 @@ export default function Users() {
             {/* Left Column: Smaller Profile Card */}
             <div className="flex flex-col items-center w-full">
               <Avatar className="w-24 h-24 mb-2">
-                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-2xl font-poppins">
-                  {currentUser?.name
-                    ? currentUser.name.split(" ")[0][0].toUpperCase() // Get the first letter of the first word
-                    : "?"}
-                </AvatarFallback>
+                {currentUser?.public_url ? (
+                  <AvatarImage 
+                    src={currentUser.public_url} 
+                    alt={currentUser.name}
+                    className="w-full h-full object-cover rounded-full"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-2xl font-poppins w-full h-full">
+                    {currentUser?.name
+                      ? currentUser.name.split(" ")[0][0].toUpperCase()
+                      : "?"}
+                  </AvatarFallback>
+                )}
               </Avatar>
 
               <div className="flex flex-col items-center text-center">
@@ -786,6 +901,7 @@ export default function Users() {
               <table className="min-w-full border-collapse table-auto">
                 <thead className="bg-blue-100 text-blue-900">
                   <tr>
+                    <th className="px-6 py-3 text-left border-b">Avatar</th>
                     <th className="px-6 py-3 text-left border-b">Name</th>
                     <th className="px-6 py-3 text-left border-b">Email</th>
                     <th className="px-6 py-3 text-left border-b">Role</th>
@@ -798,6 +914,24 @@ export default function Users() {
                       key={user.user_id}
                       className="hover:bg-blue-50 transition-colors duration-200"
                     >
+                      <td className="px-6 py-2 whitespace-nowrap">
+                        <Avatar className="w-10 h-10">
+                          {user.public_url ? (
+                            <AvatarImage 
+                              src={user.public_url} 
+                              alt={user.name}
+                              className="w-full h-full object-cover rounded-full"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-lg font-poppins w-full h-full">
+                              {user.name ? user.name.split(" ")[0][0].toUpperCase() : "?"}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                      </td>
                       <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
                         {user.name}
                       </td>
@@ -885,6 +1019,29 @@ export default function Users() {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="flex flex-col items-center mb-4">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200 mb-2">
+                  {avatarPreview ? (
+                    <img 
+                      src={avatarPreview} 
+                      alt="Avatar preview" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                      <UserPlus2 className="w-8 h-8 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleAvatarChange(e)}
+                  className="max-w-[200px]"
+                />
+                <p className="text-xs text-gray-500 mt-1">Upload profile picture</p>
+              </div>
+
               <FormField
                 control={form.control}
                 name="name"
@@ -1000,6 +1157,35 @@ export default function Users() {
               onSubmit={editForm.handleSubmit(onSubmitEdit)}
               className="space-y-4"
             >
+              <div className="flex flex-col items-center mb-4">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200 mb-2">
+                  {editAvatarPreview ? (
+                    <img 
+                      src={editAvatarPreview} 
+                      alt="Avatar preview" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : selectedUser?.public_url ? (
+                    <img 
+                      src={selectedUser.public_url} 
+                      alt="Current avatar" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                      <UserPlus2 className="w-8 h-8 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleAvatarChange(e, true)}
+                  className="max-w-[200px]"
+                />
+                <p className="text-xs text-gray-500 mt-1">Update profile picture</p>
+              </div>
+
               <FormField
                 control={editForm.control}
                 name="name"
