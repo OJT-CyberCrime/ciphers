@@ -795,22 +795,23 @@ export default function IncidentReport() {
     localStorage.setItem("isListView", JSON.stringify(view)); // Save the view state to localStorage
   };
 
-  // Function to handle clicks outside the context menu
-  const handleClickOutside = (event: MouseEvent) => {
-    if (
-      contextMenuRef.current &&
-      !contextMenuRef.current.contains(event.target as Node)
-    ) {
-      setShowOptions({}); // Close the context menu
-    }
-  };
+ // Function to handle clicks outside the context menu
+ const handleClickOutside = (event: MouseEvent) => {
+  if (
+    contextMenuRef.current &&
+    !contextMenuRef.current.contains(event.target as Node)
+  ) {
+    setShowOptions({}); // Close the context menu
+  }
+};
 
-  useEffect(() => {
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+useEffect(() => {
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
+
   const formRef = useRef<HTMLFormElement | null>(null);
   return (
     <div className="p-6">
@@ -1146,7 +1147,8 @@ export default function IncidentReport() {
                 </div>
 
                 {showOptions[file.file_id] && (
-                  <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins">
+                  <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins"
+                  ref={contextMenuRef}>
                     <Button
                       variant="ghost"
                       className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
