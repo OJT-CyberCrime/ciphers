@@ -551,7 +551,7 @@ export default function WomenChildrenFile() {
       setIsAddingFile(false);
       toast.success("File uploaded successfully");
       
-      // Reset form and all states
+      // Reset all form states
       formRef.current?.reset();
       setNewFileTitle("");
       setNewCaseTitle("");
@@ -560,6 +560,12 @@ export default function WomenChildrenFile() {
       setNewInvestigator("");
       setNewDeskOfficer("");
       setFileUpload(null);
+      setIsCollageMode(false);
+      setCollageState({
+        files: [],
+        previewUrls: [],
+        layout: '2x2'
+      });
       setReportingPerson({
         full_name: "",
         age: 0,
@@ -573,16 +579,14 @@ export default function WomenChildrenFile() {
         time_of_incident: "",
         place_of_incident: "",
       });
-      setSuspects([
-        {
-          full_name: "",
-          age: 0,
-          birthday: "",
-          gender: "Male",
-          complete_address: "",
-          contact_number: "",
-        },
-      ]);
+      setSuspects([{
+        full_name: "",
+        age: 0,
+        birthday: "",
+        gender: "Male",
+        complete_address: "",
+        contact_number: "",
+      }]);
     } catch (error: any) {
       console.error("Error uploading file:", error);
       toast.error(error.message || "Failed to upload file");
