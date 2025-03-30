@@ -215,7 +215,7 @@ export default function IncidentReport() {
 
   const handleFolderClick = (folder: Folder) => {
     navigate(`/wcp/${folder.folder_id}`, {
-      state: { from: location.pathname, fromName: "Women and Children" }
+      state: { from: location.pathname, fromName: "Women and Children" },
     });
   };
 
@@ -314,7 +314,7 @@ export default function IncidentReport() {
 
       <div className="flex justify-between items-center mb-6 ">
         <h1 className="text-2xl font-medium font-poppins text-blue-900">
-         Women and Children
+          Women and Children
         </h1>
         <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
           <Button
@@ -523,14 +523,14 @@ export default function IncidentReport() {
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 font-poppins">
-                <DotLottieReact
-                  src="/assets/NoFiles.lottie"
-                  loop
-                  autoplay
-                  className="w-6/12"
-                />
-                No files found in this folder
-              </div>
+                  <DotLottieReact
+                    src="/assets/NoFiles.lottie"
+                    loop
+                    autoplay
+                    className="w-6/12"
+                  />
+                  No files found in this folder
+                </div>
               )}
             </tbody>
           </table>
@@ -683,16 +683,16 @@ export default function IncidentReport() {
               </div>
             ))
           ) : (
-         // Fix: Ensuring Lottie is centered by spanning all columns
-    <div className="col-span-full flex flex-col items-center justify-center h-[50vh] text-gray-500 font-poppins">
-    <DotLottieReact
-      src="/assets/NoFiles.lottie"
-      loop
-      autoplay
-      className="w-6/12"
-    />
-    No files found in this folder
-  </div>
+            // Fix: Ensuring Lottie is centered by spanning all columns
+            <div className="col-span-full flex flex-col items-center justify-center h-[50vh] text-gray-500 font-poppins">
+              <DotLottieReact
+                src="/assets/NoFiles.lottie"
+                loop
+                autoplay
+                className="w-6/12"
+              />
+              No files found in this folder
+            </div>
           )}
         </div>
       )}

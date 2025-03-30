@@ -39,12 +39,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import Cookies from "js-cookie";
 import {
   Card,
