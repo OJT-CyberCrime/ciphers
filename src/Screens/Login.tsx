@@ -251,7 +251,7 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center space-y-0">
+    <div className="min-h-screen flex items-center justify-center space-y-0 font-poppins">
       <div className="flex w-full h-screen overflow-hidden">
         <div className="w-1/2 relative bg-blue-900">
           <img
@@ -373,7 +373,7 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
                   {isLoading ? (
                     <Loader className="animate-spin h-5 w-5 mr-2" />
                   ) : null}
-                  {isLoading ? "Verifying..." : "Continue"}
+                  {isLoading ? "Verifying..." : "Log In"}
                 </Button>
                 <div className="flex justify-center">
                   <HCaptcha

@@ -1,7 +1,15 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../utils/supa";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, AlertCircle, ShieldAlert, Info } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  AlertCircle,
+  ShieldAlert,
+  Info,
+  UserPlus2,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +38,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import HCaptcha from '@hcaptcha/react-hcaptcha';
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 import {
   Tooltip,
   TooltipContent,
@@ -38,12 +46,31 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import Cookies from "js-cookie";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardFooter,
+  CardDescription,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarImage } from "@radix-ui/react-avatar";
+import { AvatarFallback } from "@/components/ui/avatar";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 // Define the form schema
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
-  password: z.string()
+  password: z
+    .string()
     .min(6, "Password must be at least 6 characters")
     .or(z.literal(""))
     .optional(),
@@ -54,7 +81,8 @@ const formSchema = z.object({
 const editFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
-  password: z.string()
+  password: z
+    .string()
     .min(6, "Password must be at least 6 characters")
     .or(z.literal(""))
     .optional(),
@@ -63,7 +91,7 @@ const editFormSchema = z.object({
 
 // Define the type for user data
 interface UserData {
-  user_id?: number | string;  // Could be either number or string depending on DB
+  user_id?: number | string; // Could be either number or string depending on DB
   uuid?: string;
   name: string;
   email: string;
@@ -75,7 +103,7 @@ interface CurrentUser {
   id: string;
   email: string;
   role: string;
-  name?: string;
+  name: string;
 }
 
 export default function Users() {
@@ -88,6 +116,7 @@ export default function Users() {
   const captchaRef = useRef<HCaptcha>(null);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
 
   // Initialize add form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -116,32 +145,34 @@ export default function Users() {
   const fetchCurrentUser = async () => {
     try {
       // Get current user from auth
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
       if (authError || !user) {
         console.error("Error fetching current user:", authError);
         return;
       }
-      
+
       // Get user details from users table
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("*")
         .eq("uuid", user.id)
         .single();
-      
+
       if (userError) {
         console.error("Error fetching user details:", userError);
         return;
       }
-      
+
       setCurrentUser({
         id: user.id,
         email: user.email || "",
         role: userData?.role || user.user_metadata?.role || "",
         name: userData?.name || user.user_metadata?.name || "",
       });
-      
     } catch (error) {
       console.error("Error in fetchCurrentUser:", error);
     }
@@ -154,7 +185,7 @@ export default function Users() {
         .from("users")
         .select("*")
         .limit(1);
-      
+
       if (checkError) {
         console.error("Error checking users table:", checkError);
         toast.error("Failed to check users table structure");
@@ -163,9 +194,9 @@ export default function Users() {
 
       // Determine what columns exist in the table
       const firstUser = checkData?.[0] as Record<string, unknown> | undefined;
-      const hasUserId = firstUser && 'user_id' in firstUser;
-      const hasId = firstUser && 'id' in firstUser;
-      
+      const hasUserId = firstUser && "user_id" in firstUser;
+      const hasId = firstUser && "id" in firstUser;
+
       // Build select query based on available columns
       let selectQuery = "";
       if (hasUserId) {
@@ -176,8 +207,8 @@ export default function Users() {
         selectQuery = "*"; // Fallback to all columns
       }
       selectQuery += ", uuid, name, email, role";
-      
-      // Get all users with the appropriate query
+
+      // Get all users if superadmin, otherwise fetch only the current user
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select(selectQuery);
@@ -187,21 +218,21 @@ export default function Users() {
         toast.error("Failed to fetch users");
         return;
       }
-      
+
       if (!userData) {
         setUsers([]);
         return;
       }
-      
+
       // Map the data to ensure consistent UserData interface
       const mappedUsers = userData.map((user: Record<string, any>) => ({
         user_id: user.user_id || user.id, // Use either user_id or id
         uuid: user.uuid,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
       }));
-      
+
       setUsers(mappedUsers);
     } catch (fetchError: unknown) {
       console.error("Error in fetchUsers:", fetchError);
@@ -249,7 +280,7 @@ export default function Users() {
         toast.error("Please complete the captcha verification");
         return;
       }
-      
+
       // Check if password was provided for new user
       const hasPassword = values.password && values.password.trim().length > 0;
       if (!hasPassword) {
@@ -266,8 +297,8 @@ export default function Users() {
             name: values.name,
             role: values.role,
           },
-          captchaToken: captchaToken
-        }
+          captchaToken: captchaToken,
+        },
       });
 
       if (authError) throw authError;
@@ -283,7 +314,7 @@ export default function Users() {
           email: values.email,
           password: values.password, // This will be hashed by the trigger
           role: values.role,
-          uuid: authData.user.id // Link to the auth user
+          uuid: authData.user.id, // Link to the auth user
         },
       ]);
 
@@ -311,6 +342,20 @@ export default function Users() {
   };
 
   const handleEditUser = (user: UserData) => {
+    // Allow superadmin to edit their own information
+    if (isSuperAdmin() && user.uuid === currentUser?.id) {
+      setSelectedUser(user);
+      editForm.reset({
+        name: currentUser?.name || "",
+        email: currentUser?.email || "",
+        password: "",
+        role: currentUser?.role || "",
+      });
+      setIsEditDialogOpen(true);
+      return;
+    }
+
+    // Check if the user can edit the selected user
     if (!canEditUser(user)) {
       showPermissionDenied();
       return;
@@ -320,7 +365,7 @@ export default function Users() {
     editForm.reset({
       name: user.name,
       email: user.email,
-      password: "", // Empty string means "no change to password"
+      password: "",
       role: user.role || "",
     });
     setIsEditDialogOpen(true);
@@ -350,9 +395,10 @@ export default function Users() {
 
   const onSubmitEdit = async (values: z.infer<typeof editFormSchema>) => {
     try {
+      // Ensure selectedUser is set and has required properties
       if (!selectedUser || !selectedUser.user_id || !selectedUser.uuid) {
         toast.error("User information is incomplete");
-        return;
+        return; // Prevent further execution
       }
 
       // Check permissions again before submitting
@@ -370,9 +416,10 @@ export default function Users() {
         email: values.email,
         role: updateRole,
       };
-      
+
       // Only add password to update if it's not empty
-      const hasProvidedPassword = values.password && values.password.trim().length > 0;
+      const hasProvidedPassword =
+        values.password && values.password.trim().length > 0;
       if (hasProvidedPassword) {
         updateData.password = values.password;
       }
@@ -397,7 +444,7 @@ export default function Users() {
           data: {
             name: values.name,
             role: updateRole,
-          }
+          },
         };
 
         // Only include password in update if it's actually provided
@@ -406,56 +453,71 @@ export default function Users() {
         }
 
         // Submit the update
-        const { error: authError } = await supabase.auth.updateUser(authUpdateData);
+        const { error: authError } = await supabase.auth.updateUser(
+          authUpdateData
+        );
 
         if (authError) {
           console.error("Auth update error:", authError);
-          toast.warning("User details updated but authentication profile could not be updated.");
+          toast.warning(
+            "User details updated but authentication profile could not be updated."
+          );
         } else {
           // Update the user_data cookie to reflect the changes immediately
           try {
-            const currentUserData = JSON.parse(Cookies.get('user_data') || '{}');
+            const currentUserData = JSON.parse(
+              Cookies.get("user_data") || "{}"
+            );
             const updatedUserData = {
               ...currentUserData,
               name: values.name,
               email: values.email,
-              role: updateRole
+              role: updateRole,
             };
-            Cookies.set('user_data', JSON.stringify(updatedUserData));
+            Cookies.set("user_data", JSON.stringify(updatedUserData));
           } catch (cookieError) {
             console.error("Error updating user cookie:", cookieError);
           }
         }
       } else if (isSuperAdmin()) {
         // If a superadmin is editing someone else, we can't update their auth directly
-        
+
         // But if the user we're editing is currently logged in on this browser,
         // we should update their cookie data to reflect the changes
         try {
-          const currentUserData = JSON.parse(Cookies.get('user_data') || '{}');
-          
+          const currentUserData = JSON.parse(Cookies.get("user_data") || "{}");
+
           // Check if the edited user is the one currently logged in
           if (currentUserData.uuid === selectedUser.uuid) {
             const updatedUserData = {
               ...currentUserData,
               name: values.name,
               email: values.email,
-              role: updateRole
+              role: updateRole,
             };
-            Cookies.set('user_data', JSON.stringify(updatedUserData));
-            toast.info("User session data updated. Changes will be reflected immediately.", {
-              duration: 3000,
-            });
+            Cookies.set("user_data", JSON.stringify(updatedUserData));
+            toast.info(
+              "User session data updated. Changes will be reflected immediately.",
+              {
+                duration: 3000,
+              }
+            );
           } else {
-            toast.info("User database record updated. Auth record may need server-side update.", {
-              duration: 5000,
-            });
+            toast.info(
+              "User database record updated. Auth record may need server-side update.",
+              {
+                duration: 5000,
+              }
+            );
           }
         } catch (cookieError) {
           console.error("Error checking/updating user cookie:", cookieError);
-          toast.info("User database record updated. Auth record may need server-side update.", {
-            duration: 5000,
-          });
+          toast.info(
+            "User database record updated. Auth record may need server-side update.",
+            {
+              duration: 5000,
+            }
+          );
         }
       }
 
@@ -463,12 +525,12 @@ export default function Users() {
       setIsEditDialogOpen(false);
       editForm.reset();
       fetchUsers(); // Refresh the users list
-      
+
       // Update currentUser if editing own account
       if (isOwnAccount(selectedUser)) {
         fetchCurrentUser();
       }
-      
+
       setSelectedUser(null);
     } catch (error: any) {
       console.error("Error updating user:", error);
@@ -491,7 +553,7 @@ export default function Users() {
 
       // With client-side code, we can't use the admin API to delete users
       // We'll delete from the database and show a message about auth deletion
-      
+
       // Delete user from custom users table
       const { error: dbError } = await supabase
         .from("users")
@@ -504,9 +566,10 @@ export default function Users() {
       }
 
       toast.success("User deleted from database", {
-        description: "Note: The authentication record may require server-side deletion by an administrator."
+        description:
+          "Note: The authentication record may require server-side deletion by an administrator.",
       });
-      
+
       setIsDeleteDialogOpen(false);
       fetchUsers(); // Refresh the users list
       setSelectedUser(null);
@@ -520,107 +583,299 @@ export default function Users() {
     setCaptchaToken(token);
   };
 
+  const entriesPerPage = 3; // Define the number of entries per page
+  const pageCount = Math.ceil(users.length / entriesPerPage); // Calculate total pages
+
+  // Update the users to display based on the current page
+  const displayedUsers = users.slice(
+    currentPage * entriesPerPage,
+    (currentPage + 1) * entriesPerPage
+  );
+
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center mb-12">
         <h1 className="text-2xl font-medium font-poppins text-blue-900">
-          Accounts
+          Account Information
         </h1>
-        {canAddUser() ? (
-          <Button
-            className="bg-blue-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-800"
-            onClick={() => setIsDialogOpen(true)}
-          >
-            <Plus size={16} /> Add User
-          </Button>
-        ) : null}
       </div>
-      <hr className="border-gray-300 border-1 mb-6" />
-      
-      {currentUser?.role !== "superadmin" && (
-        <div className="bg-blue-50 p-4 rounded-lg mb-6 text-blue-800 flex items-center gap-2">
-          <Info size={18} />
-          <p className="text-sm">You can only edit your own account information.</p>
-        </div>
-      )}
-      
-      {currentUser?.role === "superadmin" && (
-        <div className="bg-amber-50 p-4 rounded-lg mb-6 text-amber-800 flex items-start gap-2">
-          <ShieldAlert size={18} className="mt-0.5" />
-          <div>
-            <p className="text-sm font-medium">Administrator Notice</p>
-            <p className="text-sm">
-              Client-side user management has limitations. You can add users and update database records, 
-              but some authentication operations may require server-side functions with admin privileges.
-            </p>
-          </div>
-        </div>
-      )}
-      
+
       <div className="mt-4">
-        {users.length > 0 ? (
-          users.map((user, index) => (
-            <div key={index} className="flex items-center justify-between mb-4 p-4 border rounded-lg hover:bg-gray-50">
-              <div className="flex items-center">
-                <img src="/assets/RACU.png" alt="Avatar" width="90" height="90" className="rounded-full mr-4" />
-                <div className="flex flex-col">
-                  <span className="text-xl font-semibold font-poppins text-gray-800">
-                    {user.name}
-                    {isOwnAccount(user) && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full ml-2">
-                        You
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-sm font-poppins text-gray-600">{user.email}</span>
-                  <span className="text-xs font-poppins text-gray-600 mt-1 px-2 py-1 bg-gray-200 rounded-full inline-block w-fit">
-                    {user.role}
-                  </span>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleEditUser(user)}
-                        className={`hover:bg-blue-100 ${!canEditUser(user) ? 'opacity-50' : ''}`}
-                      >
-                        <Pencil size={16} className="text-blue-900" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {canEditUser(user) ? 'Edit user' : 'You can only edit your own account'}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleDeleteUser(user)}
-                        className={`hover:bg-red-100 ${!canDeleteUser(user) ? 'opacity-50' : ''}`}
-                      >
-                        <Trash2 size={16} className="text-red-600" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {canDeleteUser(user) ? 'Delete user' : 'Only superadmins can delete users'}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+        {currentUser ? (
+          <div className="mt-4 grid grid-cols-1 gap-2 items-start">
+            {/* Left Column: Smaller Profile Card */}
+            <div className="flex flex-col items-center w-full">
+              <Avatar className="w-24 h-24 mb-2">
+                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-2xl font-poppins">
+                  {currentUser?.name
+                    ? currentUser.name.split(" ")[0][0].toUpperCase() // Get the first letter of the first word
+                    : "?"}
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="flex flex-col items-center text-center">
+                <span className="text-lg font-semibold font-poppins text-gray-800">
+                  {currentUser.name}
+                </span>
+                <span className="text-sm font-poppins text-gray-600">
+                  {currentUser.email}
+                </span>
+                {/* <span className="text-[10px] font-poppins text-white mt-1 px-2 py-1 bg-blue-500 rounded-full inline-block w-fit">
+                  {currentUser.role}
+                </span> */}
               </div>
             </div>
-          ))
+
+            {/* Right Column: Larger Personal Details Card */}
+            <Card className="flex flex-col w-full border-gray-300 bg-white shadow-sm mt-5 p-7">
+              <CardContent>
+                <Form {...editForm}>
+                  <form
+                    onSubmit={editForm.handleSubmit(onSubmitEdit)}
+                    className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8"
+                  >
+                    {/* Left Column: Name and Email */}
+                    <div className="space-y-4">
+                      <FormField
+                        control={editForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter name"
+                                {...field}
+                                defaultValue={currentUser?.name || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="email"
+                                placeholder="Enter email"
+                                {...field}
+                                defaultValue={currentUser?.email || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Right Column: Password and Role */}
+                    <div className="space-y-4">
+                      <FormField
+                        control={editForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Password
+                              <span className="ml-1 text-xs text-gray-500 font-normal">
+                                (optional)
+                              </span>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                type="password"
+                                placeholder="Enter new password"
+                                {...field}
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Only enter a password if you want to change it.
+                              Leave empty to keep the current password.
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="role"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Role</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={currentUser?.role || ""}
+                              disabled={!isSuperAdmin()}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a role" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="superadmin">
+                                  Super Admin
+                                </SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="user">User</SelectItem>
+                                <SelectItem value="wcpd">WCPD</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {!isSuperAdmin() && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Only superadmins can change roles.
+                              </p>
+                            )}
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Footer: Buttons */}
+                    <div className="col-span-2 flex justify-end gap-4 mt-6">
+                      <Button
+                        variant="outline"
+                        type="button"
+                        onClick={handleCancelEdit}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="bg-blue-900 hover:bg-blue-800"
+                      >
+                        Save Changes
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </div>
         ) : (
           <span className="text-sm font-poppins text-gray-600">Loading...</span>
         )}
       </div>
+
+      {/* Display all users if superadmin */}
+      {isSuperAdmin() && (
+        <div className="mt-6 font-poppins">
+          <Card className="p-4 border-gray-300 bg-white shadow-sm">
+            <div className="flex justify-between items-center">
+              <CardHeader className="text-xl font-semibold">
+                All Users
+              </CardHeader>
+              {canAddUser() && (
+                <Button
+                  className="bg-blue-900 text-white px-4 rounded-lg flex items-center hover:bg-blue-800 mr-9"
+                  onClick={() => setIsDialogOpen(true)}
+                >
+                  <UserPlus2 size={16} /> Add User
+                </Button>
+              )}
+            </div>
+
+            <CardContent>
+              <table className="min-w-full border-collapse table-auto">
+                <thead className="bg-blue-100 text-blue-900">
+                  <tr>
+                    <th className="px-6 py-3 text-left border-b">Name</th>
+                    <th className="px-6 py-3 text-left border-b">Email</th>
+                    <th className="px-6 py-3 text-left border-b">Role</th>
+                    <th className="px-6 py-3 text-left border-b">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {displayedUsers.map((user) => (
+                    <tr
+                      key={user.user_id}
+                      className="hover:bg-blue-50 transition-colors duration-200"
+                    >
+                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
+                        {user.name}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
+                        {user.email}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
+                        {user.role}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleEditUser(user)}
+                          className="hover:bg-blue-100 border-none shadow-none bg-transparent"
+                        >
+                          <Pencil size={16} className="text-blue-900" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleDeleteUser(user)}
+                          className="hover:bg-red-100 border-none shadow-none bg-transparent"
+                        >
+                          <Trash2 size={16} className="text-red-600" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+            <CardFooter>
+              <Pagination>
+                <PaginationContent className="flex items-center space-x-2">
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(0, prev - 1))
+                      }
+                      aria-disabled={currentPage === 0}
+                      className="text-xs mr-7"
+                    >
+                      <PaginationPrevious />
+                    </PaginationLink>
+                  </PaginationItem>
+
+                  {Array.from({ length: pageCount }, (_, i) => (
+                    <PaginationItem key={i}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(i)}
+                        isActive={currentPage === i}
+                        className="text-xs"
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() =>
+                        setCurrentPage((prev) =>
+                          Math.min(pageCount - 1, prev + 1)
+                        )
+                      }
+                      aria-disabled={currentPage === pageCount - 1}
+                      className="text-xs mx-3"
+                    >
+                      <PaginationNext />
+                    </PaginationLink>
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </CardFooter>
+          </Card>
+        </div>
+      )}
 
       {/* Add User Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -650,7 +905,11 @@ export default function Users() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="Enter email" {...field} />
+                      <Input
+                        type="email"
+                        placeholder="Enter email"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -661,11 +920,13 @@ export default function Users() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password <span className="text-red-500">*</span></FormLabel>
+                    <FormLabel>
+                      Password <span className="text-red-500">*</span>
+                    </FormLabel>
                     <FormControl>
-                      <Input 
-                        type="password" 
-                        placeholder="Enter password" 
+                      <Input
+                        type="password"
+                        placeholder="Enter password"
                         {...field}
                         value={field.value || ""}
                       />
@@ -683,7 +944,10 @@ export default function Users() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a role" />
@@ -718,8 +982,8 @@ export default function Users() {
       </Dialog>
 
       {/* Edit User Dialog */}
-      <Dialog 
-        open={isEditDialogOpen} 
+      <Dialog
+        open={isEditDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
             // Dialog is closing, use the same handler as the cancel button
@@ -732,7 +996,10 @@ export default function Users() {
             <DialogTitle>Edit User</DialogTitle>
           </DialogHeader>
           <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(onSubmitEdit)} className="space-y-4">
+            <form
+              onSubmit={editForm.handleSubmit(onSubmitEdit)}
+              className="space-y-4"
+            >
               <FormField
                 control={editForm.control}
                 name="name"
@@ -753,7 +1020,11 @@ export default function Users() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="Enter email" {...field} />
+                      <Input
+                        type="email"
+                        placeholder="Enter email"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -771,15 +1042,16 @@ export default function Users() {
                       </span>
                     </FormLabel>
                     <FormControl>
-                      <Input 
-                        type="password" 
-                        placeholder="Enter new password" 
+                      <Input
+                        type="password"
+                        placeholder="Enter new password"
                         {...field}
                         value={field.value || ""}
                       />
                     </FormControl>
                     <p className="text-xs text-gray-500 mt-1">
-                      Only enter a password if you want to change it. Leave empty to keep current password.
+                      Only enter a password if you want to change it. Leave
+                      empty to keep current password.
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -791,8 +1063,8 @@ export default function Users() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                       disabled={!isSuperAdmin()}
                     >
@@ -809,16 +1081,18 @@ export default function Users() {
                       </SelectContent>
                     </Select>
                     {!isSuperAdmin() && (
-                      <p className="text-xs text-gray-500 mt-1">Only superadmins can change roles.</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Only superadmins can change roles.
+                      </p>
                     )}
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  type="button" 
+                <Button
+                  variant="outline"
+                  type="button"
                   onClick={handleCancelEdit}
                 >
                   Cancel
@@ -841,15 +1115,19 @@ export default function Users() {
               Confirm Deletion
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {selectedUser?.name}? This action cannot be undone.
+              Are you sure you want to delete {selectedUser?.name}? This action
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={confirmDeleteUser}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
@@ -860,7 +1138,10 @@ export default function Users() {
       </Dialog>
 
       {/* Permission Denied Dialog */}
-      <Dialog open={isPermissionDialogOpen} onOpenChange={setIsPermissionDialogOpen}>
+      <Dialog
+        open={isPermissionDialogOpen}
+        onOpenChange={setIsPermissionDialogOpen}
+      >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-600">
@@ -877,14 +1158,6 @@ export default function Users() {
               </ul>
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsPermissionDialogOpen(false)}
-            >
-              Understood
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

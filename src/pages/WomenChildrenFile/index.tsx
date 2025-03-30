@@ -764,32 +764,34 @@ export default function WomenChildrenFile() {
                 ))}
               </tbody>
             </table>
-            <FileOperations
-              file={selectedFile || files[0]}
-              showPreview={previewStates[selectedFile?.file_id || 0] || false}
-              setShowPreview={(show) => {
-                setPreviewStates((prev) => ({
-                  ...prev,
-                  [selectedFile?.file_id || 0]: show,
-                }));
-              }}
-              showFileDialog={showFileDialog}
-              setShowFileDialog={setShowFileDialog}
-              selectedFile={selectedFile}
-              setSelectedFile={setSelectedFile}
-              onFileUpdate={() => {
-                // Remove the file from the UI if it was archived
-                if (showFileDialog === "archive") {
-                  setFiles(
-                    files.filter((f) => f.file_id !== selectedFile?.file_id)
-                  );
-                } else {
-                  // Refresh the files list
-                  window.location.reload();
-                }
-              }}
-              isListView={isListView} // Pass the isListView prop
-            />
+            {selectedFile && (
+              <FileOperations
+                file={selectedFile}
+                showPreview={previewStates[selectedFile.file_id] || false}
+                setShowPreview={(show) => {
+                  setPreviewStates((prev) => ({
+                    ...prev,
+                    [selectedFile.file_id]: show,
+                  }));
+                }}
+                showFileDialog={showFileDialog}
+                setShowFileDialog={setShowFileDialog}
+                selectedFile={selectedFile}
+                setSelectedFile={setSelectedFile}
+                onFileUpdate={() => {
+                  // Remove the file from the UI if it was archived
+                  if (showFileDialog === "archive") {
+                    setFiles(
+                      files.filter((f) => f.file_id !== selectedFile?.file_id)
+                    );
+                  } else {
+                    // Refresh the files list
+                    window.location.reload();
+                  }
+                }}
+                isListView={isListView} // Pass the isListView prop
+              />
+            )}
           </div>
         ) : filteredFiles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 font-poppins">
