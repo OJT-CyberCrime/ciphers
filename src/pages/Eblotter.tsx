@@ -50,6 +50,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Cookies from "js-cookie";
 import { toast } from "sonner";
 import PermissionDialog from "@/components/PermissionDialog";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 interface Category {
   category_id: number;
@@ -863,11 +864,15 @@ export default function Eblotter() {
                   </tr>
                 ))
               ) : (
-                <tr>
-                  <td colSpan={4} className="text-center text-gray-500 py-8">
-                    No folders found
-                  </td>
-                </tr>
+                <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 font-poppins">
+                <DotLottieReact
+                  src="/assets/NoFiles.lottie"
+                  loop
+                  autoplay
+                  className="w-6/12"
+                />
+                No files found in this folder
+              </div>
               )}
             </tbody>
           </table>
@@ -1020,9 +1025,16 @@ export default function Eblotter() {
               </div>
             ))
           ) : (
-            <div className="text-center text-gray-500 py-8">
-              No folders found
-            </div>
+    // Fix: Ensuring Lottie is centered by spanning all columns
+    <div className="col-span-full flex flex-col items-center justify-center h-[50vh] text-gray-500 font-poppins">
+    <DotLottieReact
+      src="/assets/NoFiles.lottie"
+      loop
+      autoplay
+      className="w-6/12"
+    />
+    No files found in this folder
+  </div>
           )}
         </div>
       )}

@@ -44,6 +44,7 @@ import FolderOperations from "./components/FolderOperations";
 import { Skeleton } from "@/components/ui/skeleton";
 import PermissionDialog from "@/components/PermissionDialog";
 import Cookies from "js-cookie";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 interface Category {
   category_id: number;
@@ -110,10 +111,12 @@ export default function IncidentReport() {
   const previousPageName = "Home";
   const [sortCriteria, setSortCriteria] = useState("created_at");
 
-  const userRole = JSON.parse(Cookies.get('user_data') || '{}').role;
+  const userRole = JSON.parse(Cookies.get("user_data") || "{}").role;
 
   const canEditOrArchive = () => {
-    return userRole === 'admin' || userRole === 'superadmin' || userRole === 'wcpd';
+    return (
+      userRole === "admin" || userRole === "superadmin" || userRole === "wcpd"
+    );
   };
 
   // Fetch folders with their categories from Supabase
@@ -543,11 +546,15 @@ export default function IncidentReport() {
                   </tr>
                 ))
               ) : (
-                <tr>
-                  <td colSpan={4} className="text-center text-gray-500 py-8">
-                    No folders found
-                  </td>
-                </tr>
+                <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 font-poppins">
+                  <DotLottieReact
+                    src="/assets/NoFiles.lottie"
+                    loop
+                    autoplay
+                    className="w-6/12"
+                  />
+                  No files found in this folder
+                </div>
               )}
             </tbody>
           </table>
@@ -697,8 +704,15 @@ export default function IncidentReport() {
               </div>
             ))
           ) : (
-            <div className="text-center text-gray-500 py-8">
-              No folders found
+            // Fix: Ensuring Lottie is centered by spanning all columns
+            <div className="col-span-full flex flex-col items-center justify-center h-[50vh] text-gray-500 font-poppins">
+              <DotLottieReact
+                src="/assets/NoFiles.lottie"
+                loop
+                autoplay
+                className="w-6/12"
+              />
+              No files found in this folder
             </div>
           )}
         </div>
@@ -718,7 +732,7 @@ export default function IncidentReport() {
         availableCategories={availableCategories}
       />
 
-      <PermissionDialog 
+      <PermissionDialog
         isOpen={showPermissionDialog}
         onClose={() => setShowPermissionDialog(false)}
         action={permissionAction}
