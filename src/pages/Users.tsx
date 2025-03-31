@@ -420,29 +420,42 @@ export default function Users() {
   const handleEditUser = (user: UserData) => {
     // Allow superadmin to edit their own information
     if (isSuperAdmin() && user.uuid === currentUser?.id) {
-      setSelectedUser(user);
-      editForm.reset({
-        name: currentUser?.name || "",
-        email: currentUser?.email || "",
-        password: "",
-        role: currentUser?.role || "",
-      });
-      setIsEditDialogOpen(true);
-      return;
+        setSelectedUser(user);
+        editForm.reset({
+            name: currentUser?.name || "",
+            email: currentUser?.email || "",
+            password: "",
+            role: currentUser?.role || "",
+        });
+        setIsEditDialogOpen(true);
+        return;
+    }
+
+    // Allow regular users to edit their own information
+    if (isOwnAccount(user)) {
+        setSelectedUser(user);
+        editForm.reset({
+            name: user.name,
+            email: user.email,
+            password: "",
+            role: user.role || "",
+        });
+        setIsEditDialogOpen(true);
+        return;
     }
 
     // Check if the user can edit the selected user
     if (!canEditUser(user)) {
-      showPermissionDenied();
-      return;
+        showPermissionDenied();
+        return;
     }
 
     setSelectedUser(user);
     editForm.reset({
-      name: user.name,
-      email: user.email,
-      password: "",
-      role: user.role || "",
+        name: user.name,
+        email: user.email,
+        password: "",
+        role: user.role || "",
     });
     setIsEditDialogOpen(true);
   };
@@ -470,55 +483,58 @@ export default function Users() {
   };
 
   const onSubmitEdit = async (values: z.infer<typeof editFormSchema>) => {
-    try {
-      if (!selectedUser || !selectedUser.user_id || !selectedUser.uuid) {
+    try { 
+
+      console.log("Form Values: ", values);
+      console.log("Selected User: ", currentUser?.id  );
+      // Check if selectedUser is defined and contains required information
+      if (!selectedUser || !currentUser?.id || !selectedUser.uuid) {
         toast.error("User information is incomplete");
         return;
       }
-
-      if (!canEditUser(selectedUser)) {
+  
+      // Permission check for editing
+      if (isOwnAccount(selectedUser)) {
+        // No need to check permissions for own account
+      } else if (!canEditUser(selectedUser)) {
         showPermissionDenied();
         return;
       }
-
+  
+      // If the user is editing their own account, update the role or keep existing
       const updateRole = isSuperAdmin() ? values.role : selectedUser.role;
       let filePath = selectedUser.file_path;
       let publicUrl = selectedUser.public_url;
-
+  
       // Handle avatar update if a new file was selected
       if (editAvatarFile) {
         // Delete old avatar if it exists
         if (selectedUser.file_path) {
-          await supabase.storage
-            .from("profilepic")
-            .remove([selectedUser.file_path]);
+          await supabase.storage.from("profilepic").remove([selectedUser.file_path]);
         }
-
+  
         // Upload new avatar
         const fileExt = editAvatarFile.name.split(".").pop();
         const fileName = `${Math.random()}.${fileExt}`;
         filePath = `${fileName}`;
-
+  
         const { error: uploadError } = await supabase.storage
           .from("profilepic")
           .upload(filePath, editAvatarFile, {
             cacheControl: "3600",
             upsert: false,
           });
-
+  
         if (uploadError) {
           throw uploadError;
         }
-
+  
         // Get a public URL for the new avatar
-        const { data } = supabase.storage
-          .from("profilepic")
-          .getPublicUrl(filePath);
-
+        const { data } = supabase.storage.from("profilepic").getPublicUrl(filePath);
         publicUrl = data.publicUrl;
       }
-
-      // Update user in your custom users table
+  
+      // Prepare update data
       const updateData: any = {
         name: values.name,
         email: values.email,
@@ -526,22 +542,21 @@ export default function Users() {
         file_path: filePath,
         public_url: publicUrl,
       };
-
+  
       if (values.password && values.password.trim().length > 0) {
         updateData.password = values.password;
       }
-
+  
+      // Update user in the database
       const { error: dbError } = await supabase
         .from("users")
         .update(updateData)
         .eq("user_id", selectedUser.user_id);
-
+  
       if (dbError) throw dbError;
-
+  
       // If user is updating their own account, update the auth metadata and cookies
-      // This works because a user can update their own auth record
       if (isOwnAccount(selectedUser)) {
-        // Create auth update data object without password
         const authUpdateData: any = {
           email: values.email,
           data: {
@@ -549,89 +564,37 @@ export default function Users() {
             role: updateRole,
           },
         };
-
-        // Only include password in update if it's actually provided
+  
         if (values.password && values.password.trim().length > 0) {
           authUpdateData.password = values.password;
         }
-
-        // Submit the update
-        const { error: authError } = await supabase.auth.updateUser(
-          authUpdateData
-        );
-
+  
+        const { error: authError } = await supabase.auth.updateUser(authUpdateData);
+  
         if (authError) {
-          toast.warning(
-            "User details updated but authentication profile could not be updated."
-          );
+          toast.warning("User details updated but authentication profile could not be updated.");
         } else {
-          // Update the user_data cookie to reflect the changes immediately
+          // Update the user_data cookie
           try {
-            const currentUserData = JSON.parse(
-              Cookies.get("user_data") || "{}"
-            );
-            const updatedUserData = {
-              ...currentUserData,
-              name: values.name,
-              email: values.email,
-              role: updateRole,
-            };
+            const currentUserData = JSON.parse(Cookies.get("user_data") || "{}");
+            const updatedUserData = { ...currentUserData, name: values.name, email: values.email, role: updateRole };
             Cookies.set("user_data", JSON.stringify(updatedUserData));
           } catch (cookieError) {
-            // Handle cookie error silently
+            console.error(cookieError);
           }
-        }
-      } else if (isSuperAdmin()) {
-        // If a superadmin is editing someone else, we can't update their auth directly
-
-        // But if the user we're editing is currently logged in on this browser,
-        // we should update their cookie data to reflect the changes
-        try {
-          const currentUserData = JSON.parse(Cookies.get("user_data") || "{}");
-
-          // Check if the edited user is the one currently logged in
-          if (currentUserData.uuid === selectedUser.uuid) {
-            const updatedUserData = {
-              ...currentUserData,
-              name: values.name,
-              email: values.email,
-              role: updateRole,
-            };
-            Cookies.set("user_data", JSON.stringify(updatedUserData));
-            toast.info(
-              "User session data updated. Changes will be reflected immediately.",
-              {
-                duration: 3000,
-              }
-            );
-          } else {
-            toast.info(
-              "User database record updated. Auth record may need server-side update.",
-              {
-                duration: 5000,
-              }
-            );
-          }
-        } catch (cookieError) {
-          toast.info(
-            "User database record updated. Auth record may need server-side update.",
-            {
-              duration: 5000,
-            }
-          );
         }
       }
-
+  
       toast.success("User updated successfully");
       setIsEditDialogOpen(false);
       editForm.reset();
       fetchUsers(); // Refresh the users list
-
+  
       // Update currentUser if editing own account
       if (isOwnAccount(selectedUser)) {
         fetchCurrentUser();
       }
-
+  
       setSelectedUser(null);
       setEditAvatarFile(null);
       setEditAvatarPreview(null);
@@ -640,6 +603,7 @@ export default function Users() {
       toast.error(error.message || "Failed to update user");
     }
   };
+  
 
   const confirmDeleteUser = async () => {
     try {
@@ -655,9 +619,9 @@ export default function Users() {
       }
 
       // With client-side code, we can't use the admin API to delete users
-      // We'll delete from the database and show a message about auth deletion
+      // We'll delete from the database and show a note about auth deletion
 
-      // Delete user from custom users table
+      // Delete user from users table
       const { error: dbError } = await supabase
         .from("users")
         .delete()
@@ -740,7 +704,7 @@ export default function Users() {
                 <AvatarImage
                   src={currentUser.public_url}
                   alt={currentUser.name}
-                  className="w-full h-full object-cover rounded-full"
+                  className="w-full h-full rounded-full border-2 border-gray-300 object-cover"
                   onError={(e) => {
                     e.currentTarget.style.display = "none";
                   }}
@@ -790,7 +754,7 @@ export default function Users() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="info">
+              <TabsContent value="info" forceMount>
                 <Form {...editForm}>
                   <form
                     onSubmit={editForm.handleSubmit(onSubmitEdit)}
@@ -841,7 +805,7 @@ export default function Users() {
                       <Button
                         type="submit"
                         className="bg-blue-900 hover:bg-blue-800"
-                        disabled={!isNameChanged && !isEmailChanged}
+                        disabled={!editForm.formState.isValid}
                       >
                         Save Changes
                       </Button>
