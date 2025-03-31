@@ -257,7 +257,7 @@ export default function EblotterFile() {
   const navigate = useNavigate();
   const location = useLocation();
   const previousPage = "/eblotter";
-  const previousPageName = "Eblotter";
+  const previousPageName = "Blotter Reports";
   const [reportingPerson, setReportingPerson] =
     useState<ReportingPersonDetails>({
       full_name: "",

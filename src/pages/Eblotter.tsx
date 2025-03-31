@@ -650,13 +650,13 @@ export default function Eblotter() {
           <ChevronRight size={16} />
         </BreadcrumbSeparator>
         <BreadcrumbItem>
-          <span className="text-gray-900">Blotter Report</span>
+          <span className="text-gray-900">Blotter Reports</span>
         </BreadcrumbItem>
       </Breadcrumb>
 
       <div className="flex justify-between items-center mb-6 ">
         <h1 className="text-2xl font-medium font-poppins text-blue-900">
-         Blotter Report
+         Blotter Reports
         </h1>
         <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
           <Button
