@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
   BreadcrumbItem,
+  BreadcrumbLink,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import SearchBar from "@/Search";
@@ -16,9 +17,9 @@ import {
   Archive,
   Eye,
   MoreVertical,
+  SortAsc,
   List,
   Grid,
-  SortAsc,
   X,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
@@ -36,28 +37,28 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  // DialogDescription,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import Cookies from "js-cookie";
-// import RichTextEditor from "@/components/RichTextEditor";
+import RichTextEditor from "@/components/RichTextEditor";
 import FileOperations from "./components/FileOperations";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import PermissionDialog from "@/components/PermissionDialog";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
   SheetDescription,
   SheetFooter,
+  SheetHeader,
+  SheetTitle,
 } from "@/components/ui/sheet";
-import PermissionDialog from "@/components/PermissionDialog";
 import { Switch } from "@/components/ui/switch";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 interface FileRecord {
   file_id: number;
@@ -121,7 +122,6 @@ interface Suspect {
   contact_number: string;
 }
 
-// Add new interface for collage state
 interface CollageState {
   files: File[];
   previewUrls: string[];
@@ -172,60 +172,64 @@ const getStatusBadgeClass = (status: string) => {
   }
 };
 
-const CollagePreview = ({
-  collageState,
-  onLayoutChange,
-  onPhotoRemove,
-}: {
+// Add the CollagePreview component definition before the main component
+const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
   collageState: CollageState;
   onLayoutChange: (layout: string) => void;
   onPhotoRemove: (index: number) => void;
-}) => {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Label>Layout:</Label>
-        <Select value={collageState.layout} onValueChange={onLayoutChange}>
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="Choose layout" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1x1">1 x 1</SelectItem>
-            <SelectItem value="2x2">2 x 2</SelectItem>
-            <SelectItem value="3x3">3 x 3</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div
-        className={`grid gap-2 ${
-          collageState.layout === "1x1"
-            ? "grid-cols-1"
-            : collageState.layout === "2x2"
-            ? "grid-cols-2"
-            : "grid-cols-3"
-        }`}
-      >
-        {collageState.previewUrls.map((url, index) => (
-          <div key={index} className="relative group">
-            <img
-              src={url}
-              alt={`Collage photo ${index + 1}`}
-              className="w-full h-40 object-cover rounded-md"
-            />
-            <button
-              onClick={() => onPhotoRemove(index)}
-              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        ))}
+}) => (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between">
+      <Label>Layout</Label>
+      <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
+          <Label>1x1</Label>
+          <Switch
+            checked={collageState.layout === "1x1"}
+            onCheckedChange={() => onLayoutChange("1x1")}
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Label>2x2</Label>
+          <Switch
+            checked={collageState.layout === "2x2"}
+            onCheckedChange={() => onLayoutChange("2x2")}
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Label>3x3</Label>
+          <Switch
+            checked={collageState.layout === "3x3"}
+            onCheckedChange={() => onLayoutChange("3x3")}
+          />
+        </div>
       </div>
     </div>
-  );
-};
+    <div className={`grid gap-2 ${
+      collageState.layout === "1x1" ? "grid-cols-1" :
+      collageState.layout === "2x2" ? "grid-cols-2" :
+      "grid-cols-3"
+    }`}>
+      {collageState.previewUrls.map((url, index) => (
+        <div key={index} className="relative group">
+          <img
+            src={url}
+            alt={`Preview ${index + 1}`}
+            className="w-full h-40 object-cover rounded-lg"
+          />
+          <button
+            onClick={() => onPhotoRemove(index)}
+            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
-export default function IncidentReport() {
+export default function EblotterFile() {
   const { id } = useParams<{ id: string }>();
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
@@ -252,9 +256,8 @@ export default function IncidentReport() {
   );
   const navigate = useNavigate();
   const location = useLocation();
-  const previousPage = "/incident-report";
-  const previousPageName = "Incident Report"; // Update to correct page name
-  const [sortCriteria, setSortCriteria] = useState("created_at");
+  const previousPage = "/incident-report-file";
+  const previousPageName = "Incident Report File";
   const [reportingPerson, setReportingPerson] =
     useState<ReportingPersonDetails>({
       full_name: "",
@@ -279,20 +282,18 @@ export default function IncidentReport() {
       contact_number: "",
     },
   ]);
-  const [isListView, setIsListView] = useState(() => {
-    // Retrieve the view state from localStorage
-    const savedView = localStorage.getItem("isListView");
-    return savedView ? JSON.parse(savedView) : false; // Default to grid view if not set
-  });
-  const contextMenuRef = useRef<HTMLDivElement | null>(null); // Create a ref for the context menu
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [permissionAction, setPermissionAction] = useState("");
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
+  const [activeContextMenu, setActiveContextMenu] = useState<number | null>(null);
+  const [contextMenuVisible, setContextMenuVisible] = useState<{ [key: number]: boolean }>({});
+  const [isCollage, setIsCollage] = useState(false);
   const [collageState, setCollageState] = useState<CollageState>({
     files: [],
     previewUrls: [],
-    layout: "2x2", // default layout
+    layout: '2x2'
   });
-  const [isCollageMode, setIsCollageMode] = useState(false);
 
   const userRole = JSON.parse(Cookies.get("user_data") || "{}").role;
 
@@ -302,71 +303,24 @@ export default function IncidentReport() {
     );
   };
 
-  const handleEditClick = async (file: FileRecord) => {
-    try {
-      // Client-side check first
-      if (!canEditOrArchive()) {
-        setPermissionAction("edit this file");
-        setShowPermissionDialog(true);
-        return;
-      }
-
-      // Server-side permission validation
-      const editUserData = JSON.parse(Cookies.get("user_data") || "{}");
-      const { data: editUserDetails, error: editUserError } = await supabase
-        .from("users")
-        .select("role")
-        .eq("email", editUserData.email)
-        .single();
-
-      if (editUserError) throw editUserError;
-      if (!editUserDetails) throw new Error("User not found");
-
-      if (!["admin", "superadmin", "wcpd"].includes(editUserDetails.role)) {
-        toast.error("You do not have permission to perform this action");
-        return;
-      }
-
-      setSelectedFile(file);
-      setShowFileDialog("edit");
-    } catch (error: any) {
-      console.error("Error checking permissions:", error);
-      toast.error("Failed to verify permissions");
+  const handleEditClick = (file: FileRecord) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("edit this file");
+      setShowPermissionDialog(true);
+      return;
     }
+    setSelectedFile(file);
+    setShowFileDialog("edit");
   };
 
-  const handleArchiveClick = async (file: FileRecord) => {
-    try {
-      // Client-side check first
-      if (!canEditOrArchive()) {
-        setPermissionAction("archive this file");
-        setShowPermissionDialog(true);
-        return;
-      }
-
-      // Server-side permission validation
-      const archiveUserData = JSON.parse(Cookies.get("user_data") || "{}");
-      const { data: archiveUserDetails, error: archiveUserError } =
-        await supabase
-          .from("users")
-          .select("role")
-          .eq("email", archiveUserData.email)
-          .single();
-
-      if (archiveUserError) throw archiveUserError;
-      if (!archiveUserDetails) throw new Error("User not found");
-
-      if (!["admin", "superadmin", "wcpd"].includes(archiveUserDetails.role)) {
-        toast.error("You do not have permission to perform this action");
-        return;
-      }
-
-      setSelectedFile(file);
-      setShowFileDialog("archive");
-    } catch (error: any) {
-      console.error("Error checking permissions:", error);
-      toast.error("Failed to verify permissions");
+  const handleArchiveClick = (file: FileRecord) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("archive this file");
+      setShowPermissionDialog(true);
+      return;
     }
+    setSelectedFile(file);
+    setShowFileDialog("archive");
   };
 
   // Function to add a new suspect form
@@ -425,7 +379,7 @@ export default function IncidentReport() {
       let publicUrl = "";
       let collagePhotos: string[] = [];
 
-      if (isCollageMode) {
+      if (isCollage) {
         // Upload each photo in the collage
         for (const file of collageState.files) {
           const fileExt = file.name.split(".").pop();
@@ -441,68 +395,68 @@ export default function IncidentReport() {
 
           if (uploadError) throw uploadError;
 
-          const {
-            data: { publicUrl: photoUrl },
-          } = supabase.storage.from("files").getPublicUrl(photoPath);
+          const { data: { publicUrl: photoUrl } } = supabase.storage
+            .from("files")
+            .getPublicUrl(photoPath);
 
           collagePhotos.push(photoUrl);
         }
 
-        // Create a collage preview image using HTML Canvas
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        const [cols, rows] = collageState.layout.split("x").map(Number);
-        const photoWidth = 800 / cols;
-        const photoHeight = 800 / rows;
+        if (collagePhotos.length > 0) {
+          // Create a collage preview image using HTML Canvas
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const [cols, rows] = collageState.layout.split('x').map(Number);
+          const photoWidth = 800 / cols;
+          const photoHeight = 800 / rows;
+          
+          canvas.width = 800;
+          canvas.height = 800;
 
-        canvas.width = 800;
-        canvas.height = 800;
-
-        // Load all images and draw them on the canvas
-        const images = await Promise.all(
-          collageState.previewUrls.map((url) => {
-            return new Promise<HTMLImageElement>((resolve) => {
-              const img = new Image();
-              img.crossOrigin = "anonymous";
-              img.onload = () => resolve(img);
-              img.src = url;
-            });
-          })
-        );
-
-        images.forEach((img, index) => {
-          const row = Math.floor(index / cols);
-          const col = index % cols;
-          ctx?.drawImage(
-            img,
-            col * photoWidth,
-            row * photoHeight,
-            photoWidth,
-            photoHeight
+          // Load all images and draw them on the canvas
+          const images = await Promise.all(
+            collageState.previewUrls.map(url => {
+              return new Promise<HTMLImageElement>((resolve) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => resolve(img);
+                img.src = url;
+              });
+            })
           );
-        });
 
-        // Convert canvas to blob and upload
-        const blob = await new Promise<Blob>((resolve) =>
-          canvas.toBlob((blob) => resolve(blob!))
-        );
-        const collageFileName = `collage_${Math.random()}.png`;
-        filePath = `folder_${id}/${collageFileName}`;
-
-        const { error: collageUploadError } = await supabase.storage
-          .from("files")
-          .upload(filePath, blob, {
-            cacheControl: "3600",
-            upsert: false,
+          images.forEach((img, index) => {
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            ctx?.drawImage(
+              img,
+              col * photoWidth,
+              row * photoHeight,
+              photoWidth,
+              photoHeight
+            );
           });
 
-        if (collageUploadError) throw collageUploadError;
+          // Convert canvas to blob and upload
+          const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!)));
+          const collageFileName = `collage_${Math.random()}.png`;
+          filePath = `folder_${id}/${collageFileName}`;
 
-        const {
-          data: { publicUrl: collagePublicUrl },
-        } = supabase.storage.from("files").getPublicUrl(filePath);
+          const { error: collageUploadError } = await supabase.storage
+            .from("files")
+            .upload(filePath, blob, {
+              cacheControl: "3600",
+              upsert: false,
+            });
 
-        publicUrl = collagePublicUrl;
+          if (collageUploadError) throw collageUploadError;
+
+          const { data: { publicUrl: collagePublicUrl } } = supabase.storage
+            .from("files")
+            .getPublicUrl(filePath);
+
+          publicUrl = collagePublicUrl;
+        }
       } else if (fileUpload?.[0]) {
         // Handle regular file upload
         const file = fileUpload[0];
@@ -524,8 +478,6 @@ export default function IncidentReport() {
           .getPublicUrl(filePath);
 
         publicUrl = filePublicUrl;
-      } else {
-        throw new Error("No file selected for upload");
       }
 
       // Create file record in database
@@ -544,8 +496,8 @@ export default function IncidentReport() {
             public_url: publicUrl,
             investigator: newInvestigator,
             desk_officer: newDeskOfficer,
-            is_collage: isCollageMode,
-            collage_photos: isCollageMode ? collagePhotos : null,
+            is_collage: isCollage,
+            collage_photos: isCollage ? collagePhotos : null
           },
         ])
         .select()
@@ -553,106 +505,70 @@ export default function IncidentReport() {
 
       if (fileError) throw fileError;
 
-      // Only insert reporting person details if at least one field is filled
-      const hasReportingPersonData = Object.values(reportingPerson).some(
-        (value) => value !== "" && value !== 0
-      );
+      // Only insert reporting person details if at least one field is filled out
+      const hasReportingPersonData = 
+        reportingPerson.full_name ||
+        reportingPerson.age ||
+        reportingPerson.birthday ||
+        reportingPerson.complete_address ||
+        reportingPerson.contact_number ||
+        reportingPerson.date_reported ||
+        reportingPerson.time_reported;
 
-      if (hasReportingPersonData) {
-        // Create a cleaned version of reporting person data
-        const cleanedReportingPerson = {
-          file_id: fileData.file_id,
-          full_name: reportingPerson.full_name || null,
-          age: reportingPerson.age || null,
-          gender: reportingPerson.gender || null,
-          complete_address: reportingPerson.complete_address || null,
-          contact_number: reportingPerson.contact_number || null,
-          birthday: reportingPerson.birthday
-            ? new Date(reportingPerson.birthday).toISOString()
-            : null,
-          date_reported: reportingPerson.date_reported
-            ? new Date(reportingPerson.date_reported).toISOString()
-            : null,
-          time_reported: reportingPerson.time_reported || null,
-          date_of_incident: reportingPerson.date_of_incident
-            ? new Date(reportingPerson.date_of_incident).toISOString()
-            : null,
-          time_of_incident: reportingPerson.time_of_incident || null,
-          place_of_incident: reportingPerson.place_of_incident || null,
-        };
-
+      if (hasReportingPersonData && fileData) {
         const { error: reportingError } = await supabase
           .from("reporting_person_details")
-          .insert([cleanedReportingPerson]);
+          .insert([
+            {
+              file_id: fileData.file_id,
+              ...reportingPerson,
+              birthday: reportingPerson.birthday ? new Date(reportingPerson.birthday).toISOString() : null,
+              date_reported: reportingPerson.date_reported ? new Date(reportingPerson.date_reported).toISOString() : null,
+              date_of_incident: reportingPerson.date_of_incident ? new Date(reportingPerson.date_of_incident).toISOString() : null,
+            },
+          ]);
 
         if (reportingError) throw reportingError;
       }
 
-      // Update the suspects handling as well
-      const suspectsWithData = suspects.filter(
-        (suspect) =>
+      // Insert suspects
+      if (suspects.length > 0 && fileData) {
+        // Check if any suspect has data before inserting
+        const suspectsWithData = suspects.filter(suspect => 
           suspect.full_name ||
           suspect.age ||
           suspect.birthday ||
           suspect.complete_address ||
           suspect.contact_number
-      );
+        );
 
-      if (suspectsWithData.length > 0) {
-        const cleanedSuspects = suspectsWithData.map((suspect) => ({
-          file_id: fileData.file_id,
-          full_name: suspect.full_name || null,
-          age: suspect.age || null,
-          birthday: suspect.birthday
-            ? new Date(suspect.birthday).toISOString()
-            : null,
-          gender: suspect.gender || null,
-          complete_address: suspect.complete_address || null,
-          contact_number: suspect.contact_number || null,
-        }));
+        if (suspectsWithData.length > 0) {
+          const { error: suspectsError } = await supabase
+            .from("suspects")
+            .insert(
+              suspectsWithData.map((suspect) => ({
+                file_id: fileData.file_id,
+                ...suspect,
+                birthday: suspect.birthday ? new Date(suspect.birthday).toISOString() : null
+              }))
+            );
 
-        const { error: insertSuspectsError } = await supabase
-          .from("suspects")
-          .insert(cleanedSuspects);
-
-        if (insertSuspectsError) throw insertSuspectsError;
+          if (suspectsError) throw suspectsError;
+        }
       }
 
-      // Fetch the complete file data with user information
-      const { data: newFileWithUser, error: fetchError } = await supabase
-        .from("files")
-        .select(
-          `
-          *,
-          creator:created_by(name),
-          updater:updated_by(name)
-        `
-        )
-        .eq("file_id", fileData.file_id)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Format the file data for the UI
-      const formattedFile = {
-        ...newFileWithUser,
-        created_by: newFileWithUser.creator?.name || newFileWithUser.created_by,
-        updated_by: newFileWithUser.updater?.name || newFileWithUser.updated_by,
-      };
-
-      // Update the UI with the new file
-      setFiles([formattedFile, ...files]);
       toast.success("File uploaded successfully");
       setIsAddingFile(false);
-
-      // Reset all form fields
+      fetchFolderAndFiles(); // Refresh the files list
+      
+      // Reset form
       setNewFileTitle("");
       setNewCaseTitle("");
       setNewBlotterNumber("");
       setNewFileSummary("");
+      setFileUpload(null);
       setNewInvestigator("");
       setNewDeskOfficer("");
-      setFileUpload(null);
       setReportingPerson({
         full_name: "",
         age: 0,
@@ -664,94 +580,112 @@ export default function IncidentReport() {
         time_reported: "",
         date_of_incident: "",
         time_of_incident: "",
-        place_of_incident: "",
+        place_of_incident: ""
       });
-      setSuspects([
-        {
-          full_name: "",
-          age: 0,
-          birthday: "",
-          gender: "Male",
-          complete_address: "",
-          contact_number: "",
-        },
-      ]);
-
-      // Reset collage state
-      setIsCollageMode(false);
+      setSuspects([]);
       setCollageState({
         files: [],
         previewUrls: [],
-        layout: "2x2",
+        layout: "2x2"
       });
+      setIsCollage(false);
     } catch (error: any) {
       console.error("Error uploading file:", error);
       toast.error(error.message || "Failed to upload file");
-      // Do not close dialog on error
     }
   };
 
-  // Fetch folder details and files
+  // Add collage-related handlers
+  const handleCollagePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const urls = files.map(file => URL.createObjectURL(file));
+    setCollageState(prev => ({
+      ...prev,
+      files: [...prev.files, ...files],
+      previewUrls: [...prev.previewUrls, ...urls]
+    }));
+  };
+
+  const handleLayoutChange = (layout: string) => {
+    setCollageState(prev => ({ ...prev, layout }));
+  };
+
+  const handlePhotoRemove = (index: number) => {
+    setCollageState(prev => ({
+      ...prev,
+      files: prev.files.filter((_, i) => i !== index),
+      previewUrls: prev.previewUrls.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Cleanup URLs on unmount
   useEffect(() => {
-    const fetchFolderAndFiles = async () => {
-      if (!id) return;
-
-      try {
-        // Fetch folder details
-        const { data: folderData, error: folderError } = await supabase
-          .from("folders")
-          .select(
-            `
-            *,
-            creator:created_by(name)
-          `
-          )
-          .eq("folder_id", id)
-          .single();
-
-        if (folderError) throw folderError;
-
-        setFolderDetails({
-          ...folderData,
-          created_by: folderData.creator?.name || folderData.created_by,
-        });
-
-        // Fetch files in the folder
-        const { data: filesData, error: filesError } = await supabase
-          .from("files")
-          .select(
-            `
-            *,
-            creator:created_by(name),
-            updater:updated_by(name),
-            viewer:viewed_by(name),
-            downloader:downloaded_by(name),
-            printer:printed_by(name)
-          `
-          )
-          .eq("folder_id", id)
-          .eq("is_archived", false)
-          .order("created_at", { ascending: false });
-
-        if (filesError) throw filesError;
-
-        const formattedFiles = filesData.map((file) => ({
-          ...file,
-          created_by: file.creator?.name || file.created_by,
-          updated_by: file.updater?.name || file.updated_by,
-          viewed_by: file.viewer?.name || file.viewed_by,
-          downloaded_by: file.downloader?.name || file.downloaded_by,
-          printed_by: file.printer?.name || file.printed_by,
-        }));
-
-        setFiles(formattedFiles);
-      } catch (error) {
-        console.error("Error fetching folder data:", error);
-      } finally {
-        setIsLoading(false);
-      }
+    return () => {
+      collageState.previewUrls.forEach(url => URL.revokeObjectURL(url));
     };
+  }, []);
 
+  // Fetch folder details and files
+  const fetchFolderAndFiles = async () => {
+    if (!id) return;
+
+    try {
+      // Fetch folder details
+      const { data: folderData, error: folderError } = await supabase
+        .from("folders")
+        .select(
+          `
+          *,
+          creator:created_by(name)
+        `
+        )
+        .eq("folder_id", id)
+        .single();
+
+      if (folderError) throw folderError;
+
+      setFolderDetails({
+        ...folderData,
+        created_by: folderData.creator?.name || folderData.created_by,
+      });
+
+      // Fetch files in the folder
+      const { data: filesData, error: filesError } = await supabase
+        .from("files")
+        .select(
+          `
+          *,
+          creator:created_by(name),
+          updater:updated_by(name),
+          viewer:viewed_by(name),
+          downloader:downloaded_by(name),
+          printer:printed_by(name)
+        `
+        )
+        .eq("folder_id", id)
+        .eq("is_archived", false)
+        .order("created_at", { ascending: false });
+
+      if (filesError) throw filesError;
+
+      const formattedFiles = filesData.map((file) => ({
+        ...file,
+        created_by: file.creator?.name || file.created_by,
+        updated_by: file.updater?.name || file.updated_by,
+        viewed_by: file.viewer?.name || file.viewed_by,
+        downloaded_by: file.downloader?.name || file.downloaded_by,
+        printed_by: file.printer?.name || file.printed_by,
+      }));
+
+      setFiles(formattedFiles);
+    } catch (error) {
+      console.error("Error fetching folder data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchFolderAndFiles();
   }, [id]);
 
@@ -784,31 +718,56 @@ export default function IncidentReport() {
 
     return matchesSearch && matchesFilter;
   });
-
+  const [isListView, setIsListView] = useState(() => {
+    // Retrieve the view state from localStorage
+    const savedView = localStorage.getItem("isListView");
+    return savedView ? JSON.parse(savedView) : false; // Default to grid view if not set
+  });
+  const [sortCriteria, setSortCriteria] = useState("created_at");
   // Function to handle view change
   const handleViewChange = (view: boolean) => {
     setIsListView(view);
     localStorage.setItem("isListView", JSON.stringify(view)); // Save the view state to localStorage
   };
+  
+  // Handle click outside to close context menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        if (!target.closest(".context-menu") && !target.closest(".menu-trigger")) {
+            setContextMenuVisible({}); // Close all context menus
+        }
+    };
 
- // Function to handle clicks outside the context menu
- const handleClickOutside = (event: MouseEvent) => {
-  if (
-    contextMenuRef.current &&
-    !contextMenuRef.current.contains(event.target as Node)
-  ) {
-    setShowOptions({}); // Close the context menu
-  }
-};
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
-useEffect(() => {
-  document.addEventListener("mousedown", handleClickOutside);
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside);
+    // Function to handle clicks outside the context menu
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowOptions({}); // Close the context menu
+      }
+    };
+  
+    useEffect(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, []);
+
+  // Update the click handler for the MoreVertical button
+  const handleMoreOptionsClick = (e: React.MouseEvent, fileId: number) => {
+    e.stopPropagation(); // Prevent row click
+    setContextMenuVisible((prev) => ({ ...prev, [fileId]: !prev[fileId] })); // Toggle the context menu
   };
-}, []);
 
-  const formRef = useRef<HTMLFormElement | null>(null);
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row gap-4 mb-4 items-center justify-between">
@@ -977,17 +936,11 @@ useEffect(() => {
                       <td className="px-4 py-2 border-b flex space-x-2">
                         <button
                           className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent row click
-                            setShowOptions((prev) => ({
-                              ...prev,
-                              [file.file_id]: !prev[file.file_id],
-                            }));
-                          }}
+                          onClick={(e) => handleMoreOptionsClick(e, file.file_id)}
                         >
                           <MoreVertical size={16} color="black" />
                         </button>
-                        {showOptions[file.file_id] && (
+                        {contextMenuVisible[file.file_id] && (
                           <div
                             ref={contextMenuRef}
                             className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 context-menu font-poppins"
@@ -996,13 +949,8 @@ useEffect(() => {
                               className="block w-full text-left p-2 hover:bg-gray-100"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // setSelectedFile(file);
-                                // setShowFileDialog("edit");
                                 handleEditClick(file);
-                                setShowOptions((prev) => ({
-                                  ...prev,
-                                  [file.file_id]: false,
-                                }));
+                                setContextMenuVisible((prev) => ({ ...prev, [file.file_id]: false }));
                               }}
                             >
                               <Pencil className="inline w-4 h-4 mr-2" /> Edit
@@ -1011,17 +959,11 @@ useEffect(() => {
                               className="block w-full text-left p-2 hover:bg-gray-100"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // setSelectedFile(file);
-                                // setShowFileDialog("archive");
                                 handleArchiveClick(file);
-                                setShowOptions((prev) => ({
-                                  ...prev,
-                                  [file.file_id]: false,
-                                }));
+                                setContextMenuVisible((prev) => ({ ...prev, [file.file_id]: false }));
                               }}
                             >
-                              <Archive className="inline w-4 h-4 mr-2" />{" "}
-                              Archive
+                              <Archive className="inline w-4 h-4 mr-2" /> Archive
                             </button>
                             <button
                               className="block w-full text-left p-2 hover:bg-gray-100"
@@ -1029,14 +971,10 @@ useEffect(() => {
                                 e.stopPropagation();
                                 setSelectedFile(file);
                                 setShowFileDialog("details");
-                                setShowOptions((prev) => ({
-                                  ...prev,
-                                  [file.file_id]: false,
-                                }));
+                                setContextMenuVisible((prev) => ({ ...prev, [file.file_id]: false }));
                               }}
                             >
-                              <Eye className="inline w-4 h-4 mr-2" /> View
-                              Details
+                              <Eye className="inline w-4 h-4 mr-2" /> View Details
                             </button>
                           </div>
                         )}
@@ -1092,12 +1030,12 @@ useEffect(() => {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       {getFileIcon(file.file_path)}
-                      <h3 className="font-medium text-gray-900 truncate max-w-[150px]">
+                      <h3 className="font-medium text-gray-900">
                         {file.title}
                       </h3>
                     </div>
                     <button
-                      className="p-2 rounded-full hover:bg-gray-200"
+                      className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
                       onClick={() =>
                         setShowOptions((prev) => ({
                           ...prev,
@@ -1281,64 +1219,92 @@ useEffect(() => {
                       className="h-48 resize-none border-gray-300 rounded-md font-poppins"
                     />
                   </div>
-                  <div className="grid w-full max-w-sm items-center gap-1.5">
-                    <Label htmlFor="file">Upload File(s)</Label>
-                    <Input
-                      id="file"
-                      type="file"
-                      multiple={isCollageMode}
-                      accept={isCollageMode ? "image/*" : undefined}
-                      onChange={(e) => {
-                        const files = e.target.files;
-                        if (!files) return;
-
-                        if (isCollageMode) {
-                          const newFiles = Array.from(files);
-                          const newPreviewUrls = newFiles.map((file) =>
-                            URL.createObjectURL(file)
-                          );
-
-                          setCollageState((prev) => ({
-                            ...prev,
-                            files: [...prev.files, ...newFiles],
-                            previewUrls: [
-                              ...prev.previewUrls,
-                              ...newPreviewUrls,
-                            ],
-                          }));
-                        } else {
-                          setFileUpload(files);
-                        }
-                      }}
-                    />
-                    <div className="flex items-center gap-2 mt-2">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
                       <Label>Create Collage</Label>
                       <Switch
-                        checked={isCollageMode}
-                        onCheckedChange={setIsCollageMode}
+                        checked={isCollage}
+                        onCheckedChange={setIsCollage}
                       />
                     </div>
-
-                    {isCollageMode && (
-                      <CollagePreview
-                        collageState={collageState}
-                        onLayoutChange={(layout) =>
-                          setCollageState((prev) => ({ ...prev, layout }))
-                        }
-                        onPhotoRemove={(index) => {
-                          setCollageState((prev) => ({
-                            ...prev,
-                            files: prev.files.filter((_, i) => i !== index),
-                            previewUrls: prev.previewUrls.filter(
-                              (_, i) => i !== index
-                            ),
-                          }));
-                        }}
-                      />
+                    {isCollage && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-4">
+                          <Label>Layout:</Label>
+                          <Select value={collageState.layout} onValueChange={(layout) => setCollageState(prev => ({ ...prev, layout }))}>
+                            <SelectTrigger className="w-32">
+                              <SelectValue placeholder="Choose layout" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1x1">1 x 1</SelectItem>
+                              <SelectItem value="2x2">2 x 2</SelectItem>
+                              <SelectItem value="3x3">3 x 3</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="collage_photos">Upload Photos for Collage</Label>
+                          <Input
+                            id="collage_photos"
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              if (!files) return;
+                              
+                              const newFiles = Array.from(files);
+                              const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
+                              
+                              setCollageState(prev => ({
+                                ...prev,
+                                files: [...prev.files, ...newFiles],
+                                previewUrls: [...prev.previewUrls, ...newPreviewUrls]
+                              }));
+                            }}
+                            required={isCollage}
+                          />
+                        </div>
+                        {collageState.previewUrls.length > 0 && (
+                          <div className={`grid gap-2 ${
+                            collageState.layout === "1x1" ? "grid-cols-1" :
+                            collageState.layout === "2x2" ? "grid-cols-2" :
+                            "grid-cols-3"
+                          }`}>
+                            {collageState.previewUrls.map((url, index) => (
+                              <div key={index} className="relative group">
+                                <img
+                                  src={url}
+                                  alt={`Preview ${index + 1}`}
+                                  className="w-full h-40 object-cover rounded-lg"
+                                />
+                                <button
+                                  onClick={() => handlePhotoRemove(index)}
+                                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {!isCollage && (
+                      <div>
+                        <Label htmlFor="file">Upload File</Label>
+                        <Input
+                          id="file"
+                          type="file"
+                          onChange={(e) => setFileUpload(e.target.files)}
+                          required={!isCollage}
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
 
+                {/* Reporting Person Details */}
                 <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
                   <h3 className="text-lg font-semibold">
                     Reporting Person Details
@@ -1363,12 +1329,12 @@ useEffect(() => {
                         id="rp_age"
                         type="number"
                         min="0"
-                        max="100"
+                        max="150"
                         value={reportingPerson.age}
                         onChange={(e) =>
                           setReportingPerson({
                             ...reportingPerson,
-                            age: parseInt(e.target.value) || 0,
+                            age: parseInt(e.target.value),
                           })
                         }
                       />
@@ -1510,7 +1476,8 @@ useEffect(() => {
                   </div>
                 </div>
 
-                <div className="space-y-4 bg-slate-50 p-4 mr-6 rounded-lg">
+                {/* Suspects Section */}
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">Suspects</h3>
                     <Button
@@ -1560,7 +1527,7 @@ useEffect(() => {
                             id={`suspect_${index}_age`}
                             type="number"
                             min="0"
-                            max="100"
+                            max="150"
                             value={suspect.age}
                             onChange={(e) =>
                               updateSuspect(
@@ -1663,9 +1630,7 @@ useEffect(() => {
               type="button"
               onClick={() => {
                 if (formRef.current) {
-                  formRef.current.dispatchEvent(
-                    new Event("submit", { bubbles: true })
-                  );
+                  formRef.current.dispatchEvent(new Event("submit", { bubbles: true }));
                 }
               }}
               className="bg-blue-900 hover:bg-blue-800"
@@ -1676,7 +1641,6 @@ useEffect(() => {
         </SheetContent>
       </Sheet>
 
-      {/* Add the PermissionDialog */}
       <PermissionDialog
         isOpen={showPermissionDialog}
         onClose={() => setShowPermissionDialog(false)}
