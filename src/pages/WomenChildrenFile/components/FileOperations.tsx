@@ -24,18 +24,12 @@ import {
   Eye,
   MoreVertical,
   Printer,
-  CheckCircle,
-  Edit,
   X,
+  CheckCircle,
+  Edit
 } from "lucide-react";
-import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useState, useEffect, useRef } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -81,13 +75,13 @@ interface FileRecord {
 interface ReportingPersonDetails {
   full_name: string;
   age: number;
-  birthday: string;
-  gender: "Male" | "Female" | "Other";
+  birthday: string | null;
+  gender: 'Male' | 'Female' | 'Other';
   complete_address: string;
   contact_number: string;
-  date_reported: string;
+  date_reported: string | null;
   time_reported: string;
-  date_of_incident: string;
+  date_of_incident: string | null;
   time_of_incident: string;
   place_of_incident: string;
 }
@@ -97,7 +91,7 @@ interface Suspect {
   full_name: string;
   age: number;
   birthday: string;
-  gender: "Male" | "Female" | "Other";
+  gender: 'Male' | 'Female' | 'Other';
   complete_address: string;
   contact_number: string;
 }
@@ -106,8 +100,8 @@ interface FileOperationsProps {
   file: FileRecord;
   showPreview: boolean;
   setShowPreview: (show: boolean) => void;
-  showFileDialog: "edit" | "archive" | "details" | null;
-  setShowFileDialog: (dialog: "edit" | "archive" | "details" | null) => void;
+  showFileDialog: 'edit' | 'archive' | 'details' | null;
+  setShowFileDialog: (dialog: 'edit' | 'archive' | 'details' | null) => void;
   onFileUpdate: () => void;
   selectedFile?: FileRecord | null;
   setSelectedFile: (file: FileRecord | null) => void;
@@ -118,32 +112,82 @@ interface CollageState {
   files: File[];
   previewUrls: string[];
   layout: string;
+  existingPhotos: string[];
 }
 
 // Helper function to get file type icon
 const getFileIcon = (filePath: string) => {
-  const ext = filePath.split(".").pop()?.toLowerCase() || "";
-  const imageTypes = ["jpg", "jpeg", "png", "gif", "bmp", "webp"];
-  const documentTypes = ["pdf", "doc", "docx"];
-  const spreadsheetTypes = ["xls", "xlsx"];
-  const presentationTypes = ["ppt", "pptx"];
+  const ext = filePath.split('.').pop()?.toLowerCase() || '';
+  const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+  const documentTypes = ['pdf', 'doc', 'docx'];
+  const spreadsheetTypes = ['xls', 'xlsx'];
+  const presentationTypes = ['ppt', 'pptx'];
 
-  if (imageTypes.includes(ext))
-    return <ImageIcon size={24} className="text-green-600" />;
-  if (documentTypes.includes(ext))
-    return <FileText size={24} className="text-blue-900" />;
-  if (spreadsheetTypes.includes(ext))
-    return <FileText size={24} className="text-emerald-600" />;
-  if (presentationTypes.includes(ext))
-    return <FileText size={24} className="text-orange-600" />;
+  if (imageTypes.includes(ext)) return <ImageIcon size={24} className="text-green-600" />;
+  if (documentTypes.includes(ext)) return <FileText size={24} className="text-blue-900" />;
+  if (spreadsheetTypes.includes(ext)) return <FileText size={24} className="text-emerald-600" />;
+  if (presentationTypes.includes(ext)) return <FileText size={24} className="text-orange-600" />;
   return <File size={24} className="text-gray-600" />;
 };
 
 // Add this helper function at the top level
-const formatDateForInput = (dateString: string) => {
-  if (!dateString) return "";
-  return new Date(dateString).toISOString().split("T")[0];
+const formatDateForInput = (dateString: string | null) => {
+  if (!dateString) return '';
+  return new Date(dateString).toISOString().split('T')[0];
 };
+
+// Add this helper function at the top level with other helper functions
+const formatTimeToAMPM = (timeString: string) => {
+  if (!timeString) return '';
+  const [hours, minutes] = timeString.split(':');
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minutes} ${ampm}`;
+};
+
+const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
+  collageState: CollageState;
+  onLayoutChange: (layout: string) => void;
+  onPhotoRemove: (index: number) => void;
+}) => (
+  <div className="space-y-4">
+    <div className="flex items-center gap-4">
+      <Label>Layout:</Label>
+      <Select value={collageState.layout} onValueChange={onLayoutChange}>
+        <SelectTrigger className="w-32">
+          <SelectValue placeholder="Choose layout" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="1x1">1 x 1</SelectItem>
+          <SelectItem value="2x2">2 x 2</SelectItem>
+          <SelectItem value="3x3">3 x 3</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+    <div className={`grid gap-2 ${
+      collageState.layout === '1x1' ? 'grid-cols-1' :
+      collageState.layout === '2x2' ? 'grid-cols-2' :
+      'grid-cols-3'
+    }`}>
+      {Array.isArray(collageState.previewUrls) && collageState.previewUrls.map((url, index) => (
+        <div key={index} className="relative group">
+          <img 
+            src={url} 
+            alt={`Collage photo ${index + 1}`} 
+            className="w-full h-40 object-cover rounded-md"
+          />
+          <button
+            onClick={() => onPhotoRemove(index)}
+            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 export default function FileOperations({
   file,
@@ -157,6 +201,75 @@ export default function FileOperations({
   isListView,
 }: FileOperationsProps) {
   const currentFile = showFileDialog ? selectedFile || file : file;
+  const [isCollage, setIsCollage] = useState(false);
+  const [collageState, setCollageState] = useState<CollageState>(() => ({
+    files: [],
+    previewUrls: [],
+    layout: "1x1",
+    existingPhotos: []
+  }));
+
+  // Add effect to update collage state when dialog opens
+  useEffect(() => {
+    if (showFileDialog === 'edit' && currentFile) {
+      setIsCollage(currentFile.is_collage || false);
+      if (currentFile.is_collage && Array.isArray(currentFile.collage_photos)) {
+        const urls = currentFile.collage_photos.map(photo => {
+          const { data: { publicUrl } } = supabase.storage
+            .from('files')
+            .getPublicUrl(photo);
+          return publicUrl;
+        });
+
+        const layout = currentFile.collage_photos.length === 1 
+          ? "1x1"
+          : currentFile.collage_photos.length <= 4 
+            ? "2x2" 
+            : "3x3";
+
+        setCollageState({
+          files: [],
+          previewUrls: urls,
+          layout: layout,
+          existingPhotos: currentFile.collage_photos
+        });
+      }
+    }
+  }, [showFileDialog, currentFile]);
+
+  // Add collage-related handlers
+  const handleCollagePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const urls = files.map(file => URL.createObjectURL(file));
+    setCollageState(prev => ({
+      ...prev,
+      files: [...prev.files, ...files],
+      previewUrls: [...prev.previewUrls, ...urls]
+    }));
+  };
+
+  const handleLayoutChange = (layout: string) => {
+    setCollageState(prev => ({ ...prev, layout }));
+  };
+
+  const handlePhotoRemove = (index: number) => {
+    setCollageState(prev => ({
+      ...prev,
+      files: prev.files.filter((_, i) => i !== index),
+      previewUrls: prev.previewUrls.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Cleanup URLs on unmount
+  useEffect(() => {
+    return () => {
+      collageState.previewUrls.forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, []);
 
   // Add a check to ensure currentFile is defined
   if (!currentFile) {
@@ -173,54 +286,8 @@ export default function FileOperations({
   const [error, setError] = useState<string | undefined>();
 
   // Add state for reporting person and suspects
-  const [reportingPerson, setReportingPerson] =
-    useState<ReportingPersonDetails | null>(null);
+  const [reportingPerson, setReportingPerson] = useState<ReportingPersonDetails | null>(null);
   const [suspects, setSuspects] = useState<Suspect[]>([]);
-
-  // Add state for collage
-  const [isCollageMode, setIsCollageMode] = useState(false);
-  const [collageState, setCollageState] = useState<CollageState>({
-    files: [],
-    previewUrls: [],
-    layout: '2x2'
-  });
-
-  // Use useCallback for event handlers
-  const handlePreviewClose = useCallback(() => {
-    setShowPreview(false);
-    setSelectedFile(null);
-  }, [setShowPreview, setSelectedFile]);
-
-  const handleFileDialogClose = useCallback(() => {
-    setShowFileDialog(null);
-  }, [setShowFileDialog]);
-
-  const handlePreviewOpen = useCallback((file: FileRecord) => {
-    setSelectedFile(file);
-    setShowPreview(true);
-  }, [setSelectedFile, setShowPreview]);
-
-  // Initialize collage mode when editing
-  useEffect(() => {
-    if (showFileDialog === "edit" && (selectedFile || file).is_collage) {
-      setIsCollageMode(true);
-      // If there are existing collage photos, load their previews
-      const existingPhotos = (selectedFile || file).collage_photos || [];
-      setCollageState({
-        files: [],
-        previewUrls: Array.isArray(existingPhotos) ? existingPhotos : [],
-        layout: '2x2'
-      });
-    } else {
-      // Reset collage state when not in collage mode
-      setIsCollageMode(false);
-      setCollageState({
-        files: [],
-        previewUrls: [],
-        layout: '2x2'
-      });
-    }
-  }, [showFileDialog, selectedFile, file]);
 
   // Fetch reporting person and suspects when viewing or editing a file
   useEffect(() => {
@@ -228,89 +295,70 @@ export default function FileOperations({
       if (!showFileDialog || !currentFile) return;
 
       try {
-        // Reset states first to avoid showing stale data
-        setReportingPerson(null);
-        setSuspects([]);
-        
         // Fetch reporting person details
         const { data: reportingData, error: reportingError } = await supabase
-          .from("reporting_person_details")
-          .select("*")
-          .eq("wc_file_id", currentFile.file_id)
-          .maybeSingle();
+          .from('reporting_person_details')
+          .select('*')
+          .eq('wc_file_id', currentFile.file_id)
+          .maybeSingle(); // Use maybeSingle instead of single to handle no results
 
-        // Initialize empty reporting person if no data exists
-        const emptyReportingPerson: ReportingPersonDetails = {
-          full_name: "",
-          age: 0,
-          birthday: "",
-          gender: "Male",
-          complete_address: "",
-          contact_number: "",
-          date_reported: "",
-          time_reported: "",
-          date_of_incident: "",
-          time_of_incident: "",
-          place_of_incident: "",
-        };
-        setReportingPerson(reportingData || emptyReportingPerson);
+        if (reportingError && reportingError.code !== 'PGRST116') {
+          throw reportingError;
+        }
+
+        // If no reporting person exists and we're in edit mode, create a default one
+        if (!reportingData && showFileDialog === 'edit') {
+          setReportingPerson({
+            full_name: '',
+            age: 0,
+            birthday: null,
+            gender: '' as 'Male' | 'Female' | 'Other',
+            complete_address: '',
+            contact_number: '',
+            date_reported: null,
+            time_reported: '',
+            date_of_incident: null,
+            time_of_incident: '',
+            place_of_incident: ''
+          });
+        } else {
+          setReportingPerson(reportingData);
+        }
 
         // Fetch suspects
         const { data: suspectsData, error: suspectsError } = await supabase
-          .from("suspects")
-          .select("*")
-          .eq("wc_file_id", currentFile.file_id);
+          .from('suspects')
+          .select('*')
+          .eq('wc_file_id', currentFile.file_id);
 
-        if (!suspectsError && suspectsData && suspectsData.length > 0) {
-          setSuspects(suspectsData);
-        } else {
-          // Initialize with one empty suspect with a default gender value
-          setSuspects([{
-            full_name: "",
-            age: 0,
-            birthday: "",
-            gender: "Male",
-            complete_address: "",
-            contact_number: "",
-          }]);
+        if (suspectsError) throw suspectsError;
+        setSuspects(suspectsData || []);
+      } catch (error: any) {
+        console.error('Error fetching file details:', error);
+        // Only show error toast if it's not the "no rows returned" error
+        if (error.code !== 'PGRST116') {
+          toast.error('Failed to load file details');
         }
-      } catch (error) {
-        console.error("Error fetching file details:", error);
       }
     };
 
     fetchFileDetails();
-  }, [showFileDialog, currentFile?.file_id]); // Add file_id to dependency array
-
-  // Helper function to safely update reporting person state
-  const updateReportingPerson = (updates: Partial<ReportingPersonDetails>) => {
-    setReportingPerson((prev) => {
-      if (!prev) return prev;
-      return { ...prev, ...updates };
-    });
-  };
+  }, [showFileDialog, currentFile]);
 
   // Function to add a new suspect form
   const addSuspect = () => {
-    setSuspects([
-      ...suspects,
-      {
-        full_name: "",
-        age: 0,
-        birthday: "",
-        gender: "Male",
-        complete_address: "",
-        contact_number: "",
-      },
-    ]);
+    setSuspects([...suspects, {
+      full_name: '',
+      age: 0,
+      birthday: '',
+      gender: 'Male',
+      complete_address: '',
+      contact_number: ''
+    }]);
   };
 
   // Function to update suspect details
-  const updateSuspect = (
-    index: number,
-    field: keyof Suspect,
-    value: string | number
-  ) => {
+  const updateSuspect = (index: number, field: keyof Suspect, value: string | number) => {
     const updatedSuspects = [...suspects];
     updatedSuspects[index] = { ...updatedSuspects[index], [field]: value };
     setSuspects(updatedSuspects);
@@ -333,39 +381,32 @@ export default function FileOperations({
 
         // Check if file exists first
         const { data: checkData, error: checkError } = await supabase.storage
-          .from("files")
+          .from('files')
           .list(`folder_${currentFile.folder_id}`);
 
         if (checkError) throw checkError;
 
-        const fileExists = checkData.some(
-          (f) => f.name === currentFile.file_path.split("/").pop()
-        );
+        const fileExists = checkData.some(f => f.name === currentFile.file_path.split('/').pop());
         if (!fileExists) {
-          throw new Error("File no longer exists in storage");
+          throw new Error('File no longer exists in storage');
         }
 
         const { data, error } = await supabase.storage
-          .from("files")
+          .from('files')
           .createSignedUrl(currentFile.file_path, 60 * 60 * 24); // 24 hour expiry
 
         if (error) throw error;
         setSignedUrl(data.signedUrl);
       } catch (error: any) {
-        console.error("Error getting signed URL:", error);
-        setError(error.message || "Error loading file preview");
+        console.error('Error getting signed URL:', error);
+        setError(error.message || 'Error loading file preview');
         setSignedUrl(null);
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (
-      showPreview ||
-      imageTypes.includes(ext) ||
-      pdfType.includes(ext) ||
-      officeTypes.includes(ext)
-    ) {
+    if (showPreview || imageTypes.includes(ext) || pdfType.includes(ext) || officeTypes.includes(ext)) {
       getSignedUrl();
     }
 
@@ -391,26 +432,26 @@ export default function FileOperations({
   // Function to handle file view tracking
   const handleFileView = async () => {
     try {
-      const userData = JSON.parse(Cookies.get("user_data") || "{}");
-
+      const userData = JSON.parse(Cookies.get('user_data') || '{}');
+      
       // Get the user's ID and name from the users table using their email
       const { data: userData2, error: userError } = await supabase
-        .from("users")
-        .select("user_id, name")
-        .eq("email", userData.email)
+        .from('users')
+        .select('user_id, name')
+        .eq('email', userData.email)
         .single();
 
       if (userError) throw userError;
-      if (!userData2) throw new Error("User not found");
+      if (!userData2) throw new Error('User not found');
 
       // Update the file's viewed_by and viewed_at
       const { error: updateError } = await supabase
-        .from("womenchildren_file")
+        .from('womenchildren_file')
         .update({
           viewed_by: userData2.user_id,
-          viewed_at: new Date().toISOString(),
+          viewed_at: new Date().toISOString()
         })
-        .eq("file_id", currentFile.file_id);
+        .eq('file_id', currentFile.file_id);
 
       if (updateError) throw updateError;
 
@@ -418,7 +459,7 @@ export default function FileOperations({
       currentFile.viewed_by = userData2.name;
       currentFile.viewed_at = new Date().toISOString();
     } catch (error) {
-      console.error("Error updating view tracking:", error);
+      console.error('Error updating view tracking:', error);
     }
   };
 
@@ -427,40 +468,38 @@ export default function FileOperations({
     try {
       // Check if file exists first
       const { data: checkData, error: checkError } = await supabase.storage
-        .from("files")
+        .from('files')
         .list(`folder_${currentFile.folder_id}`);
 
       if (checkError) throw checkError;
 
-      const fileExists = checkData.some(
-        (f) => f.name === currentFile.file_path.split("/").pop()
-      );
+      const fileExists = checkData.some(f => f.name === currentFile.file_path.split('/').pop());
       if (!fileExists) {
-        toast.error("File no longer exists in storage");
+        toast.error('File no longer exists in storage');
         return;
       }
 
       // Get user data from cookies
-      const userData = JSON.parse(Cookies.get("user_data") || "{}");
-
+      const userData = JSON.parse(Cookies.get('user_data') || '{}');
+      
       // Get the user's ID and name from the users table using their email
       const { data: userData2, error: userError } = await supabase
-        .from("users")
-        .select("user_id, name")
-        .eq("email", userData.email)
+        .from('users')
+        .select('user_id, name')
+        .eq('email', userData.email)
         .single();
 
       if (userError) throw userError;
-      if (!userData2) throw new Error("User not found");
+      if (!userData2) throw new Error('User not found');
 
       // Update the file's downloaded_by and downloaded_at
       const { error: updateError } = await supabase
-        .from("womenchildren_file")
+        .from('womenchildren_file')
         .update({
           downloaded_by: userData2.user_id,
-          downloaded_at: new Date().toISOString(),
+          downloaded_at: new Date().toISOString()
         })
-        .eq("file_id", currentFile.file_id);
+        .eq('file_id', currentFile.file_id);
 
       if (updateError) throw updateError;
 
@@ -470,26 +509,26 @@ export default function FileOperations({
 
       // Download the file
       const { data, error } = await supabase.storage
-        .from("files")
+        .from('files')
         .download(currentFile.file_path);
-
+      
       if (error) throw error;
-
+      
       // Create download link
       const url = URL.createObjectURL(data);
-      const a = document.createElement("a");
+      const a = document.createElement('a');
       a.href = url;
-      a.download = currentFile.case_title + "." + ext;
+      a.download = currentFile.case_title + '.' + ext;
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      toast.success("File downloaded successfully");
+      toast.success('File downloaded successfully');
       onFileUpdate();
     } catch (error: any) {
-      console.error("Error downloading file:", error);
-      toast.error(error.message || "Error downloading file. Please try again.");
+      console.error('Error downloading file:', error);
+      toast.error(error.message || 'Error downloading file. Please try again.');
     }
   };
 
@@ -498,40 +537,38 @@ export default function FileOperations({
     try {
       // Check if file exists first
       const { data: checkData, error: checkError } = await supabase.storage
-        .from("files")
+        .from('files')
         .list(`folder_${currentFile.folder_id}`);
 
       if (checkError) throw checkError;
 
-      const fileExists = checkData.some(
-        (f) => f.name === currentFile.file_path.split("/").pop()
-      );
+      const fileExists = checkData.some(f => f.name === currentFile.file_path.split('/').pop());
       if (!fileExists) {
-        toast.error("File no longer exists in storage");
+        toast.error('File no longer exists in storage');
         return;
       }
 
       // Get user data from cookies
-      const userData = JSON.parse(Cookies.get("user_data") || "{}");
-
+      const userData = JSON.parse(Cookies.get('user_data') || '{}');
+      
       // Get the user's ID and name from the users table using their email
       const { data: userData2, error: userError } = await supabase
-        .from("users")
-        .select("user_id, name")
-        .eq("email", userData.email)
+        .from('users')
+        .select('user_id, name')
+        .eq('email', userData.email)
         .single();
 
       if (userError) throw userError;
-      if (!userData2) throw new Error("User not found");
+      if (!userData2) throw new Error('User not found');
 
       // Update the file's printed_by and printed_at
       const { error: updateError } = await supabase
-        .from("womenchildren_file")
+        .from('womenchildren_file')
         .update({
           printed_by: userData2.user_id,
-          printed_at: new Date().toISOString(),
+          printed_at: new Date().toISOString()
         })
-        .eq("file_id", currentFile.file_id);
+        .eq('file_id', currentFile.file_id);
 
       if (updateError) throw updateError;
 
@@ -541,24 +578,20 @@ export default function FileOperations({
 
       // Get the signed URL for the file
       const { data: urlData, error: urlError } = await supabase.storage
-        .from("files")
+        .from('files')
         .createSignedUrl(currentFile.file_path, 60 * 60); // 1 hour expiry
 
       if (urlError) throw urlError;
 
       // Open Google Docs viewer in a new tab
-      const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(
-        urlData.signedUrl
-      )}&embedded=false`;
-      window.open(googleDocsUrl, "_blank");
+      const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(urlData.signedUrl)}&embedded=false`;
+      window.open(googleDocsUrl, '_blank');
 
-      toast.success("Opening file for printing...");
+      toast.success('Opening file for printing...');
       onFileUpdate();
     } catch (error: any) {
-      console.error("Error preparing file for print:", error);
-      toast.error(
-        error.message || "Error preparing file for print. Please try again."
-      );
+      console.error('Error preparing file for print:', error);
+      toast.error(error.message || 'Error preparing file for print. Please try again.');
     }
   };
 
@@ -566,100 +599,99 @@ export default function FileOperations({
   const handleArchiveFile = async () => {
     try {
       const fileToArchive = selectedFile || file;
-
+      
       // Get user data from cookies
-      const userData = JSON.parse(Cookies.get("user_data") || "{}");
-
+      const userData = JSON.parse(Cookies.get('user_data') || '{}');
+      
       // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
-        .from("users")
-        .select("user_id")
-        .eq("email", userData.email)
+        .from('users')
+        .select('user_id')
+        .eq('email', userData.email)
         .single();
 
       if (userError) throw userError;
-      if (!userData2) throw new Error("User not found");
+      if (!userData2) throw new Error('User not found');
 
       const { error } = await supabase
-        .from("womenchildren_file")
-        .update({
+        .from('womenchildren_file')
+        .update({ 
           is_archived: true,
           updated_by: userData2.user_id,
-          updated_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
-        .eq("file_id", fileToArchive.file_id);
+        .eq('file_id', fileToArchive.file_id);
 
       if (error) throw error;
-      toast.success("File archived successfully");
+      toast.success('File archived successfully');
       onFileUpdate(); // Refresh the files list
     } catch (error: any) {
-      console.error("Error archiving file:", error);
-      toast.error(error.message || "Failed to archive file");
+      console.error('Error archiving file:', error);
+      toast.error(error.message || 'Failed to archive file');
     }
   };
 
   // Function to handle file editing
   const handleEditFile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setShowFileDialog(null);
-    setIsLoading(true);
     try {
       const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
-      const fileTitle = formData.get("title") as string;
-      const caseTitle = formData.get("case_title") as string;
-      const blotterNumber = formData.get("blotter_number") as string;
-      const investigator = formData.get("investigator") as string;
-      const deskOfficer = formData.get("desk_officer") as string;
-      const summary = formData.get("summary") as string;
-      const uploadedFile = formData.get("file") as unknown as globalThis.File | null;
+      const fileTitle = formData.get('title') as string;
+      const caseTitle = formData.get('case_title') as string;
+      const blotterNumber = formData.get('blotter_number') as string;
+      const investigator = formData.get('investigator') as string;
+      const deskOfficer = formData.get('desk_officer') as string;
+      const summary = formData.get('summary') as string;
+      const uploadedFile = (formData.get('file') as unknown) as globalThis.File | null;
 
-      const userData = JSON.parse(Cookies.get("user_data") || "{}");
-
+      const userData = JSON.parse(Cookies.get('user_data') || '{}');
+      
       // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
-        .from("users")
-        .select("user_id")
-        .eq("email", userData.email)
+        .from('users')
+        .select('user_id')
+        .eq('email', userData.email)
         .single();
 
       if (userError) throw userError;
-      if (!userData2) throw new Error("User not found");
+      if (!userData2) throw new Error('User not found');
 
       let filePath = fileToEdit.file_path;
       let publicUrl = fileToEdit.public_url;
       let collagePhotos: string[] = [];
 
-      if (isCollageMode) {
-        // Upload each new photo in the collage
+      if (isCollage) {
+        // Handle collage photos
+        let updatedCollagePhotos: string[] = [];
+        
+        // Keep existing photos that weren't removed
+        if (collageState.existingPhotos) {
+          const keptPhotos = collageState.existingPhotos.filter((_, index) => 
+            collageState.previewUrls.some(url => url.includes(_.split('/').pop()!))
+          );
+          updatedCollagePhotos = [...keptPhotos];
+        }
+
+        // Upload new photos
         for (const file of collageState.files) {
-          const fileExt = file.name.split(".").pop();
+          const fileExt = file.name.split('.').pop();
           const fileName = `${Math.random()}.${fileExt}`;
           const photoPath = `folder_${fileToEdit.folder_id}/collage_photos/${fileName}`;
 
           const { error: uploadError } = await supabase.storage
-            .from("files")
+            .from('files')
             .upload(photoPath, file, {
-              cacheControl: "3600",
+              cacheControl: '3600',
               upsert: false,
             });
 
           if (uploadError) throw uploadError;
 
-          const { data: { publicUrl: photoUrl } } = supabase.storage
-            .from("files")
-            .getPublicUrl(photoPath);
-
-          collagePhotos.push(photoUrl);
+          updatedCollagePhotos.push(photoPath);
         }
 
-        // Keep existing photos that weren't removed
-        if (fileToEdit.collage_photos && Array.isArray(fileToEdit.collage_photos)) {
-          const existingUrls = fileToEdit.collage_photos.filter(url => 
-            collageState.previewUrls.includes(url)
-          );
-          collagePhotos = [...existingUrls, ...collagePhotos];
-        }
+        collagePhotos = updatedCollagePhotos;
 
         if (collagePhotos.length > 0) {
           // Create a collage preview image using HTML Canvas
@@ -702,53 +734,53 @@ export default function FileOperations({
           filePath = `folder_${fileToEdit.folder_id}/${collageFileName}`;
 
           const { error: collageUploadError } = await supabase.storage
-            .from("files")
+            .from('files')
             .upload(filePath, blob, {
-              cacheControl: "3600",
+              cacheControl: '3600',
               upsert: false,
             });
 
           if (collageUploadError) throw collageUploadError;
 
           const { data: { publicUrl: collagePublicUrl } } = supabase.storage
-            .from("files")
+            .from('files')
             .getPublicUrl(filePath);
 
           publicUrl = collagePublicUrl;
         }
       } else if (uploadedFile && uploadedFile instanceof globalThis.File && uploadedFile.size > 0) {
-        const fileExt = uploadedFile.name.split(".").pop();
+        // Handle regular file upload
+        const fileExt = uploadedFile.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
         const newFilePath = `folder_${fileToEdit.folder_id}/${fileName}`;
 
         // Delete the old file first
         const { error: deleteError } = await supabase.storage
-          .from("files")
+          .from('files')
           .remove([fileToEdit.file_path]);
 
         if (deleteError) throw deleteError;
 
         // Upload the new file
         const { error: uploadError } = await supabase.storage
-          .from("files")
+          .from('files')
           .upload(newFilePath, uploadedFile, {
-            cacheControl: "3600",
+            cacheControl: '3600',
             upsert: false,
           });
 
         if (uploadError) throw uploadError;
 
-        // Update file path and get new public URL
         filePath = newFilePath;
-        const {
-          data: { publicUrl: newPublicUrl },
-        } = supabase.storage.from("files").getPublicUrl(newFilePath);
+        const { data: { publicUrl: newPublicUrl } } = supabase.storage
+          .from('files')
+          .getPublicUrl(newFilePath);
         publicUrl = newPublicUrl;
       }
 
       // Update the file record
       const { error: updateError } = await supabase
-        .from("womenchildren_file")
+        .from('womenchildren_file')
         .update({
           title: fileTitle,
           case_title: caseTitle,
@@ -758,188 +790,117 @@ export default function FileOperations({
           incident_summary: summary,
           file_path: filePath,
           public_url: publicUrl,
-          is_collage: isCollageMode,
-          collage_photos: isCollageMode ? collagePhotos : null,
           updated_by: userData2.user_id,
           updated_at: new Date().toISOString(),
+          is_collage: isCollage,
+          collage_photos: isCollage ? collagePhotos : null
         })
-        .eq("file_id", fileToEdit.file_id);
+        .eq('file_id', fileToEdit.file_id);
 
       if (updateError) throw updateError;
 
-      // Update reporting person details only if there is valid data
-      const hasReportingPersonData = reportingPerson && (
-        reportingPerson.full_name ||
-        reportingPerson.age ||
-        reportingPerson.birthday ||
-        reportingPerson.complete_address ||
-        reportingPerson.contact_number ||
-        reportingPerson.date_reported ||
-        reportingPerson.time_reported ||
-        reportingPerson.date_of_incident ||
-        reportingPerson.time_of_incident ||
-        reportingPerson.place_of_incident
-      );
+      // Update reporting person details
+      if (reportingPerson) {
+        // Check if there's any data to save
+        const hasReportingPersonData = 
+          reportingPerson.full_name ||
+          reportingPerson.age ||
+          reportingPerson.birthday ||
+          reportingPerson.complete_address ||
+          reportingPerson.contact_number ||
+          reportingPerson.date_reported ||
+          reportingPerson.time_reported ||
+          reportingPerson.date_of_incident ||
+          reportingPerson.time_of_incident ||
+          reportingPerson.place_of_incident;
 
-      if (hasReportingPersonData) {
-        // Helper function to safely convert date and time to ISO string
-        const formatDateTime = (date: string, time: string = '00:00') => {
-          if (!date) return null;
-          try {
-            const [year, month, day] = date.split('-').map(Number);
-            const [hours, minutes] = time ? time.split(':').map(Number) : [0, 0];
-            
-            // Validate date components
-            if (isNaN(year) || isNaN(month) || isNaN(day) || 
-                isNaN(hours) || isNaN(minutes) ||
-                month < 1 || month > 12 || day < 1 || day > 31 ||
-                hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-              return null;
-            }
-            
-            const dateObj = new Date(year, month - 1, day, hours, minutes);
-            
-            // Check if date is valid (e.g., not "Invalid Date")
-            if (isNaN(dateObj.getTime())) {
-              return null;
-            }
-            
-            return dateObj.toISOString();
-          } catch (error) {
-            console.error('Error formatting date:', error);
-            return null;
+        if (hasReportingPersonData) {
+          const formattedReportingPerson: ReportingPersonDetails & { wc_file_id: number } = {
+            ...reportingPerson,
+            wc_file_id: fileToEdit.file_id,
+            birthday: reportingPerson.birthday ? new Date(reportingPerson.birthday).toISOString() : null,
+            date_reported: reportingPerson.date_reported ? new Date(reportingPerson.date_reported).toISOString() : null,
+            date_of_incident: reportingPerson.date_of_incident ? new Date(reportingPerson.date_of_incident).toISOString() : null,
+            // Set default gender if empty
+            gender: reportingPerson.gender || 'Male'
+          };
+
+          // First check if a record exists
+          const { data: existingRecord } = await supabase
+            .from('reporting_person_details')
+            .select('*')
+            .eq('wc_file_id', fileToEdit.file_id)
+            .maybeSingle();
+
+          if (existingRecord) {
+            // Update existing record
+            const { error: reportingError } = await supabase
+              .from('reporting_person_details')
+              .update(formattedReportingPerson)
+              .eq('wc_file_id', fileToEdit.file_id);
+
+            if (reportingError) throw reportingError;
+          } else {
+            // Insert new record
+            const { error: reportingError } = await supabase
+              .from('reporting_person_details')
+              .insert([formattedReportingPerson]);
+
+            if (reportingError) throw reportingError;
           }
-        };
-
-        const formattedReportingPerson = {
-          ...reportingPerson,
-          wc_file_id: fileToEdit.file_id,
-          birthday: reportingPerson.birthday ? formatDateTime(reportingPerson.birthday) : null,
-          date_reported: reportingPerson.date_reported ? formatDateTime(reportingPerson.date_reported, reportingPerson.time_reported) : null,
-          date_of_incident: reportingPerson.date_of_incident ? formatDateTime(reportingPerson.date_of_incident, reportingPerson.time_of_incident) : null,
-        };
-
-        // First check if a record exists
-        const { data: existingRecord } = await supabase
-          .from("reporting_person_details")
-          .select("*")
-          .eq("wc_file_id", fileToEdit.file_id)
-          .maybeSingle();
-
-        if (existingRecord) {
-          // Update existing record
-          const { error: reportingError } = await supabase
-            .from("reporting_person_details")
-            .update(formattedReportingPerson)
-            .eq("wc_file_id", fileToEdit.file_id);
-
-          if (reportingError) throw reportingError;
-        } else {
-          // Insert new record
-          const { error: reportingError } = await supabase
-            .from("reporting_person_details")
-            .insert([formattedReportingPerson]);
-
-          if (reportingError) throw reportingError;
         }
       }
 
-      // Filter out empty suspects
-      const nonEmptySuspects = suspects.filter(suspect => 
-        suspect.full_name ||
-        suspect.age ||
-        suspect.birthday ||
-        suspect.complete_address ||
-        suspect.contact_number
-      );
+      // Update suspects
+      const { error: deleteError } = await supabase
+        .from('suspects')
+        .delete()
+        .eq('wc_file_id', fileToEdit.file_id);
 
-      // Only proceed with suspect updates if there are non-empty suspects
-      if (nonEmptySuspects.length > 0) {
-        // Delete existing suspects
-        const { error: deleteError } = await supabase
-          .from("suspects")
-          .delete()
-          .eq("wc_file_id", fileToEdit.file_id);
+      if (deleteError) throw deleteError;
 
-        if (deleteError) throw deleteError;
+      // Split suspects into existing and new
+      const existingSuspects = suspects.filter(s => s.suspect_id);
+      const newSuspects = suspects.filter(s => !s.suspect_id);
 
-        // Split suspects into existing and new
-        const existingSuspects = nonEmptySuspects.filter((s) => s.suspect_id);
-        const newSuspects = nonEmptySuspects.filter((s) => !s.suspect_id);
-
-        // Update existing suspects
-        if (existingSuspects.length > 0) {
-          const { error: updateError } = await supabase.from("suspects").upsert(
-            existingSuspects.map((suspect) => ({
-              suspect_id: suspect.suspect_id,
+      // Update existing suspects
+      if (existingSuspects.length > 0) {
+        const { error: updateError } = await supabase
+          .from('suspects')
+          .upsert(
+            existingSuspects.map(s => ({
+              suspect_id: s.suspect_id,
               wc_file_id: fileToEdit.file_id,
-              ...suspect,
-              birthday: new Date(suspect.birthday).toISOString(),
+              ...s,
+              birthday: s.birthday ? new Date(s.birthday).toISOString() : null
             }))
           );
 
-          if (updateError) throw updateError;
-        }
+        if (updateError) throw updateError;
+      }
 
-        // Insert new suspects
-        if (newSuspects.length > 0) {
-          const { error: insertError } = await supabase.from("suspects").insert(
-            newSuspects.map((suspect) => {
-              const birthday = suspect.birthday ? new Date(suspect.birthday) : null;
-              return {
-                wc_file_id: fileToEdit.file_id,
-                ...suspect,
-                birthday: birthday && !isNaN(birthday.getTime()) ? birthday.toISOString() : null,
-              };
-            })
+      // Insert new suspects
+      if (newSuspects.length > 0) {
+        const { error: insertError } = await supabase
+          .from('suspects')
+          .insert(
+            newSuspects.map(s => ({
+              wc_file_id: fileToEdit.file_id,
+              ...s,
+              birthday: s.birthday ? new Date(s.birthday).toISOString() : null
+            }))
           );
 
-          if (insertError) throw insertError;
-        }
+        if (insertError) throw insertError;
       }
 
-      toast.success("File updated successfully");
+      toast.success('File updated successfully');
+      setShowFileDialog(null);
       onFileUpdate(); // Refresh the files list
-      
-      // Reset all states after successful save
-      setReportingPerson({
-        full_name: "",
-        age: 0,
-        birthday: "",
-        gender: "Male",
-        complete_address: "",
-        contact_number: "",
-        date_reported: "",
-        time_reported: "",
-        date_of_incident: "",
-        time_of_incident: "",
-        place_of_incident: "",
-      });
-      
-      setSuspects([{
-        full_name: "",
-        age: 0,
-        birthday: "",
-        gender: "Male",
-        complete_address: "",
-        contact_number: "",
-      }]);
-      
-      setIsCollageMode(false);
-      setCollageState({
-        files: [],
-        previewUrls: [],
-        layout: '2x2'
-      });
-      
-      if (formRef.current) {
-        formRef.current.reset();
-      }
+      window.location.reload(); // Force a full page refresh
     } catch (error: any) {
-      console.error("Error updating file:", error);
-      toast.error(error.message || "Failed to update file");
-    } finally {
-      setIsLoading(false);
+      console.error('Error updating file:', error);
+      toast.error(error.message || 'Failed to update file');
     }
   };
 
@@ -969,14 +930,41 @@ export default function FileOperations({
 
     if (!signedUrl) return null;
 
+    // Handle collage preview
+    if (currentFile.is_collage && Array.isArray(currentFile.collage_photos) && currentFile.collage_photos.length > 0) {
+      return (
+        <div className={`grid gap-4 p-4 ${
+          currentFile.collage_photos.length === 1 ? 'grid-cols-1' :
+          currentFile.collage_photos.length <= 4 ? 'grid-cols-2' :
+          'grid-cols-3'
+        }`}>
+          {currentFile.collage_photos.map((photoPath, index) => {
+            const { data: { publicUrl } } = supabase.storage
+              .from('files')
+              .getPublicUrl(photoPath);
+            
+            return (
+              <div key={index} className="relative aspect-square">
+                <img 
+                  src={publicUrl}
+                  alt={`Collage photo ${index + 1}`}
+                  className="w-full h-full object-cover rounded-lg"
+                />
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
     if (imageTypes.includes(ext)) {
       return (
         <div className="relative aspect-video">
-          <img
-            src={signedUrl}
+          <img 
+            src={signedUrl} 
             alt={currentFile.case_title}
             className="w-full h-full object-contain"
-            onError={() => setError("Failed to load image")}
+            onError={() => setError('Failed to load image')}
           />
         </div>
       );
@@ -987,12 +975,10 @@ export default function FileOperations({
       return (
         <div className="w-full h-[calc(80vh-8rem)]">
           <iframe
-            src={`https://docs.google.com/viewer?url=${encodeURIComponent(
-              signedUrl
-            )}&embedded=true&rm=minimal`}
+            src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true&rm=minimal`}
             className="w-full h-full border-none"
             title={currentFile.case_title}
-            onError={() => setError("Failed to load document preview")}
+            onError={() => setError('Failed to load document preview')}
           />
         </div>
       );
@@ -1026,10 +1012,42 @@ export default function FileOperations({
       return (
         <div className="w-full h-48 bg-gray-100 flex flex-col items-center justify-center rounded-lg border">
           {getFileIcon(currentFile.file_path)}
-          <span className="mt-2 text-sm text-red-600">
-            Error loading preview
-          </span>
+          <span className="mt-2 text-sm text-red-600">Error loading preview</span>
           <span className="text-xs text-gray-500">{ext.toUpperCase()}</span>
+        </div>
+      );
+    }
+
+    // Handle collage preview in card view
+    if (currentFile.is_collage && Array.isArray(currentFile.collage_photos) && currentFile.collage_photos.length > 0) {
+      return (
+        <div className="w-full h-48 bg-gray-100 rounded-lg border overflow-hidden">
+          <div className={`grid h-full gap-1 ${
+            currentFile.collage_photos.length === 1 ? 'grid-cols-1' :
+            currentFile.collage_photos.length <= 4 ? 'grid-cols-2' :
+            'grid-cols-3'
+          }`}>
+            {currentFile.collage_photos.slice(0, 4).map((photoPath, index) => {
+              const { data: { publicUrl } } = supabase.storage
+                .from('files')
+                .getPublicUrl(photoPath);
+              
+              return (
+                <div key={index} className="relative">
+                  <img 
+                    src={publicUrl}
+                    alt={`Collage photo ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              );
+            })}
+          </div>
+          {currentFile.collage_photos.length > 4 && (
+            <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded-full text-xs">
+              +{currentFile.collage_photos.length - 4} more
+            </div>
+          )}
         </div>
       );
     }
@@ -1038,9 +1056,7 @@ export default function FileOperations({
       return (
         <div className="w-full h-48 bg-gray-100 flex flex-col items-center justify-center rounded-lg border">
           {getFileIcon(currentFile.file_path)}
-          <span className="mt-2 text-sm text-gray-600">
-            Preview not available
-          </span>
+          <span className="mt-2 text-sm text-gray-600">Preview not available</span>
           <span className="text-xs text-gray-500">{ext.toUpperCase()}</span>
         </div>
       );
@@ -1049,9 +1065,9 @@ export default function FileOperations({
     if (imageTypes.includes(ext)) {
       return (
         <div className="w-full h-48 bg-gray-100 rounded-lg border overflow-hidden">
-          <img
-            src={signedUrl || undefined}
-            alt={currentFile.title}
+          <img 
+            src={signedUrl || undefined} 
+            alt={currentFile.case_title}
             className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer"
             onClick={() => {
               setSelectedFile(currentFile);
@@ -1068,11 +1084,9 @@ export default function FileOperations({
         <div className="w-full h-48 bg-white rounded-lg border overflow-hidden relative group">
           <div className="w-full h-full overflow-auto">
             <iframe
-              src={`https://docs.google.com/viewer?url=${encodeURIComponent(
-                signedUrl
-              )}&embedded=true&rm=minimal`}
+              src={`https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true&rm=minimal`}
               className="w-full h-[400px] border-none"
-              title={currentFile.title}
+              title={currentFile.case_title}
             />
           </div>
           {/* Expand button overlay */}
@@ -1097,7 +1111,7 @@ export default function FileOperations({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M15 3h6v6M14 10l6.1-6.1M9 21H3v-6M10 14l-6.1 6.1" />
+                <path d="M15 3h6v6M14 10l6.1-6.1M9 21H3v-6M10 14l-6.1 6.1"/>
               </svg>
             </Button>
           </div>
@@ -1107,86 +1121,39 @@ export default function FileOperations({
 
     // For other file types
     return (
-      <div
-        className="w-full h-48 bg-gray-100 flex flex-col items-center justify-center rounded-lg border hover:border-blue-300 transition-colors cursor-pointer"
-        onClick={() => {
-          setSelectedFile(currentFile);
-          setShowPreview(true);
-        }}
-      >
+      <div className="w-full h-48 bg-gray-100 flex flex-col items-center justify-center rounded-lg border hover:border-blue-300 transition-colors cursor-pointer"
+           onClick={() => {
+             setSelectedFile(currentFile);
+             setShowPreview(true);
+           }}>
         {getFileIcon(currentFile.file_path)}
         <span className="mt-2 text-sm text-gray-600">Click to preview</span>
         <span className="text-xs text-gray-500">{ext.toUpperCase()}</span>
       </div>
     );
   };
-
-  const formRef = useRef<HTMLFormElement | null>(null);
-
-  // Add CollagePreview component
-  const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
-    collageState: CollageState;
-    onLayoutChange: (layout: string) => void;
-    onPhotoRemove: (index: number) => void;
-  }) => (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Label>Layout:</Label>
-        <Select value={collageState.layout} onValueChange={onLayoutChange}>
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="Choose layout" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1x1">1 x 1</SelectItem>
-            <SelectItem value="2x2">2 x 2</SelectItem>
-            <SelectItem value="3x3">3 x 3</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className={`grid gap-2 ${
-        collageState.layout === '1x1' ? 'grid-cols-1' :
-        collageState.layout === '2x2' ? 'grid-cols-2' :
-        'grid-cols-3'
-      }`}>
-        {Array.isArray(collageState.previewUrls) && collageState.previewUrls.map((url, index) => (
-          <div key={index} className="relative group">
-            <img 
-              src={url} 
-              alt={`Collage photo ${index + 1}`} 
-              className="w-full h-40 object-cover rounded-md"
-            />
-            <button
-              onClick={() => onPhotoRemove(index)}
-              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
+  const formRef = useRef <HTMLFormElement | null>(null); // Create a ref for the form
   return (
     <>
       {/* Preview Sheet */}
       <Sheet
         open={showPreview}
-        onOpenChange={handlePreviewClose}
+        onOpenChange={(open) => {
+          setShowPreview(open);
+          if (!open) {
+            setSelectedFile(null);
+          }
+        }}
       >
-        <SheetContent
-          side="right"
-          className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100"
-        >
+        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100">
           <SheetHeader>
             <div className="flex justify-between items-center">
               <div>
                 <SheetTitle className="text-xl font-semibold">
-                  {currentFile.title}
+                  {currentFile.case_title}
                 </SheetTitle>
                 <SheetDescription className="text-xs text-gray-500 mt-1">
-                  {ext.toUpperCase()} Document • Added by{" "}
-                  {currentFile.created_by}
+                  {ext.toUpperCase()} Document • Added by {currentFile.created_by}
                 </SheetDescription>
               </div>
             </div>
@@ -1220,8 +1187,7 @@ export default function FileOperations({
             <div className="flex items-center gap-2 text-xs text-gray-500">
               {currentFile.viewed_at && (
                 <span>
-                  Last viewed:{" "}
-                  {new Date(currentFile.viewed_at).toLocaleString()}
+                  Last viewed: {new Date(currentFile.viewed_at).toLocaleString()}
                 </span>
               )}
             </div>
@@ -1229,15 +1195,12 @@ export default function FileOperations({
         </SheetContent>
       </Sheet>
 
-      {/* File Operations Dialog (Edit) */}
+      {/* File Operations Dialog (Archive remains as Dialog) */}
       <Sheet
         open={showFileDialog === "edit"}
-        onOpenChange={handleFileDialogClose}
+        onOpenChange={() => setShowFileDialog(null)}
       >
-        <SheetContent
-          side="right"
-          className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100 pr-0"
-        >
+        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100">
           <SheetHeader>
             <SheetTitle className="text-2xl font-bold">Edit File</SheetTitle>
             <SheetDescription className="text-sm text-gray-500">
@@ -1245,7 +1208,7 @@ export default function FileOperations({
             </SheetDescription>
           </SheetHeader>
           <div className="overflow-y-auto pr-0">
-            <form ref={formRef} onSubmit={handleEditFile} className="space-y-6">
+            <form id="editForm" ref={formRef} onSubmit={handleEditFile} className="space-y-6">
               {/* File Details Section */}
               <div className="space-y-4 py-4">
                 <div className="space-y-4 p-4 mr-6 rounded-lg bg-slate-50">
@@ -1305,52 +1268,79 @@ export default function FileOperations({
                       <div className="flex items-center gap-2">
                         <Label>Create Collage</Label>
                         <Switch
-                          checked={isCollageMode}
+                          checked={isCollage}
                           onCheckedChange={(checked) => {
-                            setIsCollageMode(checked);
-                            if (!checked) {
-                              setCollageState({
-                                files: [],
-                                previewUrls: [],
-                                layout: '2x2'
-                              });
+                            setIsCollage(checked);
+                            if (checked) {
+                              // Initialize with existing collage photos if any
+                              const existingPhotos = currentFile?.collage_photos || [];
+                              const urls = Array.isArray(existingPhotos) ? existingPhotos.map(photo => {
+                                const { data: { publicUrl } } = supabase.storage
+                                  .from('files')
+                                  .getPublicUrl(photo);
+                                return publicUrl;
+                              }) : [];
+                              setCollageState(prev => ({
+                                ...prev,
+                                previewUrls: urls,
+                                files: []
+                              }));
                             }
                           }}
                         />
                       </div>
-                      {isCollageMode ? (
+                      {isCollage && (
                         <div className="space-y-4">
-                          <Input
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            onChange={(e) => {
-                              const files = e.target.files;
-                              if (!files) return;
-                              
-                              const newFiles = Array.from(files);
-                              const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
-                              
-                              setCollageState(prev => ({
-                                ...prev,
-                                files: [...prev.files, ...newFiles],
-                                previewUrls: [...prev.previewUrls, ...newPreviewUrls]
-                              }));
-                            }}
-                          />
-                          <CollagePreview
-                            collageState={collageState}
-                            onLayoutChange={(layout) => setCollageState(prev => ({ ...prev, layout }))}
-                            onPhotoRemove={(index) => {
-                              setCollageState(prev => ({
-                                ...prev,
-                                files: prev.files.filter((_, i) => i !== index),
-                                previewUrls: prev.previewUrls.filter((_, i) => i !== index)
-                              }));
-                            }}
-                          />
+                          <div className="flex items-center gap-4">
+                            <Label>Layout:</Label>
+                            <Select value={collageState.layout} onValueChange={handleLayoutChange}>
+                              <SelectTrigger className="w-32">
+                                <SelectValue placeholder="Choose layout" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1x1">1 x 1</SelectItem>
+                                <SelectItem value="2x2">2 x 2</SelectItem>
+                                <SelectItem value="3x3">3 x 3</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="collage_photos">Upload Photos for Collage</Label>
+                            <Input
+                              id="collage_photos"
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              onChange={handleCollagePhotosChange}
+                              className="border-gray-300 rounded-md text-sm"
+                            />
+                          </div>
+                          {collageState.previewUrls.length > 0 && (
+                            <div className={`grid gap-2 ${
+                              collageState.layout === "1x1" ? "grid-cols-1" :
+                              collageState.layout === "2x2" ? "grid-cols-2" :
+                              "grid-cols-3"
+                            }`}>
+                              {collageState.previewUrls.map((url, index) => (
+                                <div key={index} className="relative group">
+                                  <img
+                                    src={url}
+                                    alt={`Preview ${index + 1}`}
+                                    className="w-full h-40 object-cover rounded-lg"
+                                  />
+                                  <button
+                                    onClick={() => handlePhotoRemove(index)}
+                                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ) : (
+                      )}
+                      {!isCollage && (
                         <div>
                           <Label htmlFor="file">Update File (Optional)</Label>
                           <Input
@@ -1380,125 +1370,182 @@ export default function FileOperations({
               </div>
 
               {/* Reporting Person Details */}
-              <div className="space-y-4 p-4 rounded-lg mr-6 bg-slate-50">
-                <p className="text-lg font-semibold">
-                  Reporting Person Details
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="rp_full_name">Full Name</Label>
-                    <Input
-                      id="rp_full_name"
-                      value={reportingPerson?.full_name || ""}
-                      onChange={(e) => updateReportingPerson({ full_name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rp_age">Age</Label>
-                    <Input
-                      id="rp_age"
-                      type="number"
-                      value={reportingPerson?.age || 0}
-                      onChange={(e) => updateReportingPerson({ age: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rp_birthday">Birthday</Label>
-                    <Input
-                      id="rp_birthday"
-                      type="date"
-                      value={formatDateForInput(reportingPerson?.birthday || "")}
-                      onChange={(e) => updateReportingPerson({ birthday: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rp_gender">Gender</Label>
-                    <Select
-                      value={reportingPerson?.gender || "Male"}
-                      onValueChange={(value) => updateReportingPerson({ gender: value as "Male" | "Female" | "Other" })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="rp_complete_address">
-                      Complete Address
-                    </Label>
-                    <Textarea
-                      id="rp_complete_address"
-                      value={reportingPerson?.complete_address || ""}
-                      onChange={(e) => updateReportingPerson({ complete_address: e.target.value })}
-                      className="h-24 resize-none border-gray-300 rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rp_contact_number">Contact Number</Label>
-                    <Input
-                      id="rp_contact_number"
-                      value={reportingPerson?.contact_number || ""}
-                      onChange={(e) => updateReportingPerson({ contact_number: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rp_date_reported">Date Reported</Label>
-                    <Input
-                      id="rp_date_reported"
-                      type="date"
-                      value={formatDateForInput(reportingPerson?.date_reported || "")}
-                      onChange={(e) => updateReportingPerson({ date_reported: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rp_time_reported">Time Reported</Label>
-                    <Input
-                      id="rp_time_reported"
-                      type="time"
-                      value={reportingPerson?.time_reported || ""}
-                      onChange={(e) => updateReportingPerson({ time_reported: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rp_date_of_incident">
-                      Date of Incident
-                    </Label>
-                    <Input
-                      id="rp_date_of_incident"
-                      type="date"
-                      value={formatDateForInput(reportingPerson?.date_of_incident || "")}
-                      onChange={(e) => updateReportingPerson({ date_of_incident: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rp_time_of_incident">
-                      Time of Incident
-                    </Label>
-                    <Input
-                      id="rp_time_of_incident"
-                      type="time"
-                      value={reportingPerson?.time_of_incident || ""}
-                      onChange={(e) => updateReportingPerson({ time_of_incident: e.target.value })}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="rp_place_of_incident">
-                      Place of Incident
-                    </Label>
-                    <Textarea
-                      id="rp_place_of_incident"
-                      value={reportingPerson?.place_of_incident || ""}
-                      onChange={(e) => updateReportingPerson({ place_of_incident: e.target.value })}
-                      className="h-24 resize-none border-gray-300 rounded-md"
-                    />
+              {reportingPerson && (
+                <div className="space-y-4 p-4 rounded-lg mr-6 bg-slate-50">
+                  <p className="text-lg font-semibold">Reporting Person Details</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="rp_full_name">Full Name</Label>
+                      <Input
+                        id="rp_full_name"
+                        value={reportingPerson.full_name}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            full_name: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_age">Age</Label>
+                      <Input
+                        id="rp_age"
+                        type="number"
+                        value={reportingPerson.age}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            age: Number(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_birthday">Birthday</Label>
+                      <Input
+                        id="rp_birthday"
+                        type="date"
+                        value={formatDateForInput(reportingPerson.birthday)}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            birthday: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_gender">Gender</Label>
+                      <Select
+                        value={reportingPerson.gender}
+                        onValueChange={(value) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            gender: value as "Male" | "Female" | "Other",
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="rp_complete_address">Complete Address</Label>
+                      <Textarea
+                        id="rp_complete_address"
+                        value={reportingPerson.complete_address}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            complete_address: e.target.value,
+                          })
+                        }
+                        className="h-24 resize-none border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_contact_number">Contact Number</Label>
+                      <Input
+                        id="rp_contact_number"
+                        value={reportingPerson.contact_number}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            contact_number: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_date_reported">Date Reported</Label>
+                      <Input
+                        id="rp_date_reported"
+                        type="date"
+                        value={formatDateForInput(reportingPerson.date_reported)}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            date_reported: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_time_reported">Time Reported</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="rp_time_reported"
+                          type="time"
+                          value={reportingPerson.time_reported}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              time_reported: e.target.value,
+                            })
+                          }
+                        />
+                        <span className="text-sm text-gray-500">
+                          {formatTimeToAMPM(reportingPerson.time_reported)}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_date_of_incident">Date of Incident</Label>
+                      <Input
+                        id="rp_date_of_incident"
+                        type="date"
+                        value={formatDateForInput(reportingPerson.date_of_incident)}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            date_of_incident: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rp_time_of_incident">Time of Incident</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="rp_time_of_incident"
+                          type="time"
+                          value={reportingPerson.time_of_incident}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              time_of_incident: e.target.value,
+                            })
+                          }
+                        />
+                        <span className="text-sm text-gray-500">
+                          {formatTimeToAMPM(reportingPerson.time_of_incident)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="rp_place_of_incident">Place of Incident</Label>
+                      <Textarea
+                        id="rp_place_of_incident"
+                        value={reportingPerson.place_of_incident}
+                        onChange={(e) =>
+                          setReportingPerson({
+                            ...reportingPerson,
+                            place_of_incident: e.target.value,
+                          })
+                        }
+                        className="h-24 resize-none border-gray-300 rounded-md"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Suspects Section */}
               <div className="space-y-4 p-4 rounded-lg bg-slate-50 mr-6">
@@ -1516,9 +1563,7 @@ export default function FileOperations({
                 {suspects.map((suspect, index) => (
                   <div key={index} className="space-y-4 p-4 border rounded-lg">
                     <div>
-                      <Label htmlFor={`suspect_${index}_full_name`}>
-                        Full Name
-                      </Label>
+                      <Label htmlFor={`suspect_${index}_full_name`}>Full Name</Label>
                       <Input
                         id={`suspect_${index}_full_name`}
                         value={suspect.full_name}
@@ -1539,9 +1584,7 @@ export default function FileOperations({
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`suspect_${index}_birthday`}>
-                        Birthday
-                      </Label>
+                      <Label htmlFor={`suspect_${index}_birthday`}>Birthday</Label>
                       <Input
                         id={`suspect_${index}_birthday`}
                         type="date"
@@ -1554,7 +1597,7 @@ export default function FileOperations({
                     <div>
                       <Label htmlFor={`suspect_${index}_gender`}>Gender</Label>
                       <Select
-                        value={suspect.gender || "Male"}
+                        value={suspect.gender}
                         onValueChange={(value) =>
                           updateSuspect(
                             index,
@@ -1574,9 +1617,7 @@ export default function FileOperations({
                       </Select>
                     </div>
                     <div className="col-span-2">
-                      <Label htmlFor={`suspect_${index}_complete_address`}>
-                        Complete Address
-                      </Label>
+                      <Label htmlFor={`suspect_${index}_complete_address`}>Complete Address</Label>
                       <Textarea
                         id={`suspect_${index}_complete_address`}
                         value={suspect.complete_address}
@@ -1591,9 +1632,7 @@ export default function FileOperations({
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`suspect_${index}_contact_number`}>
-                        Contact Number
-                      </Label>
+                      <Label htmlFor={`suspect_${index}_contact_number`}>Contact Number</Label>
                       <Input
                         id={`suspect_${index}_contact_number`}
                         value={suspect.contact_number}
@@ -1617,7 +1656,6 @@ export default function FileOperations({
               </div>
             </form>
           </div>
-          {/* Move the SheetFooter outside the form */}
           <SheetFooter className="mr-6">
             <Button
               type="button"
@@ -1628,12 +1666,12 @@ export default function FileOperations({
             </Button>
             <Button
               type="button"
+              onClick={() => {
+                if (formRef.current) {
+                  formRef.current.dispatchEvent(new Event("submit", { bubbles: true }));
+                }
+              }}
               className="bg-blue-900 text-white hover:bg-blue-700"
-              onClick={() =>
-                formRef.current?.dispatchEvent(
-                  new Event("submit", { bubbles: true })
-                )
-              } // Trigger form submission
             >
               Save Changes
             </Button>
@@ -1641,15 +1679,12 @@ export default function FileOperations({
         </SheetContent>
       </Sheet>
 
-      {/* Details Sheet */}
+      {/* New Sheet for Viewing Details without Footer */}
       <Sheet
         open={showFileDialog === "details"}
-        onOpenChange={handleFileDialogClose}
+        onOpenChange={() => setShowFileDialog(null)}
       >
-        <SheetContent
-          side="right"
-          className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100 pr-0"
-        >
+        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100 pr-0">
           <SheetHeader>
             <SheetTitle>File Details</SheetTitle>
             <SheetDescription className="text-sm text-gray-500">
@@ -1668,27 +1703,19 @@ export default function FileOperations({
                   </div>
                   <div>
                     <Label>Case Title</Label>
-                    <p className="text-gray-900 mt-1">
-                      {currentFile.case_title}
-                    </p>
+                    <p className="text-gray-900 mt-1">{currentFile.case_title}</p>
                   </div>
                   <div>
                     <Label>Blotter Number</Label>
-                    <p className="text-gray-900 mt-1">
-                      {currentFile.blotter_number}
-                    </p>
+                    <p className="text-gray-900 mt-1">{currentFile.blotter_number}</p>
                   </div>
                   <div>
                     <Label>Investigator</Label>
-                    <p className="text-gray-900 mt-1">
-                      {currentFile.investigator}
-                    </p>
+                    <p className="text-gray-900 mt-1">{currentFile.investigator}</p>
                   </div>
                   <div>
                     <Label>Desk Officer</Label>
-                    <p className="text-gray-900 mt-1">
-                      {currentFile.desk_officer}
-                    </p>
+                    <p className="text-gray-900 mt-1">{currentFile.desk_officer}</p>
                   </div>
                   <div className="col-span-2">
                     <Label>Incident Summary</Label>
@@ -1713,15 +1740,11 @@ export default function FileOperations({
              reportingPerson.time_of_incident || 
              reportingPerson.place_of_incident) && (
               <div className="space-y-4 p-4 rounded-lg mr-6 bg-slate-50">
-                <p className="text-lg font-semibold">
-                  Reporting Person Details
-                </p>
+                <p className="text-lg font-semibold">Reporting Person Details</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label>Full Name</Label>
-                    <p className="text-gray-900 mt-1">
-                      {reportingPerson.full_name}
-                    </p>
+                    <p className="text-gray-900 mt-1">{reportingPerson.full_name}</p>
                   </div>
                   <div>
                     <Label>Age</Label>
@@ -1729,15 +1752,11 @@ export default function FileOperations({
                   </div>
                   <div>
                     <Label>Birthday</Label>
-                    <p className="text-gray-900 mt-1">
-                      {formatDateForInput(reportingPerson.birthday)}
-                    </p>
+                    <p className="text-gray-900 mt-1">{formatDateForInput(reportingPerson.birthday)}</p>
                   </div>
                   <div>
                     <Label>Gender</Label>
-                    <p className="text-gray-900 mt-1">
-                      {reportingPerson.gender}
-                    </p>
+                    <p className="text-gray-900 mt-1">{reportingPerson.gender}</p>
                   </div>
                   <div className="col-span-2">
                     <Label>Complete Address</Label>
@@ -1747,33 +1766,23 @@ export default function FileOperations({
                   </div>
                   <div>
                     <Label>Contact Number</Label>
-                    <p className="text-gray-900 mt-1">
-                      {reportingPerson.contact_number}
-                    </p>
+                    <p className="text-gray-900 mt-1">{reportingPerson.contact_number}</p>
                   </div>
                   <div>
                     <Label>Date Reported</Label>
-                    <p className="text-gray-900 mt-1">
-                      {formatDateForInput(reportingPerson.date_reported)}
-                    </p>
+                    <p className="text-gray-900 mt-1">{formatDateForInput(reportingPerson.date_reported)}</p>
                   </div>
                   <div>
                     <Label>Time Reported</Label>
-                    <p className="text-gray-900 mt-1">
-                      {reportingPerson.time_reported}
-                    </p>
+                    <p className="text-gray-900 mt-1">{formatTimeToAMPM(reportingPerson.time_reported)}</p>
                   </div>
                   <div>
                     <Label>Date of Incident</Label>
-                    <p className="text-gray-900 mt-1">
-                      {formatDateForInput(reportingPerson.date_of_incident)}
-                    </p>
+                    <p className="text-gray-900 mt-1">{formatDateForInput(reportingPerson.date_of_incident)}</p>
                   </div>
                   <div>
                     <Label>Time of Incident</Label>
-                    <p className="text-gray-900 mt-1">
-                      {reportingPerson.time_of_incident}
-                    </p>
+                    <p className="text-gray-900 mt-1">{formatTimeToAMPM(reportingPerson.time_of_incident)}</p>
                   </div>
                   <div className="col-span-2">
                     <Label>Place of Incident</Label>
@@ -1801,9 +1810,7 @@ export default function FileOperations({
                     </div>
                     <div>
                       <Label>Birthday</Label>
-                      <p className="text-gray-900 mt-1">
-                        {formatDateForInput(suspect.birthday)}
-                      </p>
+                      <p className="text-gray-900 mt-1">{formatDateForInput(suspect.birthday)}</p>
                     </div>
                     <div>
                       <Label>Gender</Label>
@@ -1817,27 +1824,24 @@ export default function FileOperations({
                     </div>
                     <div>
                       <Label>Contact Number</Label>
-                      <p className="text-gray-900 mt-1">
-                        {suspect.contact_number}
-                      </p>
+                      <p className="text-gray-900 mt-1">{suspect.contact_number}</p>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-            {/* File Activity */}
-            <div className="p-4 mr-6 mt-5">
-              <h3 className="font-medium">File Activity</h3>
-              <div className="p-2 space-y-2 text-gray-600">
-                <div className="flex items-center justify-between text-xs ">
+
+            {/* File History Section */}
+            <div className="space-y-4 p-4 rounded-lg bg-slate-50 mr-6">
+              <p className="text-lg font-semibold">File History</p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-4 h-4" />
                     <Label className="font-normal">Created</Label>
                     <p className="text-gray-600">
                       {new Date(currentFile.created_at).toLocaleString()} by{" "}
-                      <span className="text-blue-900">
-                        {currentFile.created_by}
-                      </span>
+                      <span className="text-blue-900">{currentFile.created_by}</span>
                     </p>
                   </div>
                 </div>
@@ -1849,9 +1853,7 @@ export default function FileOperations({
                       {currentFile.updated_at ? (
                         <span>
                           {new Date(currentFile.updated_at).toLocaleString()} by{" "}
-                          <span className="text-blue-900">
-                            {currentFile.updated_by}
-                          </span>
+                          <span className="text-blue-900">{currentFile.updated_by}</span>
                         </span>
                       ) : (
                         "Never"
@@ -1861,15 +1863,13 @@ export default function FileOperations({
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center space-x-2">
-                    <Eye className="w-4 h-4 " />
+                    <Eye className="w-4 h-4" />
                     <Label className="font-normal">Last Viewed</Label>
                     <p className="text-gray-600">
                       {currentFile.viewed_at ? (
                         <span>
                           {new Date(currentFile.viewed_at).toLocaleString()} by{" "}
-                          <span className="text-blue-900">
-                            {currentFile.viewed_by}
-                          </span>
+                          <span className="text-blue-900">{currentFile.viewed_by}</span>
                         </span>
                       ) : (
                         "Never"
@@ -1884,11 +1884,8 @@ export default function FileOperations({
                     <p className="text-gray-600">
                       {currentFile.downloaded_at ? (
                         <span>
-                          {new Date(currentFile.downloaded_at).toLocaleString()}{" "}
-                          by{" "}
-                          <span className="text-blue-900">
-                            {currentFile.downloaded_by}
-                          </span>
+                          {new Date(currentFile.downloaded_at).toLocaleString()} by{" "}
+                          <span className="text-blue-900">{currentFile.downloaded_by}</span>
                         </span>
                       ) : (
                         "Never"
@@ -1904,9 +1901,7 @@ export default function FileOperations({
                       {currentFile.printed_at ? (
                         <span>
                           {new Date(currentFile.printed_at).toLocaleString()} by{" "}
-                          <span className="text-blue-900">
-                            {currentFile.printed_by}
-                          </span>
+                          <span className="text-blue-900">{currentFile.printed_by}</span>
                         </span>
                       ) : (
                         "Never"
@@ -1920,49 +1915,44 @@ export default function FileOperations({
         </SheetContent>
       </Sheet>
 
-      <Dialog
-        open={showFileDialog === "archive"}
-        onOpenChange={handleFileDialogClose}
-      >
+      {/* Archive Confirmation Dialog */}
+      <Dialog open={showFileDialog === "archive"} onOpenChange={() => setShowFileDialog(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Archive File</DialogTitle>
             <DialogDescription>
-              This action will archive the folder and remove it from the active
-              folders list. You can access it later in the Archives section.
+              Are you sure you want to archive this file? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-4">
+              <Archive className="w-8 h-8 text-gray-400" />
+              <div>
+                <p className="font-medium">{currentFile.title}</p>
+                <p className="text-sm text-gray-500">
+                  Added by {currentFile.created_by} on{" "}
+                  {new Date(currentFile.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          </div>
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowFileDialog(null)}
-            >
+            <Button variant="outline" onClick={() => setShowFileDialog(null)}>
               Cancel
             </Button>
             <Button
-              type="button"
-              className="bg-red-600 text-white hover:bg-red-700"
-              onClick={async () => {
-                await handleArchiveFile();
-                setShowFileDialog(null);
-              }}
+              variant="destructive"
+              onClick={handleArchiveFile}
+              className="bg-red-600 hover:bg-red-700"
             >
-              Yes, Archive
+              Archive File
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Card Preview */}
-      {!isListView && (
-        <div
-          onClick={() => handlePreviewOpen(currentFile)}
-          className="cursor-pointer"
-        >
-          {renderCardPreview()}
-        </div>
-      )}
+      {/* Render card preview in both list and grid view */}
+      {!isListView && renderCardPreview()}
 
       {/* Download and Print buttons - only show when not in list view */}
       {!isListView && (

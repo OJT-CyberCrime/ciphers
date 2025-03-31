@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
   BreadcrumbItem,
+  BreadcrumbLink,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import SearchBar from "@/Search";
@@ -16,9 +17,9 @@ import {
   Archive,
   Eye,
   MoreVertical,
+  SortAsc,
   List,
   Grid,
-  SortAsc,
   X,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
@@ -31,23 +32,32 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/utils/supa";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import Cookies from "js-cookie";
-// import RichTextEditor from "@/components/RichTextEditor";
+import RichTextEditor from "@/components/RichTextEditor";
 import FileOperations from "./components/FileOperations";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import PermissionDialog from "@/components/PermissionDialog";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
   SheetDescription,
   SheetFooter,
+  SheetHeader,
+  SheetTitle,
 } from "@/components/ui/sheet";
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { Switch } from "@/components/ui/switch";
 
 interface FileRecord {
@@ -77,6 +87,8 @@ interface FileRecord {
   viewer?: { name: string };
   downloader?: { name: string };
   printer?: { name: string };
+  is_collage?: boolean;
+  collage_photos?: string[];
 }
 
 interface Folder {
@@ -160,16 +172,64 @@ const getStatusBadgeClass = (status: string) => {
   }
 };
 
-// Helper function to safely convert date and time to ISO string
-const formatDateTime = (date: string, time: string = '00:00') => {
-  if (!date) return null;
-  const [year, month, day] = date.split('-').map(Number);
-  const [hours, minutes] = time.split(':').map(Number);
-  const dateObj = new Date(year, month - 1, day, hours, minutes);
-  return dateObj.toISOString();
-};
+// Add the CollagePreview component definition before the main component
+const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
+  collageState: CollageState;
+  onLayoutChange: (layout: string) => void;
+  onPhotoRemove: (index: number) => void;
+}) => (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between">
+      <Label>Layout</Label>
+      <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
+          <Label>1x1</Label>
+          <Switch
+            checked={collageState.layout === "1x1"}
+            onCheckedChange={() => onLayoutChange("1x1")}
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Label>2x2</Label>
+          <Switch
+            checked={collageState.layout === "2x2"}
+            onCheckedChange={() => onLayoutChange("2x2")}
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Label>3x3</Label>
+          <Switch
+            checked={collageState.layout === "3x3"}
+            onCheckedChange={() => onLayoutChange("3x3")}
+          />
+        </div>
+      </div>
+    </div>
+    <div className={`grid gap-2 ${
+      collageState.layout === "1x1" ? "grid-cols-1" :
+      collageState.layout === "2x2" ? "grid-cols-2" :
+      "grid-cols-3"
+    }`}>
+      {collageState.previewUrls.map((url, index) => (
+        <div key={index} className="relative group">
+          <img
+            src={url}
+            alt={`Preview ${index + 1}`}
+            className="w-full h-40 object-cover rounded-lg"
+          />
+          <button
+            onClick={() => onPhotoRemove(index)}
+            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
-export default function WomenChildrenFile() {
+export default function EblotterFile() {
   const { id } = useParams<{ id: string }>();
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
@@ -196,9 +256,8 @@ export default function WomenChildrenFile() {
   );
   const navigate = useNavigate();
   const location = useLocation();
-  const previousPage = "/wcp"; // Update to women and children page path
-  const previousPageName = "Women & Children Case"; // Update to correct page name
-  const [sortCriteria, setSortCriteria] = useState("created_at");
+  const previousPage = "/wcp";
+  const previousPageName = "Women & Children Case";
   const [reportingPerson, setReportingPerson] =
     useState<ReportingPersonDetails>({
       full_name: "",
@@ -223,19 +282,46 @@ export default function WomenChildrenFile() {
       contact_number: "",
     },
   ]);
-  const [isListView, setIsListView] = useState(() => {
-    // Retrieve the view state from localStorage
-    const savedView = localStorage.getItem("isListView");
-    return savedView ? JSON.parse(savedView) : false; // Default to grid view if not set
-  });
-  const contextMenuRef = useRef<HTMLDivElement | null>(null); // Create a ref for the context menu
-  const formRef = useRef<HTMLFormElement | null>(null); // Create a ref for the form
-  const [isCollageMode, setIsCollageMode] = useState(false);
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [permissionAction, setPermissionAction] = useState("");
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
+  const [activeContextMenu, setActiveContextMenu] = useState<number | null>(null);
+  const [contextMenuVisible, setContextMenuVisible] = useState<{ [key: number]: boolean }>({});
+  const [isCollage, setIsCollage] = useState(false);
   const [collageState, setCollageState] = useState<CollageState>({
     files: [],
     previewUrls: [],
     layout: '2x2'
   });
+
+  const userRole = JSON.parse(Cookies.get("user_data") || "{}").role;
+
+  const canEditOrArchive = () => {
+    return (
+      userRole === "admin" || userRole === "superadmin" || userRole === "wcpd"
+    );
+  };
+
+  const handleEditClick = (file: FileRecord) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("edit this file");
+      setShowPermissionDialog(true);
+      return;
+    }
+    setSelectedFile(file);
+    setShowFileDialog("edit");
+  };
+
+  const handleArchiveClick = (file: FileRecord) => {
+    if (!canEditOrArchive()) {
+      setPermissionAction("archive this file");
+      setShowPermissionDialog(true);
+      return;
+    }
+    setSelectedFile(file);
+    setShowFileDialog("archive");
+  };
 
   // Function to add a new suspect form
   const addSuspect = () => {
@@ -271,51 +357,7 @@ export default function WomenChildrenFile() {
     }
   };
 
-  // Add CollagePreview component
-  const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
-    collageState: CollageState;
-    onLayoutChange: (layout: string) => void;
-    onPhotoRemove: (index: number) => void;
-  }) => (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Label>Layout:</Label>
-        <Select value={collageState.layout} onValueChange={onLayoutChange}>
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="Choose layout" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1x1">1 x 1</SelectItem>
-            <SelectItem value="2x2">2 x 2</SelectItem>
-            <SelectItem value="3x3">3 x 3</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className={`grid gap-2 ${
-        collageState.layout === '1x1' ? 'grid-cols-1' :
-        collageState.layout === '2x2' ? 'grid-cols-2' :
-        'grid-cols-3'
-      }`}>
-        {Array.isArray(collageState.previewUrls) && collageState.previewUrls.map((url, index) => (
-          <div key={index} className="relative group">
-            <img 
-              src={url} 
-              alt={`Collage photo ${index + 1}`} 
-              className="w-full h-40 object-cover rounded-md"
-            />
-            <button
-              onClick={() => onPhotoRemove(index)}
-              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  // Function to handle file upload
+  // Handle file upload
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
@@ -337,7 +379,7 @@ export default function WomenChildrenFile() {
       let publicUrl = "";
       let collagePhotos: string[] = [];
 
-      if (isCollageMode) {
+      if (isCollage) {
         // Upload each photo in the collage
         for (const file of collageState.files) {
           const fileExt = file.name.split(".").pop();
@@ -454,8 +496,8 @@ export default function WomenChildrenFile() {
             public_url: publicUrl,
             investigator: newInvestigator,
             desk_officer: newDeskOfficer,
-            is_collage: isCollageMode,
-            collage_photos: isCollageMode ? collagePhotos : null
+            is_collage: isCollage,
+            collage_photos: isCollage ? collagePhotos : null
           },
         ])
         .select()
@@ -471,101 +513,62 @@ export default function WomenChildrenFile() {
         reportingPerson.complete_address ||
         reportingPerson.contact_number ||
         reportingPerson.date_reported ||
-        reportingPerson.time_reported ||
-        reportingPerson.date_of_incident ||
-        reportingPerson.time_of_incident ||
-        reportingPerson.place_of_incident;
+        reportingPerson.time_reported;
 
-      if (hasReportingPersonData) {
-        // Format dates properly before inserting
-        const formattedReportingPerson = {
-          ...reportingPerson,
-          birthday: formatDateTime(reportingPerson.birthday),
-          date_reported: formatDateTime(reportingPerson.date_reported, reportingPerson.time_reported),
-          date_of_incident: formatDateTime(reportingPerson.date_of_incident, reportingPerson.time_of_incident),
-        };
-
-        // Insert reporting person details
+      if (hasReportingPersonData && fileData) {
         const { error: reportingError } = await supabase
           .from("reporting_person_details")
           .insert([
             {
               wc_file_id: fileData.file_id,
-              ...formattedReportingPerson,
+              ...reportingPerson,
+              birthday: reportingPerson.birthday ? new Date(reportingPerson.birthday).toISOString() : null,
+              date_reported: reportingPerson.date_reported ? new Date(reportingPerson.date_reported).toISOString() : null,
+              date_of_incident: reportingPerson.date_of_incident ? new Date(reportingPerson.date_of_incident).toISOString() : null,
             },
           ]);
 
         if (reportingError) throw reportingError;
       }
 
-      // Insert suspects with proper date formatting
-      const suspectsWithData = suspects.filter(
-        (suspect) =>
+      // Insert suspects
+      if (suspects.length > 0 && fileData) {
+        // Check if any suspect has data before inserting
+        const suspectsWithData = suspects.filter(suspect => 
           suspect.full_name ||
           suspect.age ||
           suspect.birthday ||
           suspect.complete_address ||
           suspect.contact_number
-      );
+        );
 
-      if (suspectsWithData.length > 0) {
-        const formattedSuspects = suspectsWithData.map(suspect => ({
-          wc_file_id: fileData.file_id,
-          ...suspect,
-          birthday: formatDateTime(suspect.birthday),
-        }));
+        if (suspectsWithData.length > 0) {
+          const { error: suspectsError } = await supabase
+            .from("suspects")
+            .insert(
+              suspectsWithData.map((suspect) => ({
+                wc_file_id: fileData.file_id,
+                ...suspect,
+                birthday: suspect.birthday ? new Date(suspect.birthday).toISOString() : null
+              }))
+            );
 
-        const { error: suspectsError } = await supabase
-          .from("suspects")
-          .insert(formattedSuspects);
-
-        if (suspectsError) throw suspectsError;
+          if (suspectsError) throw suspectsError;
+        }
       }
 
-      // Fetch the complete file data with user information
-      const { data: newFileWithUser, error: fetchError } = await supabase
-        .from("womenchildren_file")
-        .select(
-          `
-          *,
-          creator:created_by(name),
-          updater:updated_by(name)
-        `
-        )
-        .eq("file_id", fileData.file_id)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Format the file data for the UI
-      const formattedFile = {
-        ...newFileWithUser,
-        created_by: newFileWithUser.creator?.name || newFileWithUser.created_by,
-        updated_by: newFileWithUser.updater?.name || newFileWithUser.updated_by,
-      };
-
-      // Update the UI with the new file
-      setFiles([formattedFile, ...files]);
-      
-      // Close the dialog and show success message
-      setIsAddingFile(false);
       toast.success("File uploaded successfully");
+      setIsAddingFile(false);
+      fetchFolderAndFiles(); // Refresh the files list
       
-      // Reset all form states
-      formRef.current?.reset();
+      // Reset form
       setNewFileTitle("");
       setNewCaseTitle("");
       setNewBlotterNumber("");
       setNewFileSummary("");
+      setFileUpload(null);
       setNewInvestigator("");
       setNewDeskOfficer("");
-      setFileUpload(null);
-      setIsCollageMode(false);
-      setCollageState({
-        files: [],
-        previewUrls: [],
-        layout: '2x2'
-      });
       setReportingPerson({
         full_name: "",
         age: 0,
@@ -577,84 +580,112 @@ export default function WomenChildrenFile() {
         time_reported: "",
         date_of_incident: "",
         time_of_incident: "",
-        place_of_incident: "",
+        place_of_incident: ""
       });
-      setSuspects([{
-        full_name: "",
-        age: 0,
-        birthday: "",
-        gender: "Male",
-        complete_address: "",
-        contact_number: "",
-      }]);
+      setSuspects([]);
+      setCollageState({
+        files: [],
+        previewUrls: [],
+        layout: "2x2"
+      });
+      setIsCollage(false);
     } catch (error: any) {
       console.error("Error uploading file:", error);
       toast.error(error.message || "Failed to upload file");
-      // Do not close dialog on error
     }
   };
 
-  // Fetch folder details and files
+  // Add collage-related handlers
+  const handleCollagePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const urls = files.map(file => URL.createObjectURL(file));
+    setCollageState(prev => ({
+      ...prev,
+      files: [...prev.files, ...files],
+      previewUrls: [...prev.previewUrls, ...urls]
+    }));
+  };
+
+  const handleLayoutChange = (layout: string) => {
+    setCollageState(prev => ({ ...prev, layout }));
+  };
+
+  const handlePhotoRemove = (index: number) => {
+    setCollageState(prev => ({
+      ...prev,
+      files: prev.files.filter((_, i) => i !== index),
+      previewUrls: prev.previewUrls.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Cleanup URLs on unmount
   useEffect(() => {
-    const fetchFolderAndFiles = async () => {
-      if (!id) return;
-
-      try {
-        // Fetch folder details
-        const { data: folderData, error: folderError } = await supabase
-          .from("folders")
-          .select(
-            `
-            *,
-            creator:created_by(name)
-          `
-          )
-          .eq("folder_id", id)
-          .single();
-
-        if (folderError) throw folderError;
-
-        setFolderDetails({
-          ...folderData,
-          created_by: folderData.creator?.name || folderData.created_by,
-        });
-
-        // Fetch files in the folder
-        const { data: filesData, error: filesError } = await supabase
-          .from("womenchildren_file")
-          .select(
-            `
-            *,
-            creator:created_by(name),
-            updater:updated_by(name),
-            viewer:viewed_by(name),
-            downloader:downloaded_by(name),
-            printer:printed_by(name)
-          `
-          )
-          .eq("folder_id", id)
-          .eq("is_archived", false)
-          .order("created_at", { ascending: false });
-
-        if (filesError) throw filesError;
-
-        const formattedFiles = filesData.map((file) => ({
-          ...file,
-          created_by: file.creator?.name || file.created_by,
-          updated_by: file.updater?.name || file.updated_by,
-          viewed_by: file.viewer?.name || file.viewed_by,
-          downloaded_by: file.downloader?.name || file.downloaded_by,
-          printed_by: file.printer?.name || file.printed_by,
-        }));
-
-        setFiles(formattedFiles);
-      } catch (error) {
-        console.error("Error fetching folder data:", error);
-      } finally {
-        setIsLoading(false);
-      }
+    return () => {
+      collageState.previewUrls.forEach(url => URL.revokeObjectURL(url));
     };
+  }, []);
 
+  // Fetch folder details and files
+  const fetchFolderAndFiles = async () => {
+    if (!id) return;
+
+    try {
+      // Fetch folder details
+      const { data: folderData, error: folderError } = await supabase
+        .from("folders")
+        .select(
+          `
+          *,
+          creator:created_by(name)
+        `
+        )
+        .eq("folder_id", id)
+        .single();
+
+      if (folderError) throw folderError;
+
+      setFolderDetails({
+        ...folderData,
+        created_by: folderData.creator?.name || folderData.created_by,
+      });
+
+      // Fetch files in the folder
+      const { data: filesData, error: filesError } = await supabase
+        .from("womenchildren_file")
+        .select(
+          `
+          *,
+          creator:created_by(name),
+          updater:updated_by(name),
+          viewer:viewed_by(name),
+          downloader:downloaded_by(name),
+          printer:printed_by(name)
+        `
+        )
+        .eq("folder_id", id)
+        .eq("is_archived", false)
+        .order("created_at", { ascending: false });
+
+      if (filesError) throw filesError;
+
+      const formattedFiles = filesData.map((file) => ({
+        ...file,
+        created_by: file.creator?.name || file.created_by,
+        updated_by: file.updater?.name || file.updated_by,
+        viewed_by: file.viewer?.name || file.viewed_by,
+        downloaded_by: file.downloader?.name || file.downloaded_by,
+        printed_by: file.printer?.name || file.printed_by,
+      }));
+
+      setFiles(formattedFiles);
+    } catch (error) {
+      console.error("Error fetching folder data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchFolderAndFiles();
   }, [id]);
 
@@ -687,29 +718,55 @@ export default function WomenChildrenFile() {
 
     return matchesSearch && matchesFilter;
   });
-
+  const [isListView, setIsListView] = useState(() => {
+    // Retrieve the view state from localStorage
+    const savedView = localStorage.getItem("isListView");
+    return savedView ? JSON.parse(savedView) : false; // Default to grid view if not set
+  });
+  const [sortCriteria, setSortCriteria] = useState("created_at");
   // Function to handle view change
   const handleViewChange = (view: boolean) => {
     setIsListView(view);
     localStorage.setItem("isListView", JSON.stringify(view)); // Save the view state to localStorage
   };
-
-  // Function to handle clicks outside the context menu
-  const handleClickOutside = (event: MouseEvent) => {
-    if (
-      contextMenuRef.current &&
-      !contextMenuRef.current.contains(event.target as Node)
-    ) {
-      setShowOptions({}); // Close the context menu
-    }
-  };
-
+  
+  // Handle click outside to close context menu
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        if (!target.closest(".context-menu") && !target.closest(".menu-trigger")) {
+            setContextMenuVisible({}); // Close all context menus
+        }
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+        document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+    // Function to handle clicks outside the context menu
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowOptions({}); // Close the context menu
+      }
+    };
+  
+    useEffect(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, []);
+
+  // Update the click handler for the MoreVertical button
+  const handleMoreOptionsClick = (e: React.MouseEvent, fileId: number) => {
+    e.stopPropagation(); // Prevent row click
+    setContextMenuVisible((prev) => ({ ...prev, [fileId]: !prev[fileId] })); // Toggle the context menu
+  };
 
   return (
     <div className="p-6">
@@ -879,17 +936,11 @@ export default function WomenChildrenFile() {
                       <td className="px-4 py-2 border-b flex space-x-2">
                         <button
                           className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent row click
-                            setShowOptions((prev) => ({
-                              ...prev,
-                              [file.file_id]: !prev[file.file_id],
-                            }));
-                          }}
+                          onClick={(e) => handleMoreOptionsClick(e, file.file_id)}
                         >
                           <MoreVertical size={16} color="black" />
                         </button>
-                        {showOptions[file.file_id] && (
+                        {contextMenuVisible[file.file_id] && (
                           <div
                             ref={contextMenuRef}
                             className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 context-menu font-poppins"
@@ -898,12 +949,8 @@ export default function WomenChildrenFile() {
                               className="block w-full text-left p-2 hover:bg-gray-100"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedFile(file);
-                                setShowFileDialog("edit");
-                                setShowOptions((prev) => ({
-                                  ...prev,
-                                  [file.file_id]: false,
-                                }));
+                                handleEditClick(file);
+                                setContextMenuVisible((prev) => ({ ...prev, [file.file_id]: false }));
                               }}
                             >
                               <Pencil className="inline w-4 h-4 mr-2" /> Edit
@@ -912,12 +959,8 @@ export default function WomenChildrenFile() {
                               className="block w-full text-left p-2 hover:bg-gray-100"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedFile(file);
-                                setShowFileDialog("archive");
-                                setShowOptions((prev) => ({
-                                  ...prev,
-                                  [file.file_id]: false,
-                                }));
+                                handleArchiveClick(file);
+                                setContextMenuVisible((prev) => ({ ...prev, [file.file_id]: false }));
                               }}
                             >
                               <Archive className="inline w-4 h-4 mr-2" /> Archive
@@ -928,10 +971,7 @@ export default function WomenChildrenFile() {
                                 e.stopPropagation();
                                 setSelectedFile(file);
                                 setShowFileDialog("details");
-                                setShowOptions((prev) => ({
-                                  ...prev,
-                                  [file.file_id]: false,
-                                }));
+                                setContextMenuVisible((prev) => ({ ...prev, [file.file_id]: false }));
                               }}
                             >
                               <Eye className="inline w-4 h-4 mr-2" /> View Details
@@ -990,12 +1030,12 @@ export default function WomenChildrenFile() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       {getFileIcon(file.file_path)}
-                      <h3 className="font-medium text-gray-900 truncate max-w-[150px]">
+                      <h3 className="font-medium text-gray-900">
                         {file.title}
                       </h3>
                     </div>
                     <button
-                      className="p-2 rounded-full hover:bg-gray-200"
+                      className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
                       onClick={() =>
                         setShowOptions((prev) => ({
                           ...prev,
@@ -1034,22 +1074,21 @@ export default function WomenChildrenFile() {
                     }}
                     isListView={isListView} // Pass the isListView prop
                   />
-                  <div className="text-xs text-gray-500 mt-2">
+                  <div className="text-sm text-gray-500 mt-2">
                     Added by {file.created_by} on{" "}
                     {new Date(file.created_at).toLocaleDateString()}
                   </div>
                 </div>
 
                 {showOptions[file.file_id] && (
-                  <div
-                    ref={contextMenuRef}
-                    className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins"
-                  >
-                    <button
-                      className="block w-full text-left p-2 hover:bg-gray-100"
-                      onClick={() => {
-                        setSelectedFile(file);
-                        setShowFileDialog("edit");
+                  <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins"
+                  ref={contextMenuRef}>
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditClick(file);
                         setShowOptions((prev) => ({
                           ...prev,
                           [file.file_id]: false,
@@ -1057,12 +1096,13 @@ export default function WomenChildrenFile() {
                       }}
                     >
                       <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                    </button>
-                    <button
-                      className="block w-full text-left p-2 hover:bg-gray-100"
-                      onClick={() => {
-                        setSelectedFile(file);
-                        setShowFileDialog("archive");
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleArchiveClick(file);
                         setShowOptions((prev) => ({
                           ...prev,
                           [file.file_id]: false,
@@ -1070,10 +1110,12 @@ export default function WomenChildrenFile() {
                       }}
                     >
                       <Archive className="inline w-4 h-4 mr-2" /> Archive
-                    </button>
-                    <button
-                      className="block w-full text-left p-2 hover:bg-gray-100"
-                      onClick={() => {
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedFile(file);
                         setShowFileDialog("details");
                         setShowOptions((prev) => ({
@@ -1083,7 +1125,7 @@ export default function WomenChildrenFile() {
                       }}
                     >
                       <Eye className="inline w-4 h-4 mr-2" /> View Details
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1091,14 +1133,14 @@ export default function WomenChildrenFile() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8">
-          <DotLottieReact
-            src="/assets/NoFiles.lottie"
-            loop
-            autoplay
-            className="w-6/12"
-          />
-          No files found in this folder
-        </div>
+            <DotLottieReact
+              src="/assets/NoFiles.lottie"
+              loop
+              autoplay
+              className="w-6/12"
+            />
+            No files found in this folder
+          </div>
         )}
       </div>
 
@@ -1181,65 +1223,88 @@ export default function WomenChildrenFile() {
                     <div className="flex items-center gap-2">
                       <Label>Create Collage</Label>
                       <Switch
-                        checked={isCollageMode}
-                        onCheckedChange={(checked) => {
-                          setIsCollageMode(checked);
-                          if (!checked) {
-                            setCollageState({
-                              files: [],
-                              previewUrls: [],
-                              layout: '2x2'
-                            });
-                          }
-                        }}
+                        checked={isCollage}
+                        onCheckedChange={setIsCollage}
                       />
                     </div>
-                    {isCollageMode ? (
+                    {isCollage && (
                       <div className="space-y-4">
-                        <Input
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          onChange={(e) => {
-                            const files = e.target.files;
-                            if (!files) return;
-                            
-                            const newFiles = Array.from(files);
-                            const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
-                            
-                            setCollageState(prev => ({
-                              ...prev,
-                              files: [...prev.files, ...newFiles],
-                              previewUrls: [...prev.previewUrls, ...newPreviewUrls]
-                            }));
-                          }}
-                        />
-                        <CollagePreview
-                          collageState={collageState}
-                          onLayoutChange={(layout) => setCollageState(prev => ({ ...prev, layout }))}
-                          onPhotoRemove={(index) => {
-                            setCollageState(prev => ({
-                              ...prev,
-                              files: prev.files.filter((_, i) => i !== index),
-                              previewUrls: prev.previewUrls.filter((_, i) => i !== index)
-                            }));
-                          }}
-                        />
+                        <div className="flex items-center gap-4">
+                          <Label>Layout:</Label>
+                          <Select value={collageState.layout} onValueChange={(layout) => setCollageState(prev => ({ ...prev, layout }))}>
+                            <SelectTrigger className="w-32">
+                              <SelectValue placeholder="Choose layout" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1x1">1 x 1</SelectItem>
+                              <SelectItem value="2x2">2 x 2</SelectItem>
+                              <SelectItem value="3x3">3 x 3</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="collage_photos">Upload Photos for Collage</Label>
+                          <Input
+                            id="collage_photos"
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              if (!files) return;
+                              
+                              const newFiles = Array.from(files);
+                              const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
+                              
+                              setCollageState(prev => ({
+                                ...prev,
+                                files: [...prev.files, ...newFiles],
+                                previewUrls: [...prev.previewUrls, ...newPreviewUrls]
+                              }));
+                            }}
+                            required={isCollage}
+                          />
+                        </div>
+                        {collageState.previewUrls.length > 0 && (
+                          <div className={`grid gap-2 ${
+                            collageState.layout === "1x1" ? "grid-cols-1" :
+                            collageState.layout === "2x2" ? "grid-cols-2" :
+                            "grid-cols-3"
+                          }`}>
+                            {collageState.previewUrls.map((url, index) => (
+                              <div key={index} className="relative group">
+                                <img
+                                  src={url}
+                                  alt={`Preview ${index + 1}`}
+                                  className="w-full h-40 object-cover rounded-lg"
+                                />
+                                <button
+                                  onClick={() => handlePhotoRemove(index)}
+                                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    ) : (
+                    )}
+                    {!isCollage && (
                       <div>
                         <Label htmlFor="file">Upload File</Label>
                         <Input
                           id="file"
                           type="file"
                           onChange={(e) => setFileUpload(e.target.files)}
-                          required
+                          required={!isCollage}
                         />
                       </div>
                     )}
                   </div>
                 </div>
 
+                {/* Reporting Person Details */}
                 <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
                   <h3 className="text-lg font-semibold">
                     Reporting Person Details
@@ -1264,7 +1329,7 @@ export default function WomenChildrenFile() {
                         id="rp_age"
                         type="number"
                         min="0"
-                        max="100"
+                        max="150"
                         value={reportingPerson.age}
                         onChange={(e) =>
                           setReportingPerson({
@@ -1411,7 +1476,8 @@ export default function WomenChildrenFile() {
                   </div>
                 </div>
 
-                <div className="space-y-4 bg-slate-50 p-4 mr-6 rounded-lg">
+                {/* Suspects Section */}
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">Suspects</h3>
                     <Button
@@ -1461,7 +1527,7 @@ export default function WomenChildrenFile() {
                             id={`suspect_${index}_age`}
                             type="number"
                             min="0"
-                            max="100"
+                            max="150"
                             value={suspect.age}
                             onChange={(e) =>
                               updateSuspect(
@@ -1574,6 +1640,12 @@ export default function WomenChildrenFile() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      <PermissionDialog
+        isOpen={showPermissionDialog}
+        onClose={() => setShowPermissionDialog(false)}
+        action={permissionAction}
+      />
     </div>
   );
 }
