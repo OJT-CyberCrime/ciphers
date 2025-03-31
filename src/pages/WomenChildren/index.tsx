@@ -314,7 +314,7 @@ export default function IncidentReport() {
 
       <div className="flex justify-between items-center mb-6 ">
         <h1 className="text-2xl font-medium font-poppins text-blue-900">
-          Women and Children
+          Women and Children Case
         </h1>
         <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
           <Button
