@@ -20,6 +20,7 @@ import {
   SortAsc,
   List,
   Grid,
+  X,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -57,6 +58,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 
 interface FileRecord {
   file_id: number;
@@ -85,6 +87,8 @@ interface FileRecord {
   viewer?: { name: string };
   downloader?: { name: string };
   printer?: { name: string };
+  is_collage?: boolean;
+  collage_photos?: string[];
 }
 
 interface Folder {
@@ -116,6 +120,12 @@ interface Suspect {
   gender: "Male" | "Female" | "Other";
   complete_address: string;
   contact_number: string;
+}
+
+interface CollageState {
+  files: File[];
+  previewUrls: string[];
+  layout: string;
 }
 
 // Helper function to get file type icon
@@ -161,6 +171,63 @@ const getStatusBadgeClass = (status: string) => {
       return { class: "bg-gray-200 text-black", label: "N/A" }; // Default case
   }
 };
+
+// Add the CollagePreview component definition before the main component
+const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
+  collageState: CollageState;
+  onLayoutChange: (layout: string) => void;
+  onPhotoRemove: (index: number) => void;
+}) => (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between">
+      <Label>Layout</Label>
+      <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
+          <Label>1x1</Label>
+          <Switch
+            checked={collageState.layout === "1x1"}
+            onCheckedChange={() => onLayoutChange("1x1")}
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Label>2x2</Label>
+          <Switch
+            checked={collageState.layout === "2x2"}
+            onCheckedChange={() => onLayoutChange("2x2")}
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Label>3x3</Label>
+          <Switch
+            checked={collageState.layout === "3x3"}
+            onCheckedChange={() => onLayoutChange("3x3")}
+          />
+        </div>
+      </div>
+    </div>
+    <div className={`grid gap-2 ${
+      collageState.layout === "1x1" ? "grid-cols-1" :
+      collageState.layout === "2x2" ? "grid-cols-2" :
+      "grid-cols-3"
+    }`}>
+      {collageState.previewUrls.map((url, index) => (
+        <div key={index} className="relative group">
+          <img
+            src={url}
+            alt={`Preview ${index + 1}`}
+            className="w-full h-40 object-cover rounded-lg"
+          />
+          <button
+            onClick={() => onPhotoRemove(index)}
+            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 export default function EblotterFile() {
   const { id } = useParams<{ id: string }>();
@@ -221,6 +288,12 @@ export default function EblotterFile() {
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [activeContextMenu, setActiveContextMenu] = useState<number | null>(null);
   const [contextMenuVisible, setContextMenuVisible] = useState<{ [key: number]: boolean }>({});
+  const [isCollage, setIsCollage] = useState(false);
+  const [collageState, setCollageState] = useState<CollageState>({
+    files: [],
+    previewUrls: [],
+    layout: '2x2'
+  });
 
   const userRole = JSON.parse(Cookies.get("user_data") || "{}").role;
 
@@ -287,7 +360,7 @@ export default function EblotterFile() {
   // Handle file upload
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !fileUpload?.[0]) return;
+    if (!id) return;
 
     try {
       const userData = JSON.parse(Cookies.get("user_data") || "{}");
@@ -302,25 +375,110 @@ export default function EblotterFile() {
       if (userError) throw userError;
       if (!userData2) throw new Error("User not found");
 
-      // Upload file to storage
-      const file = fileUpload[0];
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `folder_${id}/${fileName}`;
+      let filePath = "";
+      let publicUrl = "";
+      let collagePhotos: string[] = [];
 
-      const { error: uploadError } = await supabase.storage
-        .from("files")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
+      if (isCollage) {
+        // Upload each photo in the collage
+        for (const file of collageState.files) {
+          const fileExt = file.name.split(".").pop();
+          const fileName = `${Math.random()}.${fileExt}`;
+          const photoPath = `folder_${id}/collage_photos/${fileName}`;
 
-      if (uploadError) throw uploadError;
+          const { error: uploadError } = await supabase.storage
+            .from("files")
+            .upload(photoPath, file, {
+              cacheControl: "3600",
+              upsert: false,
+            });
 
-      // Get the public URL for the uploaded file
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("files").getPublicUrl(filePath);
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl: photoUrl } } = supabase.storage
+            .from("files")
+            .getPublicUrl(photoPath);
+
+          collagePhotos.push(photoUrl);
+        }
+
+        if (collagePhotos.length > 0) {
+          // Create a collage preview image using HTML Canvas
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const [cols, rows] = collageState.layout.split('x').map(Number);
+          const photoWidth = 800 / cols;
+          const photoHeight = 800 / rows;
+          
+          canvas.width = 800;
+          canvas.height = 800;
+
+          // Load all images and draw them on the canvas
+          const images = await Promise.all(
+            collageState.previewUrls.map(url => {
+              return new Promise<HTMLImageElement>((resolve) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => resolve(img);
+                img.src = url;
+              });
+            })
+          );
+
+          images.forEach((img, index) => {
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            ctx?.drawImage(
+              img,
+              col * photoWidth,
+              row * photoHeight,
+              photoWidth,
+              photoHeight
+            );
+          });
+
+          // Convert canvas to blob and upload
+          const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!)));
+          const collageFileName = `collage_${Math.random()}.png`;
+          filePath = `folder_${id}/${collageFileName}`;
+
+          const { error: collageUploadError } = await supabase.storage
+            .from("files")
+            .upload(filePath, blob, {
+              cacheControl: "3600",
+              upsert: false,
+            });
+
+          if (collageUploadError) throw collageUploadError;
+
+          const { data: { publicUrl: collagePublicUrl } } = supabase.storage
+            .from("files")
+            .getPublicUrl(filePath);
+
+          publicUrl = collagePublicUrl;
+        }
+      } else if (fileUpload?.[0]) {
+        // Handle regular file upload
+        const file = fileUpload[0];
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        filePath = `folder_${id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("files")
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl: filePublicUrl } } = supabase.storage
+          .from("files")
+          .getPublicUrl(filePath);
+
+        publicUrl = filePublicUrl;
+      }
 
       // Create file record in database
       const { data: fileData, error: fileError } = await supabase
@@ -338,6 +496,8 @@ export default function EblotterFile() {
             public_url: publicUrl,
             investigator: newInvestigator,
             desk_officer: newDeskOfficer,
+            is_collage: isCollage,
+            collage_photos: isCollage ? collagePhotos : null
           },
         ])
         .select()
@@ -345,84 +505,70 @@ export default function EblotterFile() {
 
       if (fileError) throw fileError;
 
-      // Insert reporting person details
-      const { error: reportingError } = await supabase
-        .from("reporting_person_details")
-        .insert([
-          {
-            blotter_id: fileData.file_id,
-            ...reportingPerson,
-            birthday: new Date(reportingPerson.birthday).toISOString(),
-            date_reported: new Date(
-              reportingPerson.date_reported
-            ).toISOString(),
-            date_of_incident: new Date(
-              reportingPerson.date_of_incident
-            ).toISOString(),
-          },
-        ]);
+      // Only insert reporting person details if at least one field is filled out
+      const hasReportingPersonData = 
+        reportingPerson.full_name ||
+        reportingPerson.age ||
+        reportingPerson.birthday ||
+        reportingPerson.complete_address ||
+        reportingPerson.contact_number ||
+        reportingPerson.date_reported ||
+        reportingPerson.time_reported;
 
-      if (reportingError) throw reportingError;
+      if (hasReportingPersonData && fileData) {
+        const { error: reportingError } = await supabase
+          .from("reporting_person_details")
+          .insert([
+            {
+              blotter_id: fileData.file_id,
+              ...reportingPerson,
+              birthday: reportingPerson.birthday ? new Date(reportingPerson.birthday).toISOString() : null,
+              date_reported: reportingPerson.date_reported ? new Date(reportingPerson.date_reported).toISOString() : null,
+              date_of_incident: reportingPerson.date_of_incident ? new Date(reportingPerson.date_of_incident).toISOString() : null,
+            },
+          ]);
+
+        if (reportingError) throw reportingError;
+      }
 
       // Insert suspects
-      const suspectsWithData = suspects.filter(
-        (suspect) =>
+      if (suspects.length > 0 && fileData) {
+        // Check if any suspect has data before inserting
+        const suspectsWithData = suspects.filter(suspect => 
           suspect.full_name ||
           suspect.age ||
           suspect.birthday ||
           suspect.complete_address ||
           suspect.contact_number
-      );
-
-      if (suspectsWithData.length > 0) {
-        const { error: suspectsError } = await supabase.from("suspects").insert(
-          suspectsWithData.map((suspect) => ({
-            blotter_id: fileData.file_id,
-            ...suspect,
-            birthday: suspect.birthday
-              ? new Date(suspect.birthday).toISOString()
-              : null,
-          }))
         );
 
-        if (suspectsError) throw suspectsError;
+        if (suspectsWithData.length > 0) {
+          const { error: suspectsError } = await supabase
+            .from("suspects")
+            .insert(
+              suspectsWithData.map((suspect) => ({
+                blotter_id: fileData.file_id,
+                ...suspect,
+                birthday: suspect.birthday ? new Date(suspect.birthday).toISOString() : null
+              }))
+            );
+
+          if (suspectsError) throw suspectsError;
+        }
       }
 
-      // Fetch the complete file data with user information
-      const { data: newFileWithUser, error: fetchError } = await supabase
-        .from("eblotter_file")
-        .select(
-          `
-          *,
-          creator:created_by(name),
-          updater:updated_by(name)
-        `
-        )
-        .eq("file_id", fileData.file_id)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Format the file data for the UI
-      const formattedFile = {
-        ...newFileWithUser,
-        created_by: newFileWithUser.creator?.name || newFileWithUser.created_by,
-        updated_by: newFileWithUser.updater?.name || newFileWithUser.updated_by,
-      };
-
-      // Update the UI with the new file
-      setFiles([formattedFile, ...files]);
       toast.success("File uploaded successfully");
       setIsAddingFile(false);
-
-      // Reset all form fields
+      fetchFolderAndFiles(); // Refresh the files list
+      
+      // Reset form
       setNewFileTitle("");
       setNewCaseTitle("");
       setNewBlotterNumber("");
       setNewFileSummary("");
+      setFileUpload(null);
       setNewInvestigator("");
       setNewDeskOfficer("");
-      setFileUpload(null);
       setReportingPerson({
         full_name: "",
         age: 0,
@@ -434,85 +580,112 @@ export default function EblotterFile() {
         time_reported: "",
         date_of_incident: "",
         time_of_incident: "",
-        place_of_incident: "",
+        place_of_incident: ""
       });
-      setSuspects([
-        {
-          full_name: "",
-          age: 0,
-          birthday: "",
-          gender: "Male",
-          complete_address: "",
-          contact_number: "",
-        },
-      ]);
+      setSuspects([]);
+      setCollageState({
+        files: [],
+        previewUrls: [],
+        layout: "2x2"
+      });
+      setIsCollage(false);
     } catch (error: any) {
       console.error("Error uploading file:", error);
       toast.error(error.message || "Failed to upload file");
     }
   };
 
-  // Fetch folder details and files
+  // Add collage-related handlers
+  const handleCollagePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const urls = files.map(file => URL.createObjectURL(file));
+    setCollageState(prev => ({
+      ...prev,
+      files: [...prev.files, ...files],
+      previewUrls: [...prev.previewUrls, ...urls]
+    }));
+  };
+
+  const handleLayoutChange = (layout: string) => {
+    setCollageState(prev => ({ ...prev, layout }));
+  };
+
+  const handlePhotoRemove = (index: number) => {
+    setCollageState(prev => ({
+      ...prev,
+      files: prev.files.filter((_, i) => i !== index),
+      previewUrls: prev.previewUrls.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Cleanup URLs on unmount
   useEffect(() => {
-    const fetchFolderAndFiles = async () => {
-      if (!id) return;
-
-      try {
-        // Fetch folder details
-        const { data: folderData, error: folderError } = await supabase
-          .from("folders")
-          .select(
-            `
-            *,
-            creator:created_by(name)
-          `
-          )
-          .eq("folder_id", id)
-          .single();
-
-        if (folderError) throw folderError;
-
-        setFolderDetails({
-          ...folderData,
-          created_by: folderData.creator?.name || folderData.created_by,
-        });
-
-        // Fetch files in the folder
-        const { data: filesData, error: filesError } = await supabase
-          .from("eblotter_file")
-          .select(
-            `
-            *,
-            creator:created_by(name),
-            updater:updated_by(name),
-            viewer:viewed_by(name),
-            downloader:downloaded_by(name),
-            printer:printed_by(name)
-          `
-          )
-          .eq("folder_id", id)
-          .eq("is_archived", false)
-          .order("created_at", { ascending: false });
-
-        if (filesError) throw filesError;
-
-        const formattedFiles = filesData.map((file) => ({
-          ...file,
-          created_by: file.creator?.name || file.created_by,
-          updated_by: file.updater?.name || file.updated_by,
-          viewed_by: file.viewer?.name || file.viewed_by,
-          downloaded_by: file.downloader?.name || file.downloaded_by,
-          printed_by: file.printer?.name || file.printed_by,
-        }));
-
-        setFiles(formattedFiles);
-      } catch (error) {
-        console.error("Error fetching folder data:", error);
-      } finally {
-        setIsLoading(false);
-      }
+    return () => {
+      collageState.previewUrls.forEach(url => URL.revokeObjectURL(url));
     };
+  }, []);
 
+  // Fetch folder details and files
+  const fetchFolderAndFiles = async () => {
+    if (!id) return;
+
+    try {
+      // Fetch folder details
+      const { data: folderData, error: folderError } = await supabase
+        .from("folders")
+        .select(
+          `
+          *,
+          creator:created_by(name)
+        `
+        )
+        .eq("folder_id", id)
+        .single();
+
+      if (folderError) throw folderError;
+
+      setFolderDetails({
+        ...folderData,
+        created_by: folderData.creator?.name || folderData.created_by,
+      });
+
+      // Fetch files in the folder
+      const { data: filesData, error: filesError } = await supabase
+        .from("eblotter_file")
+        .select(
+          `
+          *,
+          creator:created_by(name),
+          updater:updated_by(name),
+          viewer:viewed_by(name),
+          downloader:downloaded_by(name),
+          printer:printed_by(name)
+        `
+        )
+        .eq("folder_id", id)
+        .eq("is_archived", false)
+        .order("created_at", { ascending: false });
+
+      if (filesError) throw filesError;
+
+      const formattedFiles = filesData.map((file) => ({
+        ...file,
+        created_by: file.creator?.name || file.created_by,
+        updated_by: file.updater?.name || file.updated_by,
+        viewed_by: file.viewer?.name || file.viewed_by,
+        downloaded_by: file.downloader?.name || file.downloaded_by,
+        printed_by: file.printer?.name || file.printed_by,
+      }));
+
+      setFiles(formattedFiles);
+    } catch (error) {
+      console.error("Error fetching folder data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchFolderAndFiles();
   }, [id]);
 
@@ -1047,13 +1220,87 @@ export default function EblotterFile() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="file">Upload File</Label>
-                    <Input
-                      id="file"
-                      type="file"
-                      onChange={(e) => setFileUpload(e.target.files)}
-                      required
-                    />
+                    <div className="flex items-center gap-2">
+                      <Label>Create Collage</Label>
+                      <Switch
+                        checked={isCollage}
+                        onCheckedChange={setIsCollage}
+                      />
+                    </div>
+                    {isCollage && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-4">
+                          <Label>Layout:</Label>
+                          <Select value={collageState.layout} onValueChange={(layout) => setCollageState(prev => ({ ...prev, layout }))}>
+                            <SelectTrigger className="w-32">
+                              <SelectValue placeholder="Choose layout" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1x1">1 x 1</SelectItem>
+                              <SelectItem value="2x2">2 x 2</SelectItem>
+                              <SelectItem value="3x3">3 x 3</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="collage_photos">Upload Photos for Collage</Label>
+                          <Input
+                            id="collage_photos"
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              if (!files) return;
+                              
+                              const newFiles = Array.from(files);
+                              const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
+                              
+                              setCollageState(prev => ({
+                                ...prev,
+                                files: [...prev.files, ...newFiles],
+                                previewUrls: [...prev.previewUrls, ...newPreviewUrls]
+                              }));
+                            }}
+                            required={isCollage}
+                          />
+                        </div>
+                        {collageState.previewUrls.length > 0 && (
+                          <div className={`grid gap-2 ${
+                            collageState.layout === "1x1" ? "grid-cols-1" :
+                            collageState.layout === "2x2" ? "grid-cols-2" :
+                            "grid-cols-3"
+                          }`}>
+                            {collageState.previewUrls.map((url, index) => (
+                              <div key={index} className="relative group">
+                                <img
+                                  src={url}
+                                  alt={`Preview ${index + 1}`}
+                                  className="w-full h-40 object-cover rounded-lg"
+                                />
+                                <button
+                                  onClick={() => handlePhotoRemove(index)}
+                                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {!isCollage && (
+                      <div>
+                        <Label htmlFor="file">Upload File</Label>
+                        <Input
+                          id="file"
+                          type="file"
+                          onChange={(e) => setFileUpload(e.target.files)}
+                          required={!isCollage}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1074,7 +1321,6 @@ export default function EblotterFile() {
                             full_name: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1091,7 +1337,6 @@ export default function EblotterFile() {
                             age: parseInt(e.target.value),
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1106,7 +1351,6 @@ export default function EblotterFile() {
                             birthday: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1140,7 +1384,6 @@ export default function EblotterFile() {
                             complete_address: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1154,7 +1397,6 @@ export default function EblotterFile() {
                             contact_number: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                   </div>
@@ -1172,7 +1414,6 @@ export default function EblotterFile() {
                             date_reported: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1187,7 +1428,6 @@ export default function EblotterFile() {
                             time_reported: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1202,7 +1442,6 @@ export default function EblotterFile() {
                             date_of_incident: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1217,7 +1456,6 @@ export default function EblotterFile() {
                             time_of_incident: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div className="col-span-2">
@@ -1233,7 +1471,6 @@ export default function EblotterFile() {
                             place_of_incident: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                   </div>

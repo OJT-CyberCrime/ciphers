@@ -38,7 +38,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  SheetOverlay,
+} from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 
 interface FileRecord {
@@ -1177,7 +1185,7 @@ export default function FileOperations({
             </SheetDescription>
           </SheetHeader>
           <div className="overflow-y-auto pr-0">
-            <form ref={formRef} onSubmit={handleEditFile} className="space-y-6">
+            <form onSubmit={handleEditFile} className="space-y-6">
               {/* File Details Section */}
               <div className="space-y-4 py-4">
                 <div className="space-y-4 p-4 mr-6 rounded-lg bg-slate-50">

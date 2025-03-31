@@ -24,7 +24,9 @@ import {
   Eye,
   MoreVertical,
   Printer,
-  X
+  X,
+  CheckCircle,
+  Edit
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -37,6 +39,7 @@ import {
   SheetFooter,
   SheetOverlay,
 } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 
 interface FileRecord {
   file_id: number;
@@ -65,18 +68,20 @@ interface FileRecord {
   viewer?: { name: string };
   downloader?: { name: string };
   printer?: { name: string };
+  is_collage?: boolean;
+  collage_photos?: string[];
 }
 
 interface ReportingPersonDetails {
   full_name: string;
   age: number;
-  birthday: string;
+  birthday: string | null;
   gender: 'Male' | 'Female' | 'Other';
   complete_address: string;
   contact_number: string;
-  date_reported: string;
+  date_reported: string | null;
   time_reported: string;
-  date_of_incident: string;
+  date_of_incident: string | null;
   time_of_incident: string;
   place_of_incident: string;
 }
@@ -103,6 +108,13 @@ interface FileOperationsProps {
   isListView: boolean;
 }
 
+interface CollageState {
+  files: File[];
+  previewUrls: string[];
+  layout: string;
+  existingPhotos: string[];
+}
+
 // Helper function to get file type icon
 const getFileIcon = (filePath: string) => {
   const ext = filePath.split('.').pop()?.toLowerCase() || '';
@@ -119,10 +131,63 @@ const getFileIcon = (filePath: string) => {
 };
 
 // Add this helper function at the top level
-const formatDateForInput = (dateString: string) => {
+const formatDateForInput = (dateString: string | null) => {
   if (!dateString) return '';
   return new Date(dateString).toISOString().split('T')[0];
 };
+
+// Add this helper function at the top level with other helper functions
+const formatTimeToAMPM = (timeString: string) => {
+  if (!timeString) return '';
+  const [hours, minutes] = timeString.split(':');
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minutes} ${ampm}`;
+};
+
+const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
+  collageState: CollageState;
+  onLayoutChange: (layout: string) => void;
+  onPhotoRemove: (index: number) => void;
+}) => (
+  <div className="space-y-4">
+    <div className="flex items-center gap-4">
+      <Label>Layout:</Label>
+      <Select value={collageState.layout} onValueChange={onLayoutChange}>
+        <SelectTrigger className="w-32">
+          <SelectValue placeholder="Choose layout" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="1x1">1 x 1</SelectItem>
+          <SelectItem value="2x2">2 x 2</SelectItem>
+          <SelectItem value="3x3">3 x 3</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+    <div className={`grid gap-2 ${
+      collageState.layout === '1x1' ? 'grid-cols-1' :
+      collageState.layout === '2x2' ? 'grid-cols-2' :
+      'grid-cols-3'
+    }`}>
+      {Array.isArray(collageState.previewUrls) && collageState.previewUrls.map((url, index) => (
+        <div key={index} className="relative group">
+          <img 
+            src={url} 
+            alt={`Collage photo ${index + 1}`} 
+            className="w-full h-40 object-cover rounded-md"
+          />
+          <button
+            onClick={() => onPhotoRemove(index)}
+            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 export default function FileOperations({
   file,
@@ -136,6 +201,75 @@ export default function FileOperations({
   isListView,
 }: FileOperationsProps) {
   const currentFile = showFileDialog ? selectedFile || file : file;
+  const [isCollage, setIsCollage] = useState(false);
+  const [collageState, setCollageState] = useState<CollageState>(() => ({
+    files: [],
+    previewUrls: [],
+    layout: "1x1",
+    existingPhotos: []
+  }));
+
+  // Add effect to update collage state when dialog opens
+  useEffect(() => {
+    if (showFileDialog === 'edit' && currentFile) {
+      setIsCollage(currentFile.is_collage || false);
+      if (currentFile.is_collage && Array.isArray(currentFile.collage_photos)) {
+        const urls = currentFile.collage_photos.map(photo => {
+          const { data: { publicUrl } } = supabase.storage
+            .from('files')
+            .getPublicUrl(photo);
+          return publicUrl;
+        });
+
+        const layout = currentFile.collage_photos.length === 1 
+          ? "1x1"
+          : currentFile.collage_photos.length <= 4 
+            ? "2x2" 
+            : "3x3";
+
+        setCollageState({
+          files: [],
+          previewUrls: urls,
+          layout: layout,
+          existingPhotos: currentFile.collage_photos
+        });
+      }
+    }
+  }, [showFileDialog, currentFile]);
+
+  // Add collage-related handlers
+  const handleCollagePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const urls = files.map(file => URL.createObjectURL(file));
+    setCollageState(prev => ({
+      ...prev,
+      files: [...prev.files, ...files],
+      previewUrls: [...prev.previewUrls, ...urls]
+    }));
+  };
+
+  const handleLayoutChange = (layout: string) => {
+    setCollageState(prev => ({ ...prev, layout }));
+  };
+
+  const handlePhotoRemove = (index: number) => {
+    setCollageState(prev => ({
+      ...prev,
+      files: prev.files.filter((_, i) => i !== index),
+      previewUrls: prev.previewUrls.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Cleanup URLs on unmount
+  useEffect(() => {
+    return () => {
+      collageState.previewUrls.forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, []);
 
   // Add a check to ensure currentFile is defined
   if (!currentFile) {
@@ -166,10 +300,30 @@ export default function FileOperations({
           .from('reporting_person_details')
           .select('*')
           .eq('blotter_id', currentFile.file_id)
-          .single();
+          .maybeSingle(); // Use maybeSingle instead of single to handle no results
 
-        if (reportingError) throw reportingError;
-        setReportingPerson(reportingData);
+        if (reportingError && reportingError.code !== 'PGRST116') {
+          throw reportingError;
+        }
+
+        // If no reporting person exists and we're in edit mode, create a default one
+        if (!reportingData && showFileDialog === 'edit') {
+          setReportingPerson({
+            full_name: '',
+            age: 0,
+            birthday: null,
+            gender: '' as 'Male' | 'Female' | 'Other',
+            complete_address: '',
+            contact_number: '',
+            date_reported: null,
+            time_reported: '',
+            date_of_incident: null,
+            time_of_incident: '',
+            place_of_incident: ''
+          });
+        } else {
+          setReportingPerson(reportingData);
+        }
 
         // Fetch suspects
         const { data: suspectsData, error: suspectsError } = await supabase
@@ -179,9 +333,12 @@ export default function FileOperations({
 
         if (suspectsError) throw suspectsError;
         setSuspects(suspectsData || []);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching file details:', error);
-        toast.error('Failed to load file details');
+        // Only show error toast if it's not the "no rows returned" error
+        if (error.code !== 'PGRST116') {
+          toast.error('Failed to load file details');
+        }
       }
     };
 
@@ -502,9 +659,97 @@ export default function FileOperations({
 
       let filePath = fileToEdit.file_path;
       let publicUrl = fileToEdit.public_url;
-      
-      // Only handle file upload if a new file was actually uploaded
-      if (uploadedFile && uploadedFile instanceof globalThis.File && uploadedFile.size > 0) {
+      let collagePhotos: string[] = [];
+
+      if (isCollage) {
+        // Handle collage photos
+        let updatedCollagePhotos: string[] = [];
+        
+        // Keep existing photos that weren't removed
+        if (collageState.existingPhotos) {
+          const keptPhotos = collageState.existingPhotos.filter((_, index) => 
+            collageState.previewUrls.some(url => url.includes(_.split('/').pop()!))
+          );
+          updatedCollagePhotos = [...keptPhotos];
+        }
+
+        // Upload new photos
+        for (const file of collageState.files) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Math.random()}.${fileExt}`;
+          const photoPath = `folder_${fileToEdit.folder_id}/collage_photos/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('files')
+            .upload(photoPath, file, {
+              cacheControl: '3600',
+              upsert: false,
+            });
+
+          if (uploadError) throw uploadError;
+
+          updatedCollagePhotos.push(photoPath);
+        }
+
+        collagePhotos = updatedCollagePhotos;
+
+        if (collagePhotos.length > 0) {
+          // Create a collage preview image using HTML Canvas
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const [cols, rows] = collageState.layout.split('x').map(Number);
+          const photoWidth = 800 / cols;
+          const photoHeight = 800 / rows;
+          
+          canvas.width = 800;
+          canvas.height = 800;
+
+          // Load all images and draw them on the canvas
+          const images = await Promise.all(
+            collageState.previewUrls.map(url => {
+              return new Promise<HTMLImageElement>((resolve) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => resolve(img);
+                img.src = url;
+              });
+            })
+          );
+
+          images.forEach((img, index) => {
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            ctx?.drawImage(
+              img,
+              col * photoWidth,
+              row * photoHeight,
+              photoWidth,
+              photoHeight
+            );
+          });
+
+          // Convert canvas to blob and upload
+          const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!)));
+          const collageFileName = `collage_${Math.random()}.png`;
+          filePath = `folder_${fileToEdit.folder_id}/${collageFileName}`;
+
+          const { error: collageUploadError } = await supabase.storage
+            .from('files')
+            .upload(filePath, blob, {
+              cacheControl: '3600',
+              upsert: false,
+            });
+
+          if (collageUploadError) throw collageUploadError;
+
+          const { data: { publicUrl: collagePublicUrl } } = supabase.storage
+            .from('files')
+            .getPublicUrl(filePath);
+
+          publicUrl = collagePublicUrl;
+        }
+      } else if (uploadedFile && uploadedFile instanceof globalThis.File && uploadedFile.size > 0) {
+        // Handle regular file upload
         const fileExt = uploadedFile.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
         const newFilePath = `folder_${fileToEdit.folder_id}/${fileName}`;
@@ -521,12 +766,11 @@ export default function FileOperations({
           .from('files')
           .upload(newFilePath, uploadedFile, {
             cacheControl: '3600',
-            upsert: false
+            upsert: false,
           });
 
         if (uploadError) throw uploadError;
-        
-        // Update file path and get new public URL
+
         filePath = newFilePath;
         const { data: { publicUrl: newPublicUrl } } = supabase.storage
           .from('files')
@@ -544,13 +788,12 @@ export default function FileOperations({
           investigator,
           desk_officer: deskOfficer,
           incident_summary: summary,
-          ...(uploadedFile && uploadedFile instanceof globalThis.File && uploadedFile.size > 0 ? {
-            file_path: filePath,
-            public_url: publicUrl,
-            file_name: uploadedFile.name
-          } : {}),
+          file_path: filePath,
+          public_url: publicUrl,
           updated_by: userData2.user_id,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          is_collage: isCollage,
+          collage_photos: isCollage ? collagePhotos : null
         })
         .eq('file_id', fileToEdit.file_id);
 
@@ -558,17 +801,54 @@ export default function FileOperations({
 
       // Update reporting person details
       if (reportingPerson) {
-        const { error: reportingError } = await supabase
-          .from('reporting_person_details')
-          .update({
-            ...reportingPerson,
-            birthday: new Date(reportingPerson.birthday).toISOString(),
-            date_reported: new Date(reportingPerson.date_reported).toISOString(),
-            date_of_incident: new Date(reportingPerson.date_of_incident).toISOString()
-          })
-          .eq('blotter_id', fileToEdit.file_id);
+        // Check if there's any data to save
+        const hasReportingPersonData = 
+          reportingPerson.full_name ||
+          reportingPerson.age ||
+          reportingPerson.birthday ||
+          reportingPerson.complete_address ||
+          reportingPerson.contact_number ||
+          reportingPerson.date_reported ||
+          reportingPerson.time_reported ||
+          reportingPerson.date_of_incident ||
+          reportingPerson.time_of_incident ||
+          reportingPerson.place_of_incident;
 
-        if (reportingError) throw reportingError;
+        if (hasReportingPersonData) {
+          const formattedReportingPerson: ReportingPersonDetails & { blotter_id: number } = {
+            ...reportingPerson,
+            blotter_id: fileToEdit.file_id,
+            birthday: reportingPerson.birthday ? new Date(reportingPerson.birthday).toISOString() : null,
+            date_reported: reportingPerson.date_reported ? new Date(reportingPerson.date_reported).toISOString() : null,
+            date_of_incident: reportingPerson.date_of_incident ? new Date(reportingPerson.date_of_incident).toISOString() : null,
+            // Set default gender if empty
+            gender: reportingPerson.gender || 'Male'
+          };
+
+          // First check if a record exists
+          const { data: existingRecord } = await supabase
+            .from('reporting_person_details')
+            .select('*')
+            .eq('blotter_id', fileToEdit.file_id)
+            .maybeSingle();
+
+          if (existingRecord) {
+            // Update existing record
+            const { error: reportingError } = await supabase
+              .from('reporting_person_details')
+              .update(formattedReportingPerson)
+              .eq('blotter_id', fileToEdit.file_id);
+
+            if (reportingError) throw reportingError;
+          } else {
+            // Insert new record
+            const { error: reportingError } = await supabase
+              .from('reporting_person_details')
+              .insert([formattedReportingPerson]);
+
+            if (reportingError) throw reportingError;
+          }
+        }
       }
 
       // Update suspects
@@ -588,11 +868,11 @@ export default function FileOperations({
         const { error: updateError } = await supabase
           .from('suspects')
           .upsert(
-            existingSuspects.map(suspect => ({
-              suspect_id: suspect.suspect_id,
+            existingSuspects.map(s => ({
+              suspect_id: s.suspect_id,
               blotter_id: fileToEdit.file_id,
-              ...suspect,
-              birthday: new Date(suspect.birthday).toISOString()
+              ...s,
+              birthday: s.birthday ? new Date(s.birthday).toISOString() : null
             }))
           );
 
@@ -604,10 +884,10 @@ export default function FileOperations({
         const { error: insertError } = await supabase
           .from('suspects')
           .insert(
-            newSuspects.map(suspect => ({
+            newSuspects.map(s => ({
               blotter_id: fileToEdit.file_id,
-              ...suspect,
-              birthday: new Date(suspect.birthday).toISOString()
+              ...s,
+              birthday: s.birthday ? new Date(s.birthday).toISOString() : null
             }))
           );
 
@@ -617,6 +897,7 @@ export default function FileOperations({
       toast.success('File updated successfully');
       setShowFileDialog(null);
       onFileUpdate(); // Refresh the files list
+      window.location.reload(); // Force a full page refresh
     } catch (error: any) {
       console.error('Error updating file:', error);
       toast.error(error.message || 'Failed to update file');
@@ -648,6 +929,33 @@ export default function FileOperations({
     }
 
     if (!signedUrl) return null;
+
+    // Handle collage preview
+    if (currentFile.is_collage && Array.isArray(currentFile.collage_photos) && currentFile.collage_photos.length > 0) {
+      return (
+        <div className={`grid gap-4 p-4 ${
+          currentFile.collage_photos.length === 1 ? 'grid-cols-1' :
+          currentFile.collage_photos.length <= 4 ? 'grid-cols-2' :
+          'grid-cols-3'
+        }`}>
+          {currentFile.collage_photos.map((photoPath, index) => {
+            const { data: { publicUrl } } = supabase.storage
+              .from('files')
+              .getPublicUrl(photoPath);
+            
+            return (
+              <div key={index} className="relative aspect-square">
+                <img 
+                  src={publicUrl}
+                  alt={`Collage photo ${index + 1}`}
+                  className="w-full h-full object-cover rounded-lg"
+                />
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
 
     if (imageTypes.includes(ext)) {
       return (
@@ -706,6 +1014,40 @@ export default function FileOperations({
           {getFileIcon(currentFile.file_path)}
           <span className="mt-2 text-sm text-red-600">Error loading preview</span>
           <span className="text-xs text-gray-500">{ext.toUpperCase()}</span>
+        </div>
+      );
+    }
+
+    // Handle collage preview in card view
+    if (currentFile.is_collage && Array.isArray(currentFile.collage_photos) && currentFile.collage_photos.length > 0) {
+      return (
+        <div className="w-full h-48 bg-gray-100 rounded-lg border overflow-hidden">
+          <div className={`grid h-full gap-1 ${
+            currentFile.collage_photos.length === 1 ? 'grid-cols-1' :
+            currentFile.collage_photos.length <= 4 ? 'grid-cols-2' :
+            'grid-cols-3'
+          }`}>
+            {currentFile.collage_photos.slice(0, 4).map((photoPath, index) => {
+              const { data: { publicUrl } } = supabase.storage
+                .from('files')
+                .getPublicUrl(photoPath);
+              
+              return (
+                <div key={index} className="relative">
+                  <img 
+                    src={publicUrl}
+                    alt={`Collage photo ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              );
+            })}
+          </div>
+          {currentFile.collage_photos.length > 4 && (
+            <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded-full text-xs">
+              +{currentFile.collage_photos.length - 4} more
+            </div>
+          )}
         </div>
       );
     }
@@ -866,7 +1208,7 @@ export default function FileOperations({
             </SheetDescription>
           </SheetHeader>
           <div className="overflow-y-auto pr-0">
-            <form onSubmit={handleEditFile} className="space-y-6">
+            <form id="editForm" ref={formRef} onSubmit={handleEditFile} className="space-y-6">
               {/* File Details Section */}
               <div className="space-y-4 py-4">
                 <div className="space-y-4 p-4 mr-6 rounded-lg bg-slate-50">
@@ -922,17 +1264,96 @@ export default function FileOperations({
                         className="border-gray-300 rounded-md"
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="file">Update File (Optional)</Label>
-                      <Input
-                        id="file"
-                        name="file"
-                        type="file"
-                        className="border-gray-300 rounded-md text-sm"
-                      />
-                      <p className="text-xs text-gray-500">
-                        Leave empty to keep the current file
-                      </p>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label>Create Collage</Label>
+                        <Switch
+                          checked={isCollage}
+                          onCheckedChange={(checked) => {
+                            setIsCollage(checked);
+                            if (checked) {
+                              // Initialize with existing collage photos if any
+                              const existingPhotos = currentFile?.collage_photos || [];
+                              const urls = Array.isArray(existingPhotos) ? existingPhotos.map(photo => {
+                                const { data: { publicUrl } } = supabase.storage
+                                  .from('files')
+                                  .getPublicUrl(photo);
+                                return publicUrl;
+                              }) : [];
+                              setCollageState(prev => ({
+                                ...prev,
+                                previewUrls: urls,
+                                files: []
+                              }));
+                            }
+                          }}
+                        />
+                      </div>
+                      {isCollage && (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-4">
+                            <Label>Layout:</Label>
+                            <Select value={collageState.layout} onValueChange={handleLayoutChange}>
+                              <SelectTrigger className="w-32">
+                                <SelectValue placeholder="Choose layout" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1x1">1 x 1</SelectItem>
+                                <SelectItem value="2x2">2 x 2</SelectItem>
+                                <SelectItem value="3x3">3 x 3</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="collage_photos">Upload Photos for Collage</Label>
+                            <Input
+                              id="collage_photos"
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              onChange={handleCollagePhotosChange}
+                              className="border-gray-300 rounded-md text-sm"
+                            />
+                          </div>
+                          {collageState.previewUrls.length > 0 && (
+                            <div className={`grid gap-2 ${
+                              collageState.layout === "1x1" ? "grid-cols-1" :
+                              collageState.layout === "2x2" ? "grid-cols-2" :
+                              "grid-cols-3"
+                            }`}>
+                              {collageState.previewUrls.map((url, index) => (
+                                <div key={index} className="relative group">
+                                  <img
+                                    src={url}
+                                    alt={`Preview ${index + 1}`}
+                                    className="w-full h-40 object-cover rounded-lg"
+                                  />
+                                  <button
+                                    onClick={() => handlePhotoRemove(index)}
+                                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {!isCollage && (
+                        <div>
+                          <Label htmlFor="file">Update File (Optional)</Label>
+                          <Input
+                            id="file"
+                            name="file"
+                            type="file"
+                            className="border-gray-300 rounded-md text-sm"
+                          />
+                          <p className="text-xs text-gray-500">
+                            Leave empty to keep the current file
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
@@ -964,7 +1385,6 @@ export default function FileOperations({
                             full_name: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -979,7 +1399,6 @@ export default function FileOperations({
                             age: Number(e.target.value),
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -994,7 +1413,6 @@ export default function FileOperations({
                             birthday: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1007,7 +1425,6 @@ export default function FileOperations({
                             gender: value as "Male" | "Female" | "Other",
                           })
                         }
-                        required
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select gender" />
@@ -1030,7 +1447,6 @@ export default function FileOperations({
                             complete_address: e.target.value,
                           })
                         }
-                        required
                         className="h-24 resize-none border-gray-300 rounded-md"
                       />
                     </div>
@@ -1045,7 +1461,6 @@ export default function FileOperations({
                             contact_number: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
@@ -1060,22 +1475,26 @@ export default function FileOperations({
                             date_reported: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
                       <Label htmlFor="rp_time_reported">Time Reported</Label>
-                      <Input
-                        id="rp_time_reported"
-                        value={reportingPerson.time_reported}
-                        onChange={(e) =>
-                          setReportingPerson({
-                            ...reportingPerson,
-                            time_reported: e.target.value,
-                          })
-                        }
-                        required
-                      />
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="rp_time_reported"
+                          type="time"
+                          value={reportingPerson.time_reported}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              time_reported: e.target.value,
+                            })
+                          }
+                        />
+                        <span className="text-sm text-gray-500">
+                          {formatTimeToAMPM(reportingPerson.time_reported)}
+                        </span>
+                      </div>
                     </div>
                     <div>
                       <Label htmlFor="rp_date_of_incident">Date of Incident</Label>
@@ -1089,22 +1508,26 @@ export default function FileOperations({
                             date_of_incident: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
                     <div>
                       <Label htmlFor="rp_time_of_incident">Time of Incident</Label>
-                      <Input
-                        id="rp_time_of_incident"
-                        value={reportingPerson.time_of_incident}
-                        onChange={(e) =>
-                          setReportingPerson({
-                            ...reportingPerson,
-                            time_of_incident: e.target.value,
-                          })
-                        }
-                        required
-                      />
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="rp_time_of_incident"
+                          type="time"
+                          value={reportingPerson.time_of_incident}
+                          onChange={(e) =>
+                            setReportingPerson({
+                              ...reportingPerson,
+                              time_of_incident: e.target.value,
+                            })
+                          }
+                        />
+                        <span className="text-sm text-gray-500">
+                          {formatTimeToAMPM(reportingPerson.time_of_incident)}
+                        </span>
+                      </div>
                     </div>
                     <div className="col-span-2">
                       <Label htmlFor="rp_place_of_incident">Place of Incident</Label>
@@ -1117,7 +1540,6 @@ export default function FileOperations({
                             place_of_incident: e.target.value,
                           })
                         }
-                        required
                         className="h-24 resize-none border-gray-300 rounded-md"
                       />
                     </div>
@@ -1244,12 +1666,12 @@ export default function FileOperations({
             </Button>
             <Button
               type="button"
+              onClick={() => {
+                if (formRef.current) {
+                  formRef.current.dispatchEvent(new Event("submit", { bubbles: true }));
+                }
+              }}
               className="bg-blue-900 text-white hover:bg-blue-700"
-              onClick={() =>
-                formRef.current?.dispatchEvent(
-                  new Event("submit", { bubbles: true })
-                )
-              } // Trigger form submission
             >
               Save Changes
             </Button>
@@ -1306,7 +1728,17 @@ export default function FileOperations({
             </div>
 
             {/* Reporting Person Details */}
-            {reportingPerson && (
+            {reportingPerson && (reportingPerson.full_name || 
+             reportingPerson.age || 
+             reportingPerson.birthday || 
+             reportingPerson.gender || 
+             reportingPerson.complete_address || 
+             reportingPerson.contact_number || 
+             reportingPerson.date_reported || 
+             reportingPerson.time_reported || 
+             reportingPerson.date_of_incident || 
+             reportingPerson.time_of_incident || 
+             reportingPerson.place_of_incident) && (
               <div className="space-y-4 p-4 rounded-lg mr-6 bg-slate-50">
                 <p className="text-lg font-semibold">Reporting Person Details</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1342,7 +1774,7 @@ export default function FileOperations({
                   </div>
                   <div>
                     <Label>Time Reported</Label>
-                    <p className="text-gray-900 mt-1">{reportingPerson.time_reported}</p>
+                    <p className="text-gray-900 mt-1">{formatTimeToAMPM(reportingPerson.time_reported)}</p>
                   </div>
                   <div>
                     <Label>Date of Incident</Label>
@@ -1350,7 +1782,7 @@ export default function FileOperations({
                   </div>
                   <div>
                     <Label>Time of Incident</Label>
-                    <p className="text-gray-900 mt-1">{reportingPerson.time_of_incident}</p>
+                    <p className="text-gray-900 mt-1">{formatTimeToAMPM(reportingPerson.time_of_incident)}</p>
                   </div>
                   <div className="col-span-2">
                     <Label>Place of Incident</Label>
@@ -1398,9 +1830,126 @@ export default function FileOperations({
                 ))}
               </div>
             )}
+
+            {/* File History Section */}
+            <div className="space-y-4 p-4 rounded-lg bg-slate-50 mr-6">
+              <p className="text-lg font-semibold">File History</p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4" />
+                    <Label className="font-normal">Created</Label>
+                    <p className="text-gray-600">
+                      {new Date(currentFile.created_at).toLocaleString()} by{" "}
+                      <span className="text-blue-900">{currentFile.created_by}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-2">
+                    <Edit className="w-4 h-4" />
+                    <Label className="font-normal">Last Updated</Label>
+                    <p className="text-gray-600">
+                      {currentFile.updated_at ? (
+                        <span>
+                          {new Date(currentFile.updated_at).toLocaleString()} by{" "}
+                          <span className="text-blue-900">{currentFile.updated_by}</span>
+                        </span>
+                      ) : (
+                        "Never"
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-2">
+                    <Eye className="w-4 h-4" />
+                    <Label className="font-normal">Last Viewed</Label>
+                    <p className="text-gray-600">
+                      {currentFile.viewed_at ? (
+                        <span>
+                          {new Date(currentFile.viewed_at).toLocaleString()} by{" "}
+                          <span className="text-blue-900">{currentFile.viewed_by}</span>
+                        </span>
+                      ) : (
+                        "Never"
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-2">
+                    <Download className="w-4 h-4" />
+                    <Label className="font-normal">Last Downloaded</Label>
+                    <p className="text-gray-600">
+                      {currentFile.downloaded_at ? (
+                        <span>
+                          {new Date(currentFile.downloaded_at).toLocaleString()} by{" "}
+                          <span className="text-blue-900">{currentFile.downloaded_by}</span>
+                        </span>
+                      ) : (
+                        "Never"
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-2">
+                    <Printer className="w-4 h-4" />
+                    <Label className="font-normal">Last Printed</Label>
+                    <p className="text-gray-600">
+                      {currentFile.printed_at ? (
+                        <span>
+                          {new Date(currentFile.printed_at).toLocaleString()} by{" "}
+                          <span className="text-blue-900">{currentFile.printed_by}</span>
+                        </span>
+                      ) : (
+                        "Never"
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Archive Confirmation Dialog */}
+      <Dialog open={showFileDialog === "archive"} onOpenChange={() => setShowFileDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Archive File</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to archive this file? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-4">
+              <Archive className="w-8 h-8 text-gray-400" />
+              <div>
+                <p className="font-medium">{currentFile.title}</p>
+                <p className="text-sm text-gray-500">
+                  Added by {currentFile.created_by} on{" "}
+                  {new Date(currentFile.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFileDialog(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleArchiveFile}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Archive File
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Render card preview in both list and grid view */}
       {!isListView && renderCardPreview()}
