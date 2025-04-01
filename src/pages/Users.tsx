@@ -483,57 +483,85 @@ export default function Users() {
   };
 
   const onSubmitEdit = async (values: z.infer<typeof editFormSchema>) => {
-    try { 
-
+    try {
       console.log("Form Values: ", values);
-      console.log("Selected User: ", currentUser?.id  );
-      // Check if selectedUser is defined and contains required information
-      if (!selectedUser || !currentUser?.id || !selectedUser.uuid) {
+      console.log("Selected User: ", currentUser?.id);
+
+      // Check if we're editing from profile tab or user list
+      const isProfileEdit = !selectedUser;
+      
+      // Get the current user's data from the database if editing from profile tab
+      let currentUserData;
+      if (isProfileEdit) {
+        const { data, error } = await supabase
+          .from("users")
+          .select("*")
+          .eq("uuid", currentUser?.id)
+          .single();
+        
+        if (error) {
+          throw error;
+        }
+        currentUserData = data;
+      }
+
+      const userToEdit: UserData = isProfileEdit ? {
+        user_id: currentUser?.id || '',
+        uuid: currentUser?.id || '',
+        name: currentUser?.name || values.name,
+        email: currentUser?.email || values.email,
+        role: currentUser?.role || values.role,
+        file_path: currentUserData?.file_path || '',
+        public_url: currentUserData?.public_url || null
+      } : selectedUser;
+
+      // Check if we have the required information
+      if (!userToEdit || !userToEdit.uuid) {
         toast.error("User information is incomplete");
         return;
       }
-  
+
       // Permission check for editing
-      if (isOwnAccount(selectedUser)) {
+      if (isProfileEdit || isOwnAccount(userToEdit)) {
         // No need to check permissions for own account
-      } else if (!canEditUser(selectedUser)) {
+      } else if (!canEditUser(userToEdit)) {
         showPermissionDenied();
         return;
       }
-  
+
       // If the user is editing their own account, update the role or keep existing
-      const updateRole = isSuperAdmin() ? values.role : selectedUser.role;
-      let filePath = selectedUser.file_path;
-      let publicUrl = selectedUser.public_url;
-  
+      const updateRole = isSuperAdmin() ? values.role : userToEdit.role;
+      let filePath = userToEdit.file_path;
+      let publicUrl = userToEdit.public_url;
+
       // Handle avatar update if a new file was selected
       if (editAvatarFile) {
         // Delete old avatar if it exists
-        if (selectedUser.file_path) {
-          await supabase.storage.from("profilepic").remove([selectedUser.file_path]);
+        if (userToEdit.file_path) {
+          await supabase.storage.from("profilepic").remove([userToEdit.file_path]);
         }
-  
+
         // Upload new avatar
         const fileExt = editAvatarFile.name.split(".").pop();
         const fileName = `${Math.random()}.${fileExt}`;
         filePath = `${fileName}`;
-  
+
         const { error: uploadError } = await supabase.storage
           .from("profilepic")
           .upload(filePath, editAvatarFile, {
             cacheControl: "3600",
             upsert: false,
           });
-  
+
         if (uploadError) {
           throw uploadError;
         }
-  
+
         // Get a public URL for the new avatar
         const { data } = supabase.storage.from("profilepic").getPublicUrl(filePath);
         publicUrl = data.publicUrl;
       }
-  
+
       // Prepare update data
       const updateData: any = {
         name: values.name,
@@ -542,21 +570,21 @@ export default function Users() {
         file_path: filePath,
         public_url: publicUrl,
       };
-  
+
       if (values.password && values.password.trim().length > 0) {
         updateData.password = values.password;
       }
-  
+
       // Update user in the database
       const { error: dbError } = await supabase
         .from("users")
         .update(updateData)
-        .eq("user_id", selectedUser.user_id);
-  
+        .eq("uuid", userToEdit.uuid);
+
       if (dbError) throw dbError;
-  
+
       // If user is updating their own account, update the auth metadata and cookies
-      if (isOwnAccount(selectedUser)) {
+      if (isProfileEdit || isOwnAccount(userToEdit)) {
         const authUpdateData: any = {
           email: values.email,
           data: {
@@ -564,13 +592,13 @@ export default function Users() {
             role: updateRole,
           },
         };
-  
+
         if (values.password && values.password.trim().length > 0) {
           authUpdateData.password = values.password;
         }
-  
+
         const { error: authError } = await supabase.auth.updateUser(authUpdateData);
-  
+
         if (authError) {
           toast.warning("User details updated but authentication profile could not be updated.");
         } else {
@@ -584,17 +612,17 @@ export default function Users() {
           }
         }
       }
-  
+
       toast.success("User updated successfully");
       setIsEditDialogOpen(false);
       editForm.reset();
       fetchUsers(); // Refresh the users list
-  
+
       // Update currentUser if editing own account
-      if (isOwnAccount(selectedUser)) {
+      if (isProfileEdit || isOwnAccount(userToEdit)) {
         fetchCurrentUser();
       }
-  
+
       setSelectedUser(null);
       setEditAvatarFile(null);
       setEditAvatarPreview(null);
@@ -686,6 +714,79 @@ export default function Users() {
     editForm.setValue("email", value);
   };
 
+  const handleMainAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      // Delete old avatar if it exists
+      if (currentUser?.public_url) {
+        const { data } = await supabase
+          .from("users")
+          .select("file_path")
+          .eq("uuid", currentUser.id)
+          .single();
+
+        if (data?.file_path) {
+          await supabase.storage.from("profilepic").remove([data.file_path]);
+        }
+      }
+
+      // Upload new avatar
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("profilepic")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data } = supabase.storage.from("profilepic").getPublicUrl(filePath);
+      const publicUrl = data.publicUrl;
+
+      // Update user in database
+      const { error: dbError } = await supabase
+        .from("users")
+        .update({
+          file_path: filePath,
+          public_url: publicUrl,
+        })
+        .eq("uuid", currentUser?.id);
+
+      if (dbError) throw dbError;
+
+      // Update auth metadata
+      await supabase.auth.updateUser({
+        data: {
+          avatar_url: publicUrl,
+        },
+      });
+
+      // Update cookie
+      try {
+        const currentUserData = JSON.parse(Cookies.get("user_data") || "{}");
+        const updatedUserData = { ...currentUserData, public_url: publicUrl };
+        Cookies.set("user_data", JSON.stringify(updatedUserData));
+      } catch (cookieError) {
+        console.error(cookieError);
+      }
+
+      // Refresh user data
+      fetchCurrentUser();
+      fetchUsers();
+      toast.success("Avatar updated successfully");
+    } catch (error: any) {
+      console.error("Error updating avatar:", error);
+      toast.error(error.message || "Failed to update avatar");
+    }
+  };
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-medium text-blue-900 mb-20">
@@ -696,40 +797,41 @@ export default function Users() {
         {/* Left Column: Profile Avatar */}
         <div className="flex flex-col items-center w-full md:w-1/3">
           <div className="relative">
-            <Avatar
-              className="w-32 h-32 cursor-pointer"
-              onClick={() => document.getElementById("avatar-upload")?.click()}
-            >
+            <Avatar className="w-32 h-32 cursor-pointer group">
               {currentUser?.public_url ? (
                 <AvatarImage
                   src={currentUser.public_url}
                   alt={currentUser.name}
-                  className="w-full h-full rounded-full border-2 border-gray-300 object-cover"
+                  className="w-full h-full rounded-full border-2 border-gray-300 object-cover group-hover:opacity-80 transition-opacity"
+                  onClick={() => document.getElementById("main-avatar-upload")?.click()}
                   onError={(e) => {
                     e.currentTarget.style.display = "none";
                   }}
                 />
               ) : (
-                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-3xl">
+                <AvatarFallback 
+                  className="bg-blue-100 text-blue-700 font-semibold text-3xl cursor-pointer group-hover:bg-blue-200 transition-colors"
+                  onClick={() => document.getElementById("main-avatar-upload")?.click()}
+                >
                   {currentUser?.name
                     ? currentUser.name.split(" ")[0][0].toUpperCase()
                     : "?"}
                 </AvatarFallback>
               )}
+              {/* Edit Icon Overlay */}
+              <div
+                onClick={() => document.getElementById("main-avatar-upload")?.click()}
+                className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-30 rounded-full transition-all cursor-pointer"
+              >
+                <Edit className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
             </Avatar>
-            {/* Edit Icon */}
-            <div
-              onClick={() => document.getElementById("avatar-upload")?.click()}
-              className="absolute bottom-0 right-0 bg-white p-2 rounded-full cursor-pointer shadow-md hover:bg-blue-100"
-            >
-              <Edit className="w-5 h-5 text-blue-600" />
-            </div>
           </div>
           <input
             type="file"
-            id="avatar-upload"
+            id="main-avatar-upload"
             accept="image/*"
-            onChange={(e) => handleAvatarChange(e)}
+            onChange={handleMainAvatarChange}
             className="hidden"
           />
           <h2 className="text-xl font-semibold mt-4 font-poppins">{currentUser?.name}</h2>
