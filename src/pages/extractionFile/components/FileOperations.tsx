@@ -71,6 +71,7 @@ interface FileOperationsProps {
   onFileUpdate: () => void;
   selectedFile?: Extraction | null;
   setSelectedFile: (file: Extraction | null) => void;
+  isListView: boolean;
 }
 
 // Helper function to get file type icon

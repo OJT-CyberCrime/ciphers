@@ -1030,7 +1030,7 @@ export default function EblotterFile() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       {getFileIcon(file.file_path)}
-                      <h3 className="font-medium text-gray-900">
+                      <h3 className="font-medium text-gray-900 truncate w-[180px] text-ellipsis">
                         {file.title}
                       </h3>
                     </div>

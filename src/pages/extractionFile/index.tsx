@@ -1,20 +1,34 @@
 import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator} from "@/components/ui/breadcrumb";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import SearchBar from "@/Search";
-import { 
-  ChevronRight, 
-  Plus, 
-  FileText, 
-  Image as ImageIcon, 
+import {
+  ChevronRight,
+  Plus,
+  FileText,
+  Image as ImageIcon,
   File,
   Pencil,
   Archive,
   Eye,
-  MoreVertical
+  MoreVertical,
+  SortAsc,
+  Grid,
+  List,
 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect, useRef } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/utils/supa";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -34,6 +48,7 @@ import FileOperations from "./components/FileOperations";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import PermissionDialog from "@/components/PermissionDialog";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 interface Extraction {
   extraction_id: number;
@@ -82,23 +97,27 @@ interface Folder {
 
 // Helper function to get file type icon
 const getFileIcon = (filePath: string) => {
-  const ext = filePath.split('.').pop()?.toLowerCase() || '';
-  const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
-  const documentTypes = ['pdf', 'doc', 'docx'];
-  const spreadsheetTypes = ['xls', 'xlsx'];
-  const presentationTypes = ['ppt', 'pptx'];
+  const ext = filePath.split(".").pop()?.toLowerCase() || "";
+  const imageTypes = ["jpg", "jpeg", "png", "gif", "bmp"];
+  const documentTypes = ["pdf", "doc", "docx"];
+  const spreadsheetTypes = ["xls", "xlsx"];
+  const presentationTypes = ["ppt", "pptx"];
 
-  if (imageTypes.includes(ext)) return <ImageIcon size={24} className="text-green-600" />;
-  if (documentTypes.includes(ext)) return <FileText size={24} className="text-blue-900" />;
-  if (spreadsheetTypes.includes(ext)) return <FileText size={24} className="text-emerald-600" />;
-  if (presentationTypes.includes(ext)) return <FileText size={24} className="text-orange-600" />;
+  if (imageTypes.includes(ext))
+    return <ImageIcon size={24} className="text-green-600" />;
+  if (documentTypes.includes(ext))
+    return <FileText size={24} className="text-blue-900" />;
+  if (spreadsheetTypes.includes(ext))
+    return <FileText size={24} className="text-emerald-600" />;
+  if (presentationTypes.includes(ext))
+    return <FileText size={24} className="text-orange-600" />;
   return <File size={24} className="text-gray-600" />;
 };
 
 // Add this helper function to strip HTML tags
 const stripHtml = (html: string) => {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  return doc.body.textContent || '';
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return doc.body.textContent || "";
 };
 
 export default function extractionFile() {
@@ -121,26 +140,34 @@ export default function extractionFile() {
     contact_num: "",
     fb_account: "",
     station_unit: "",
-    date_release: new Date().toISOString().split('T')[0],
+    date_release: new Date().toISOString().split("T")[0],
     signatories: "",
     incident_summary: "",
   });
   const [fileUpload, setFileUpload] = useState<FileList | null>(null);
   const [selectedFile, setSelectedFile] = useState<Extraction | null>(null);
-  const [showFileDialog, setShowFileDialog] = useState<'edit' | 'archive' | 'details' | null>(null);
-  const [previewStates, setPreviewStates] = useState<{ [key: number]: boolean }>({});
-  const [showOptions, setShowOptions] = useState<{ [key: number]: boolean }>({});
+  const [showFileDialog, setShowFileDialog] = useState<
+    "edit" | "archive" | "details" | null
+  >(null);
+  const [previewStates, setPreviewStates] = useState<{
+    [key: number]: boolean;
+  }>({});
+  const [showOptions, setShowOptions] = useState<{ [key: number]: boolean }>(
+    {}
+  );
   const navigate = useNavigate();
   const location = useLocation();
   const previousPage = "/extraction"; // Path to extraction page
   const previousPageName = "Certification of Extraction"; // Name for breadcrumb
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [permissionAction, setPermissionAction] = useState("");
-  
-  const userRole = JSON.parse(Cookies.get('user_data') || '{}').role;
+
+  const userRole = JSON.parse(Cookies.get("user_data") || "{}").role;
 
   const canEditOrArchive = () => {
-    return userRole === 'admin' || userRole === 'superadmin' || userRole === 'wcpd';
+    return (
+      userRole === "admin" || userRole === "superadmin" || userRole === "wcpd"
+    );
   };
 
   const handleEditClick = (file: Extraction) => {
@@ -169,59 +196,61 @@ export default function extractionFile() {
     if (!id || !fileUpload?.[0]) return;
 
     try {
-      const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+      const userData = JSON.parse(Cookies.get("user_data") || "{}");
+
       const { data: userData2, error: userError } = await supabase
-        .from('users')
-        .select('user_id')
-        .eq('email', userData.email)
+        .from("users")
+        .select("user_id")
+        .eq("email", userData.email)
         .single();
 
       if (userError) throw userError;
-      if (!userData2) throw new Error('User not found');
+      if (!userData2) throw new Error("User not found");
 
       // Upload file to storage
       const file = fileUpload[0];
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `folder_${id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('files')
+        .from("files")
         .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
+          cacheControl: "3600",
+          upsert: false,
         });
 
       if (uploadError) throw uploadError;
 
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('files')
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("files").getPublicUrl(filePath);
 
       // Create extraction record
       const { data: extractionData, error: extractionError } = await supabase
-        .from('extraction')
+        .from("extraction")
         .insert([
           {
             ...newFile,
-            incident_summary: stripHtml(newFile.incident_summary || ''),
+            incident_summary: stripHtml(newFile.incident_summary || ""),
             file_path: filePath,
             public_url: publicUrl,
             is_archived: false,
             created_by: userData2.user_id,
-            folder_id: id
-          }
+            folder_id: id,
+          },
         ])
-        .select(`
+        .select(
+          `
           *,
           creator:created_by(name),
           updater:updated_by(name),
           viewer:viewed_by(name),
           downloader:downloaded_by(name),
           printer:printed_by(name)
-        `)
+        `
+        )
         .single();
 
       if (extractionError) throw extractionError;
@@ -241,13 +270,13 @@ export default function extractionFile() {
         contact_num: "",
         fb_account: "",
         station_unit: "",
-        date_release: new Date().toISOString().split('T')[0],
+        date_release: new Date().toISOString().split("T")[0],
         signatories: "",
         incident_summary: "",
       });
       setFileUpload(null);
     } catch (error: any) {
-      console.error('Error adding certificate file:', error);
+      console.error("Error adding certificate file:", error);
       toast.error(error.message || "Failed to add certificate file");
     }
   };
@@ -260,50 +289,54 @@ export default function extractionFile() {
       try {
         // Fetch folder details
         const { data: folderData, error: folderError } = await supabase
-          .from('folders')
-          .select(`
+          .from("folders")
+          .select(
+            `
             *,
             creator:created_by(name)
-          `)
-          .eq('folder_id', id)
+          `
+          )
+          .eq("folder_id", id)
           .single();
 
         if (folderError) throw folderError;
 
         setFolderDetails({
           ...folderData,
-          created_by: folderData.creator?.name || folderData.created_by
+          created_by: folderData.creator?.name || folderData.created_by,
         });
 
         // Fetch extraction files in the folder
         const { data: filesData, error: filesError } = await supabase
-          .from('extraction')
-          .select(`
+          .from("extraction")
+          .select(
+            `
             *,
             creator:created_by(name),
             updater:updated_by(name),
             viewer:viewed_by(name),
             downloader:downloaded_by(name),
             printer:printed_by(name)
-          `)
-          .eq('folder_id', id)
-          .eq('is_archived', false)
-          .order('created_at', { ascending: false });
+          `
+          )
+          .eq("folder_id", id)
+          .eq("is_archived", false)
+          .order("created_at", { ascending: false });
 
         if (filesError) throw filesError;
 
-        const formattedFiles = filesData.map(file => ({
+        const formattedFiles = filesData.map((file) => ({
           ...file,
           created_by: file.creator?.name || file.created_by,
           updated_by: file.updater?.name || file.updated_by,
           viewed_by: file.viewer?.name || file.viewed_by,
           downloaded_by: file.downloader?.name || file.downloaded_by,
-          printed_by: file.printer?.name || file.printed_by
+          printed_by: file.printer?.name || file.printed_by,
         }));
 
         setFiles(formattedFiles);
       } catch (error) {
-        console.error('Error fetching folder data:', error);
+        console.error("Error fetching folder data:", error);
       } finally {
         setIsLoading(false);
       }
@@ -313,26 +346,88 @@ export default function extractionFile() {
   }, [id]);
 
   // Filter files based on search query
-  const filteredFiles = files.filter(file => {
-    const matchesSearch = file.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         file.incident_summary.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredFiles = files.filter((file) => {
+    const matchesSearch =
+      file.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      file.incident_summary.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
 
+  // Update the helper function to return an object with class and label
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "pending":
+        return { class: "bg-yellow-200 text-yellow-800", label: "Pending" }; // Lighter for pending status
+      case "resolved":
+        return { class: "bg-green-200 text-green-800", label: "Resolved" }; // Lighter for resolved status
+      case "dismissed":
+        return { class: "bg-red-200 text-red-800", label: "Dismissed" }; // Lighter for dismissed status
+      case "under investigation":
+        return {
+          class: "bg-blue-200 text-blue-800",
+          label: "Under Investigation",
+        }; // Lighter for under investigation status
+      default:
+        return { class: "bg-gray-200 text-black", label: "N/A" }; // Default case
+    }
+  };
+  const [isListView, setIsListView] = useState(() => {
+    // Retrieve the view state from localStorage
+    const savedView = localStorage.getItem("isListView");
+    return savedView ? JSON.parse(savedView) : false; // Default to grid view if not set
+  });
+  const handleViewChange = (view: boolean) => {
+    setIsListView(view);
+    localStorage.setItem("isListView", JSON.stringify(view)); // Save the view state to localStorage
+  };
+
+  const [sortCriteria, setSortCriteria] = useState("created_at");
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
+  const [contextMenuVisible, setContextMenuVisible] = useState<{ [key: number]: boolean }>({});
+
+  // Update the click handler for the MoreVertical button
+  const handleMoreOptionsClick = (e: React.MouseEvent, fileId: number) => {
+    e.stopPropagation(); // Prevent row click
+    setContextMenuVisible((prev) => ({ ...prev, [fileId]: !prev[fileId] })); // Toggle the context menu
+  };
+
   return (
     <div className="p-6">
-      <div className="flex flex-col md:flex-row gap-4 mb-4">
+      <div className="flex flex-col md:flex-row gap-4 mb-4 items-center justify-between">
         <SearchBar
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search certificates..."
+          placeholder="Search files..."
         />
+
+        <Select onValueChange={setFilter} defaultValue="all">
+          <SelectTrigger className="w-full md:w-48 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Files</SelectItem>
+            <SelectItem value="document">Documents</SelectItem>
+            <SelectItem value="image">Images</SelectItem>
+            <SelectItem value="other">Others</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select onValueChange={setSortCriteria} defaultValue="created_at">
+          <SelectTrigger className="w-full md:w-48 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
+            <SortAsc size={16} className="text-gray-600" />
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="created_at">Date Created</SelectItem>
+            <SelectItem value="title">Title</SelectItem>
+          </SelectContent>
+        </Select>
 
         <Button
           onClick={() => setIsAddingFile(true)}
           className="bg-blue-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-800"
         >
-          <Plus size={16} /> Add Certificate
+          <Plus size={16} /> Add File
         </Button>
       </div>
 
@@ -355,20 +450,50 @@ export default function extractionFile() {
           <ChevronRight size={16} />
         </BreadcrumbSeparator>
         <BreadcrumbItem>
-          <span className="text-gray-900">{folderDetails?.title || `Folder ${id}`}</span>
+          <span className="text-gray-900">
+            {folderDetails?.title || `Folder ${id}`}
+          </span>
         </BreadcrumbItem>
       </Breadcrumb>
 
       {/* Folder Content */}
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          {isLoading ? (
-            <Skeleton className="h-8 w-1/2 rounded-lg" />
-          ) : (
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-4">
             <h1 className="text-2xl font-medium font-poppins text-blue-900">
               {folderDetails?.title || `Folder ${id}`}
             </h1>
-          )}
+            <Badge
+              variant="outline"
+              className={`${
+                getStatusBadgeClass(folderDetails?.status || "N/A").class
+              } shadow-none`}
+            >
+              {getStatusBadgeClass(folderDetails?.status || "N/A").label}
+            </Badge>
+          </div>
+          <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
+            <Button
+              onClick={() => handleViewChange(true)}
+              className={`flex items-center justify-center w-10 h-8 rounded-s-full ${
+                isListView ? "bg-blue-200" : "bg-white"
+              } transition-colors hover:${
+                isListView ? "bg-blue-300" : "bg-gray-100"
+              }`}
+            >
+              <List size={16} color="black" />
+            </Button>
+            <Button
+              onClick={() => handleViewChange(false)}
+              className={`flex items-center justify-center w-10 h-8 rounded-e-full ${
+                !isListView ? "bg-blue-200" : "bg-white"
+              } transition-colors hover:${
+                !isListView ? "bg-blue-300" : "bg-gray-100"
+              }`}
+            >
+              <Grid size={16} color="black" />
+            </Button>
+          </div>
         </div>
 
         {/* Loading Skeleton or Files Grid */}
@@ -379,92 +504,265 @@ export default function extractionFile() {
             <Skeleton className="h-32 w-full rounded-lg" />
             <Skeleton className="h-32 w-full rounded-lg" />
           </div>
+        ) : isListView ? (
+          <div className="overflow-x-auto">
+            {files.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 font-poppins">
+                <DotLottieReact
+                  src="/assets/NoFiles.lottie"
+                  loop
+                  autoplay
+                  className="w-6/12"
+                />
+                No files found in this folder
+              </div>
+            ) : (
+              <table className="min-w-full bg-gray-50 font-poppins">
+                <thead>
+                  <tr>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                      File Name
+                    </th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                      Added By
+                    </th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                      Date Added
+                    </th>
+                    <th className="font-semibold text-md px-4 py-2 border-b text-left">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {files.map((file) => (
+                    <tr
+                      key={file.extraction_id}
+                      className="hover:bg-gray-100 cursor-pointer transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent row click
+                        setSelectedFile(file);
+                        setPreviewStates((prev) => ({
+                          ...prev,
+                          [file.extraction_id]: true,
+                        }));
+                      }}
+                    >
+                      <td className="px-4 py-2 border-b flex items-center gap-2">
+                        {getFileIcon(file.file_path)}
+                        {file.title}
+                      </td>
+                      <td className="px-4 py-2 border-b">{file.created_by}</td>
+                      <td className="px-4 py-2 border-b">
+                        {new Date(file.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-2 border-b flex space-x-2">
+                        <button
+                          className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
+                          onClick={(e) => handleMoreOptionsClick(e, file.extraction_id)}
+                        >
+                          <MoreVertical size={16} color="black" />
+                        </button>
+                        {contextMenuVisible[file.extraction_id] && (
+                          <div
+                            ref={contextMenuRef}
+                            className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 context-menu font-poppins"
+                          >
+                            <button
+                              className="block w-full text-left p-2 hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditClick(file);
+                                setContextMenuVisible((prev) => ({ ...prev, [file.extraction_id]: false }));
+                              }}
+                            >
+                              <Pencil className="inline w-4 h-4 mr-2" /> Edit
+                            </button>
+                            <button
+                              className="block w-full text-left p-2 hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleArchiveClick(file);
+                                setContextMenuVisible((prev) => ({ ...prev, [file.extraction_id]: false }));
+                              }}
+                            >
+                              <Archive className="inline w-4 h-4 mr-2" /> Archive
+                            </button>
+                            <button
+                              className="block w-full text-left p-2 hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedFile(file);
+                                setShowFileDialog("details");
+                                setContextMenuVisible((prev) => ({ ...prev, [file.extraction_id]: false }));
+                              }}
+                            >
+                              <Eye className="inline w-4 h-4 mr-2" /> View Details
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {selectedFile && (
+              <FileOperations
+                file={selectedFile}
+                showPreview={previewStates[selectedFile.extraction_id] || false}
+                setShowPreview={(show) => {
+                  setPreviewStates((prev) => ({
+                    ...prev,
+                    [selectedFile.extraction_id]: show,
+                  }));
+                }}
+                showFileDialog={showFileDialog}
+                setShowFileDialog={setShowFileDialog}
+                selectedFile={selectedFile}
+                setSelectedFile={setSelectedFile}
+                onFileUpdate={() => {
+                  // Remove the file from the UI if it was archived
+                  if (showFileDialog === "archive") {
+                    setFiles(
+                      files.filter((f) => f.extraction_id !== selectedFile?.extraction_id)
+                    );
+                  } else {
+                    // Refresh the files list
+                    window.location.reload();
+                  }
+                }}
+                isListView={isListView}
+              />
+            )}
+          </div>
         ) : filteredFiles.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 font-poppins">
             {filteredFiles.map((file) => (
               <div key={file.extraction_id} className="relative">
                 <div
-                  className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
-                  style={{ height: '420px', width: '100%', overflow: 'hidden' }}
-                  onContextMenu={(e) => e.preventDefault()}
+                  className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow aspect-square"
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setShowOptions((prev) => ({
+                      ...prev,
+                      [file.extraction_id]: !prev[file.extraction_id],
+                    }));
+                  }}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       {getFileIcon(file.file_path)}
-                      <h3 className="font-medium text-gray-900">{file.title}</h3>
+                      <h3 className="font-medium text-gray-900 truncate w-[180px] text-ellipsis">
+                        {file.title}
+                      </h3>
                     </div>
                     <button
-                      className="p-2 rounded-full hover:bg-gray-200"
-                      onClick={() => setShowOptions(prev => ({ ...prev, [file.extraction_id]: !prev[file.extraction_id] }))}
+                      className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
+                      onClick={() =>
+                        setShowOptions((prev) => ({
+                          ...prev,
+                          [file.extraction_id]: !prev[file.extraction_id],
+                        }))
+                      }
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
                   </div>
-                  <div 
-                    className="prose prose-sm max-w-none mb-2 text-gray-600 line-clamp-3 whitespace-pre-line overflow-hidden text-ellipsis"
-                  >
-                    {file.incident_summary}
-                  </div>
-                  {file && file.file_path && (
-                    <FileOperations
-                      file={file}
-                      showPreview={previewStates[file.extraction_id] || false}
-                      setShowPreview={(show) => {
-                        setPreviewStates(prev => ({
-                          ...prev,
-                          [file.extraction_id]: show
-                        }));
-                      }}
-                      showFileDialog={showFileDialog}
-                      setShowFileDialog={setShowFileDialog}
-                      selectedFile={selectedFile}
-                      setSelectedFile={setSelectedFile}
-                      onFileUpdate={() => {
-                        if (showFileDialog === 'archive') {
-                          setFiles(files.filter(f => f.extraction_id !== selectedFile?.extraction_id));
-                        } else {
-                          window.location.reload();
-                        }
-                      }}
-                    />
-                  )}
-                  <div className="text-sm text-gray-500 mt-2">
-                    Added by {file.created_by} on {new Date(file.created_at).toLocaleDateString()}
+                  <FileOperations
+                    file={file}
+                    showPreview={previewStates[file.extraction_id] || false}
+                    setShowPreview={(show) => {
+                      setPreviewStates((prev) => ({
+                        ...prev,
+                        [file.extraction_id]: show,
+                      }));
+                    }}
+                    showFileDialog={showFileDialog}
+                    setShowFileDialog={setShowFileDialog}
+                    selectedFile={selectedFile}
+                    setSelectedFile={setSelectedFile}
+                    onFileUpdate={() => {
+                      // Remove the file from the UI if it was archived
+                      if (showFileDialog === "archive") {
+                        setFiles(
+                          files.filter(
+                            (f) => f.extraction_id !== selectedFile?.extraction_id
+                          )
+                        );
+                      } else {
+                        // Refresh the files list
+                        window.location.reload();
+                      }
+                    }}
+                    isListView={isListView}
+                  />
+                  <div className="text-xs text-gray-500 mt-2">
+                    Added by {file.created_by} on{" "}
+                    {new Date(file.created_at).toLocaleDateString()}
                   </div>
                 </div>
 
                 {showOptions[file.extraction_id] && (
-                  <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-                    <button
-                      className="block w-full text-left p-2 hover:bg-gray-100"
-                      onClick={() => handleEditClick(file)}
+                  <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins"
+                  ref={contextMenuRef}>
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditClick(file);
+                        setShowOptions((prev) => ({
+                          ...prev,
+                          [file.extraction_id]: false,
+                        }));
+                      }}
                     >
                       <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                    </button>
-                    <button
-                      className="block w-full text-left p-2 hover:bg-gray-100"
-                      onClick={() => handleArchiveClick(file)}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleArchiveClick(file);
+                        setShowOptions((prev) => ({
+                          ...prev,
+                          [file.extraction_id]: false,
+                        }));
+                      }}
                     >
                       <Archive className="inline w-4 h-4 mr-2" /> Archive
-                    </button>
-                    <button
-                      className="block w-full text-left p-2 hover:bg-gray-100"
-                      onClick={() => {
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedFile(file);
-                        setShowFileDialog('details');
-                        setShowOptions(prev => ({ ...prev, [file.extraction_id]: false }));
+                        setShowFileDialog("details");
+                        setShowOptions((prev) => ({
+                          ...prev,
+                          [file.extraction_id]: false,
+                        }));
                       }}
                     >
                       <Eye className="inline w-4 h-4 mr-2" /> View Details
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center text-gray-500 py-8">
-            No certificates found in this folder
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8">
+            <DotLottieReact
+              src="/assets/NoFiles.lottie"
+              loop
+              autoplay
+              className="w-6/12"
+            />
+            No files found in this folder
           </div>
         )}
       </div>
@@ -487,7 +785,9 @@ export default function extractionFile() {
                     <Input
                       id="title"
                       value={newFile.title}
-                      onChange={(e) => setNewFile({ ...newFile, title: e.target.value })}
+                      onChange={(e) =>
+                        setNewFile({ ...newFile, title: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -497,7 +797,9 @@ export default function extractionFile() {
                       id="control_num"
                       type="text"
                       value={newFile.control_num}
-                      onChange={(e) => setNewFile({ ...newFile, control_num: e.target.value })}
+                      onChange={(e) =>
+                        setNewFile({ ...newFile, control_num: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -506,7 +808,9 @@ export default function extractionFile() {
                     <Input
                       id="complainant"
                       value={newFile.complainant}
-                      onChange={(e) => setNewFile({ ...newFile, complainant: e.target.value })}
+                      onChange={(e) =>
+                        setNewFile({ ...newFile, complainant: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -515,7 +819,9 @@ export default function extractionFile() {
                     <Input
                       id="assisted_by"
                       value={newFile.assisted_by}
-                      onChange={(e) => setNewFile({ ...newFile, assisted_by: e.target.value })}
+                      onChange={(e) =>
+                        setNewFile({ ...newFile, assisted_by: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -524,7 +830,12 @@ export default function extractionFile() {
                     <Input
                       id="accompanied_by"
                       value={newFile.accompanied_by}
-                      onChange={(e) => setNewFile({ ...newFile, accompanied_by: e.target.value })}
+                      onChange={(e) =>
+                        setNewFile({
+                          ...newFile,
+                          accompanied_by: e.target.value,
+                        })
+                      }
                       required
                     />
                   </div>
@@ -533,7 +844,9 @@ export default function extractionFile() {
                     <Input
                       id="witnesses"
                       value={newFile.witnesses}
-                      onChange={(e) => setNewFile({ ...newFile, witnesses: e.target.value })}
+                      onChange={(e) =>
+                        setNewFile({ ...newFile, witnesses: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -542,7 +855,9 @@ export default function extractionFile() {
                     <Input
                       id="respondent"
                       value={newFile.respondent}
-                      onChange={(e) => setNewFile({ ...newFile, respondent: e.target.value })}
+                      onChange={(e) =>
+                        setNewFile({ ...newFile, respondent: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -551,7 +866,9 @@ export default function extractionFile() {
                     <Input
                       id="investigator"
                       value={newFile.investigator}
-                      onChange={(e) => setNewFile({ ...newFile, investigator: e.target.value })}
+                      onChange={(e) =>
+                        setNewFile({ ...newFile, investigator: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -560,7 +877,9 @@ export default function extractionFile() {
                     <Input
                       id="contact_num"
                       value={newFile.contact_num}
-                      onChange={(e) => setNewFile({ ...newFile, contact_num: e.target.value })}
+                      onChange={(e) =>
+                        setNewFile({ ...newFile, contact_num: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -569,7 +888,9 @@ export default function extractionFile() {
                     <Input
                       id="fb_account"
                       value={newFile.fb_account}
-                      onChange={(e) => setNewFile({ ...newFile, fb_account: e.target.value })}
+                      onChange={(e) =>
+                        setNewFile({ ...newFile, fb_account: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -578,7 +899,9 @@ export default function extractionFile() {
                     <Input
                       id="station_unit"
                       value={newFile.station_unit}
-                      onChange={(e) => setNewFile({ ...newFile, station_unit: e.target.value })}
+                      onChange={(e) =>
+                        setNewFile({ ...newFile, station_unit: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -588,7 +911,9 @@ export default function extractionFile() {
                       id="date_release"
                       type="date"
                       value={newFile.date_release}
-                      onChange={(e) => setNewFile({ ...newFile, date_release: e.target.value })}
+                      onChange={(e) =>
+                        setNewFile({ ...newFile, date_release: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -597,7 +922,9 @@ export default function extractionFile() {
                     <Input
                       id="signatories"
                       value={newFile.signatories}
-                      onChange={(e) => setNewFile({ ...newFile, signatories: e.target.value })}
+                      onChange={(e) =>
+                        setNewFile({ ...newFile, signatories: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -606,7 +933,9 @@ export default function extractionFile() {
                   <Label htmlFor="incident_summary">Incident Summary</Label>
                   <RichTextEditor
                     content={newFile.incident_summary || ""}
-                    onChange={(content) => setNewFile({ ...newFile, incident_summary: content })}
+                    onChange={(content) =>
+                      setNewFile({ ...newFile, incident_summary: content })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -638,7 +967,7 @@ export default function extractionFile() {
                     contact_num: "",
                     fb_account: "",
                     station_unit: "",
-                    date_release: new Date().toISOString().split('T')[0],
+                    date_release: new Date().toISOString().split("T")[0],
                     signatories: "",
                     incident_summary: "",
                   });
@@ -656,11 +985,11 @@ export default function extractionFile() {
       </Dialog>
 
       {/* Add the PermissionDialog */}
-      <PermissionDialog 
+      <PermissionDialog
         isOpen={showPermissionDialog}
         onClose={() => setShowPermissionDialog(false)}
         action={permissionAction}
       />
     </div>
   );
-} 
+}

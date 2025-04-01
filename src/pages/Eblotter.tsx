@@ -13,6 +13,7 @@ import {
   List,
   ClockIcon,
   RefreshCwIcon,
+  Info,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -76,16 +77,16 @@ interface Folder {
 // Function to determine badge color based on status
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
-    case 'pending':
-      return { class: 'bg-yellow-200 text-yellow-800', label: 'P' }; // Lighter for pending status
-    case 'resolved':
-      return { class: 'bg-green-200 text-green-800', label: 'R' }; // Lighter for resolved status
-    case 'dismissed':
-      return { class: 'bg-red-200 text-red-800', label: 'D' }; // Lighter for dismissed status
-    case 'under investigation':
-      return { class: 'bg-blue-200 text-blue-800', label: 'UI' }; // Lighter for under investigation status
+    case "pending":
+      return { class: "bg-yellow-200 text-yellow-800", label: "P" }; // Lighter for pending status
+    case "resolved":
+      return { class: "bg-green-200 text-green-800", label: "R" }; // Lighter for resolved status
+    case "dismissed":
+      return { class: "bg-red-200 text-red-800", label: "D" }; // Lighter for dismissed status
+    case "under investigation":
+      return { class: "bg-blue-200 text-blue-800", label: "UI" }; // Lighter for under investigation status
     default:
-      return { class: 'bg-gray-200 text-black', label: 'N/A' }; // Default case
+      return { class: "bg-gray-200 text-black", label: "N/A" }; // Default case
   }
 };
 
@@ -100,8 +101,12 @@ export default function Eblotter() {
   const location = useLocation();
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [isEditingFolder, setIsEditingFolder] = useState(false);
-  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
-  const [contextMenuVisible, setContextMenuVisible] = useState<{ [key: number]: boolean }>({});
+  const [availableCategories, setAvailableCategories] = useState<Category[]>(
+    []
+  );
+  const [contextMenuVisible, setContextMenuVisible] = useState<{
+    [key: number]: boolean;
+  }>({});
   const [newFolderTitle, setNewFolderTitle] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [newFolderStatus, setNewFolderStatus] = useState("pending");
@@ -110,30 +115,39 @@ export default function Eblotter() {
   const [categorySelectKey, setCategorySelectKey] = useState(0);
   const [editFolderTitle, setEditFolderTitle] = useState("");
   const [editFolderStatus, setEditFolderStatus] = useState("");
-  const [editSelectedCategories, setEditSelectedCategories] = useState<string[]>([]);
+  const [editSelectedCategories, setEditSelectedCategories] = useState<
+    string[]
+  >([]);
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [permissionAction, setPermissionAction] = useState("");
+  const [isStatusMeaningDialogOpen, setIsStatusMeaningDialogOpen] =
+    useState(false);
 
-  const userRole = JSON.parse(Cookies.get('user_data') || '{}').role;
+  const userRole = JSON.parse(Cookies.get("user_data") || "{}").role;
 
   const canEditOrArchive = () => {
-    return userRole === 'admin' || userRole === 'superadmin' || userRole === 'wcpd';
+    return (
+      userRole === "admin" || userRole === "superadmin" || userRole === "wcpd"
+    );
   };
 
   const [sortCriteria, setSortCriteria] = useState("created_at");
-  
+
   const statusOptions = [
     "pending",
     "resolved",
     "dismissed",
-    "under investigation"
+    "under investigation",
   ];
 
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
+      if (
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(event.target as Node)
+      ) {
         setContextMenuVisible({});
       }
     };
@@ -151,33 +165,38 @@ export default function Eblotter() {
       try {
         // First fetch folders with user information
         const { data: foldersData, error: foldersError } = await supabase
-          .from('folders')
-          .select(`
+          .from("folders")
+          .select(
+            `
             *,
             creator:created_by(name),
             updater:updated_by(name)
-          `)
-          .eq('is_archived', false)
-          .eq('is_blotter', true)
-          .eq('is_womencase', false) // Only fetch non-women case folders
-          .order('created_at', { ascending: false });
+          `
+          )
+          .eq("is_archived", false)
+          .eq("is_blotter", true)
+          .eq("is_womencase", false) // Only fetch non-women case folders
+          .order("created_at", { ascending: false });
 
         if (foldersError) throw foldersError;
 
         // For each folder, fetch its categories
         const foldersWithCategories = await Promise.all(
           (foldersData || []).map(async (folder) => {
-            const { data: categoriesData, error: categoriesError } = await supabase
-              .from('folder_categories')
-              .select(`
+            const { data: categoriesData, error: categoriesError } =
+              await supabase
+                .from("folder_categories")
+                .select(
+                  `
                 categories (
                   category_id,
                   title,
                   created_by,
                   created_at
                 )
-              `)
-              .eq('folder_id', folder.folder_id);
+              `
+                )
+                .eq("folder_id", folder.folder_id);
 
             if (categoriesError) throw categoriesError;
 
@@ -185,14 +204,14 @@ export default function Eblotter() {
               ...folder,
               created_by: folder.creator?.name || folder.created_by,
               updated_by: folder.updater?.name || folder.updated_by,
-              categories: categoriesData?.map(item => item.categories) || []
+              categories: categoriesData?.map((item) => item.categories) || [],
             };
           })
         );
 
         setFolders(foldersWithCategories);
       } catch (error) {
-        console.error('Error fetching folders:', error);
+        console.error("Error fetching folders:", error);
       } finally {
         setIsLoading(false);
       }
@@ -205,12 +224,12 @@ export default function Eblotter() {
   useEffect(() => {
     const fetchCategories = async () => {
       const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('title', { ascending: true });
+        .from("categories")
+        .select("*")
+        .order("title", { ascending: true });
 
       if (error) {
-        console.error('Error fetching categories:', error);
+        console.error("Error fetching categories:", error);
         return;
       }
 
@@ -221,9 +240,13 @@ export default function Eblotter() {
   }, []);
 
   // Filter folders based on search query and category
-  const filteredFolders = folders.filter(folder => {
-    const matchesSearch = folder.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = filter === "all" || folder.categories.some(cat => cat.category_id.toString() === filter);
+  const filteredFolders = folders.filter((folder) => {
+    const matchesSearch = folder.title
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      filter === "all" ||
+      folder.categories.some((cat) => cat.category_id.toString() === filter);
     return matchesSearch && matchesCategory;
   });
 
@@ -259,21 +282,21 @@ export default function Eblotter() {
   const handleAddFolder = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+      const userData = JSON.parse(Cookies.get("user_data") || "{}");
+
       // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
-        .from('users')
-        .select('user_id')
-        .eq('email', userData.email)
+        .from("users")
+        .select("user_id")
+        .eq("email", userData.email)
         .single();
 
       if (userError) throw userError;
-      if (!userData2) throw new Error('User not found');
+      if (!userData2) throw new Error("User not found");
 
       // Create the folder first
       const { data: folderData, error: folderError } = await supabase
-        .from('folders')
+        .from("folders")
         .insert([
           {
             title: newFolderTitle,
@@ -284,10 +307,11 @@ export default function Eblotter() {
             is_archived: false,
             is_blotter: true,
             is_womencase: false,
-            is_extraction: false
-          }
+            is_extraction: false,
+          },
         ])
-        .select(`
+        .select(
+          `
           *,
           creator:created_by(name),
           updater:updated_by(name),
@@ -299,30 +323,33 @@ export default function Eblotter() {
               created_at
             )
           )
-        `)
+        `
+        )
         .single();
 
       if (folderError) throw folderError;
-      if (!folderData) throw new Error('Failed to create folder');
+      if (!folderData) throw new Error("Failed to create folder");
 
       // Add categories to folder_categories if any categories were selected
       if (selectedCategories.length > 0) {
-        const folderCategoriesData = selectedCategories.map(categoryId => ({
+        const folderCategoriesData = selectedCategories.map((categoryId) => ({
           folder_id: folderData.folder_id,
-          category_id: parseInt(categoryId)
+          category_id: parseInt(categoryId),
         }));
 
         const { error: categoriesError } = await supabase
-          .from('folder_categories')
+          .from("folder_categories")
           .insert(folderCategoriesData);
 
         if (categoriesError) throw categoriesError;
       }
 
       // Fetch the complete folder data with categories for the UI update
-      const { data: newFolderWithCategories, error: fetchError } = await supabase
-        .from('folders')
-        .select(`
+      const { data: newFolderWithCategories, error: fetchError } =
+        await supabase
+          .from("folders")
+          .select(
+            `
           *,
           creator:created_by(name),
           updater:updated_by(name),
@@ -334,20 +361,25 @@ export default function Eblotter() {
               created_at
             )
           )
-        `)
-        .eq('folder_id', folderData.folder_id)
-        .single();
+        `
+          )
+          .eq("folder_id", folderData.folder_id)
+          .single();
 
       if (fetchError) throw fetchError;
 
       // Format the categories data for the UI
       const formattedFolder = {
         ...newFolderWithCategories,
-        created_by: newFolderWithCategories.creator?.name || newFolderWithCategories.created_by,
-        updated_by: newFolderWithCategories.updater?.name || newFolderWithCategories.updated_by,
+        created_by:
+          newFolderWithCategories.creator?.name ||
+          newFolderWithCategories.created_by,
+        updated_by:
+          newFolderWithCategories.updater?.name ||
+          newFolderWithCategories.updated_by,
         categories: newFolderWithCategories.categories
           .map((item: any) => item.categories)
-          .filter(Boolean)
+          .filter(Boolean),
       };
 
       // Update the UI with the new folder
@@ -358,7 +390,7 @@ export default function Eblotter() {
       setNewFolderStatus("pending");
       setSelectedCategories([]);
     } catch (error: any) {
-      console.error('Error adding folder:', error);
+      console.error("Error adding folder:", error);
       toast.error(error.message || "Failed to create folder");
     }
   };
@@ -367,26 +399,26 @@ export default function Eblotter() {
   const handleAddCategory = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+      const userData = JSON.parse(Cookies.get("user_data") || "{}");
+
       // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
-        .from('users')
-        .select('user_id')
-        .eq('email', userData.email)
+        .from("users")
+        .select("user_id")
+        .eq("email", userData.email)
         .single();
 
       if (userError) throw userError;
-      if (!userData2) throw new Error('User not found');
+      if (!userData2) throw new Error("User not found");
 
       // Create the new category
       const { data: categoryData, error: categoryError } = await supabase
-        .from('categories')
+        .from("categories")
         .insert([
           {
             title: newCategoryTitle,
-            created_by: userData2.user_id
-          }
+            created_by: userData2.user_id,
+          },
         ])
         .select()
         .single();
@@ -395,18 +427,21 @@ export default function Eblotter() {
 
       // Add the new category to the selected categories
       if (categoryData) {
-        setSelectedCategories([...selectedCategories, categoryData.category_id.toString()]);
+        setSelectedCategories([
+          ...selectedCategories,
+          categoryData.category_id.toString(),
+        ]);
         // Update available categories
         setAvailableCategories([...availableCategories, categoryData]);
         // Reset the select component
-        setCategorySelectKey(prev => prev + 1);
+        setCategorySelectKey((prev) => prev + 1);
       }
 
       toast.success("Category created successfully");
       setIsAddingCategory(false);
       setNewCategoryTitle("");
     } catch (error: any) {
-      console.error('Error adding category:', error);
+      console.error("Error adding category:", error);
       toast.error(error.message || "Failed to create category");
     }
   };
@@ -417,48 +452,50 @@ export default function Eblotter() {
     if (!selectedFolder) return;
 
     try {
-      const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+      const userData = JSON.parse(Cookies.get("user_data") || "{}");
+
       // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
-        .from('users')
-        .select('user_id')
-        .eq('email', userData.email)
+        .from("users")
+        .select("user_id")
+        .eq("email", userData.email)
         .single();
 
       if (userError) throw userError;
-      if (!userData2) throw new Error('User not found');
+      if (!userData2) throw new Error("User not found");
 
       // Update the folder
       const { error: folderError } = await supabase
-        .from('folders')
+        .from("folders")
         .update({
           title: editFolderTitle,
           status: editFolderStatus,
           updated_by: userData2.user_id,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('folder_id', selectedFolder.folder_id);
+        .eq("folder_id", selectedFolder.folder_id);
 
       if (folderError) throw folderError;
 
       // Delete existing category associations
       const { error: deleteError } = await supabase
-        .from('folder_categories')
+        .from("folder_categories")
         .delete()
-        .eq('folder_id', selectedFolder.folder_id);
+        .eq("folder_id", selectedFolder.folder_id);
 
       if (deleteError) throw deleteError;
 
       // Add new category associations
       if (editSelectedCategories.length > 0) {
-        const folderCategoriesData = editSelectedCategories.map(categoryId => ({
-          folder_id: selectedFolder.folder_id,
-          category_id: parseInt(categoryId)
-        }));
+        const folderCategoriesData = editSelectedCategories.map(
+          (categoryId) => ({
+            folder_id: selectedFolder.folder_id,
+            category_id: parseInt(categoryId),
+          })
+        );
 
         const { error: categoriesError } = await supabase
-          .from('folder_categories')
+          .from("folder_categories")
           .insert(folderCategoriesData);
 
         if (categoriesError) throw categoriesError;
@@ -466,8 +503,9 @@ export default function Eblotter() {
 
       // Fetch the updated folder data
       const { data: updatedFolder, error: fetchError } = await supabase
-        .from('folders')
-        .select(`
+        .from("folders")
+        .select(
+          `
           *,
           creator:created_by(name),
           updater:updated_by(name),
@@ -479,8 +517,9 @@ export default function Eblotter() {
               created_at
             )
           )
-        `)
-        .eq('folder_id', selectedFolder.folder_id)
+        `
+        )
+        .eq("folder_id", selectedFolder.folder_id)
         .single();
 
       if (fetchError) throw fetchError;
@@ -492,19 +531,23 @@ export default function Eblotter() {
         updated_by: updatedFolder.updater?.name || updatedFolder.updated_by,
         categories: updatedFolder.categories
           .map((item: any) => item.categories)
-          .filter(Boolean)
+          .filter(Boolean),
       };
 
       // Update the folders state
-      setFolders(folders.map(folder => 
-        folder.folder_id === selectedFolder.folder_id ? formattedFolder : folder
-      ));
+      setFolders(
+        folders.map((folder) =>
+          folder.folder_id === selectedFolder.folder_id
+            ? formattedFolder
+            : folder
+        )
+      );
 
       toast.success("Folder updated successfully");
       setIsEditingFolder(false);
       setSelectedFolder(null);
     } catch (error: any) {
-      console.error('Error updating folder:', error);
+      console.error("Error updating folder:", error);
       toast.error(error.message || "Failed to update folder");
     }
   };
@@ -514,37 +557,41 @@ export default function Eblotter() {
     if (!selectedFolder) return;
 
     try {
-      const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+      const userData = JSON.parse(Cookies.get("user_data") || "{}");
+
       // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
-        .from('users')
-        .select('user_id')
-        .eq('email', userData.email)
+        .from("users")
+        .select("user_id")
+        .eq("email", userData.email)
         .single();
 
       if (userError) throw userError;
-      if (!userData2) throw new Error('User not found');
+      if (!userData2) throw new Error("User not found");
 
       // Update the folder to archived status
       const { error: archiveError } = await supabase
-        .from('folders')
+        .from("folders")
         .update({
           is_archived: true,
           updated_by: userData2.user_id,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('folder_id', selectedFolder.folder_id);
+        .eq("folder_id", selectedFolder.folder_id);
 
       if (archiveError) throw archiveError;
 
       // Remove the folder from the UI
-      setFolders(folders.filter(folder => folder.folder_id !== selectedFolder.folder_id));
+      setFolders(
+        folders.filter(
+          (folder) => folder.folder_id !== selectedFolder.folder_id
+        )
+      );
       toast.success("Folder archived successfully");
       setDialogContent(null);
       setSelectedFolder(null);
     } catch (error: any) {
-      console.error('Error archiving folder:', error);
+      console.error("Error archiving folder:", error);
       toast.error(error.message || "Failed to archive folder");
     }
   };
@@ -555,7 +602,7 @@ export default function Eblotter() {
       setEditFolderTitle(selectedFolder.title);
       setEditFolderStatus(selectedFolder.status);
       setEditSelectedCategories(
-        selectedFolder.categories.map(cat => cat.category_id.toString())
+        selectedFolder.categories.map((cat) => cat.category_id.toString())
       );
     }
   }, [selectedFolder, isEditingFolder]);
@@ -580,15 +627,71 @@ export default function Eblotter() {
 
   const handleFolderClick = (folder: Folder) => {
     navigate(`/eblotter/${folder.folder_id}`, {
-      state: { from: location.pathname, fromName: "Blotter Report" }
+      state: { from: location.pathname, fromName: "Blotter Report" },
     });
   };
-  
-  
+
   const handleViewChange = (view: boolean) => {
     setIsListView(view);
     localStorage.setItem("viewPreference", JSON.stringify(view));
   };
+
+  // Add this function to handle the dialog content for status meanings
+  const renderStatusMeaningDialog = () => (
+    <Dialog
+      open={isStatusMeaningDialogOpen}
+      onOpenChange={() => setIsStatusMeaningDialogOpen(false)}
+    >
+      <DialogContent className="max-w-md p-6">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold text-gray-900">
+            Status Badge Meanings
+          </DialogTitle>
+        </DialogHeader>
+        <DialogDescription>
+          <ul className="space-y-2">
+            <li className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className="bg-yellow-200 text-yellow-800"
+              >
+                P
+              </Badge>
+              <span className="text-gray-700">
+                Pending - The folder is currently being processed.
+              </span>
+            </li>
+            <li className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-green-200 text-green-800">
+                R
+              </Badge>
+              <span className="text-gray-700">
+                Resolved - The folder has been processed successfully.
+              </span>
+            </li>
+            <li className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-red-200 text-red-800">
+                D
+              </Badge>
+              <span className="text-gray-700">
+                Dismissed - The folder has been dismissed and will not be
+                processed.
+              </span>
+            </li>
+            <li className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-blue-200 text-blue-800">
+                UI
+              </Badge>
+              <span className="text-gray-700">
+                Under Investigation - The folder is currently under
+                investigation.
+              </span>
+            </li>
+          </ul>
+        </DialogDescription>
+      </DialogContent>
+    </Dialog>
+  );
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
@@ -638,7 +741,7 @@ export default function Eblotter() {
 
       <Breadcrumb className="mb-4 text-gray-600 flex space-x-2">
         <BreadcrumbItem>
-          <Link 
+          <Link
             to={previousPage}
             state={{ from: location.pathname }}
             className="text-gray-600 hover:text-gray-900"
@@ -654,10 +757,20 @@ export default function Eblotter() {
         </BreadcrumbItem>
       </Breadcrumb>
 
-      <div className="flex justify-between items-center mb-6 ">
-        <h1 className="text-2xl font-medium font-poppins text-blue-900">
-         Blotter Reports
-        </h1>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center">
+          <h1 className="text-2xl font-medium font-poppins text-blue-900">
+            Blotter Reports
+          </h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-2 p-1"
+            onClick={() => setIsStatusMeaningDialogOpen(true)}
+          >
+            <Info className="w-4 h-4 text-gray-600" />
+          </Button>
+        </div>
         <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
           <Button
             onClick={() => handleViewChange(true)}
@@ -681,7 +794,7 @@ export default function Eblotter() {
           </Button>
         </div>
       </div>
-      
+
       {isListView ? (
         <div className="overflow-x-auto font-poppins">
           <table className="min-w-full bg-gray-50">
@@ -865,14 +978,14 @@ export default function Eblotter() {
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 font-poppins">
-                <DotLottieReact
-                  src="/assets/NoFiles.lottie"
-                  loop
-                  autoplay
-                  className="w-6/12"
-                />
-                No files found in this folder
-              </div>
+                  <DotLottieReact
+                    src="/assets/NoFiles.lottie"
+                    loop
+                    autoplay
+                    className="w-6/12"
+                  />
+                  No files found in this folder
+                </div>
               )}
             </tbody>
           </table>
@@ -1025,16 +1138,16 @@ export default function Eblotter() {
               </div>
             ))
           ) : (
-    // Fix: Ensuring Lottie is centered by spanning all columns
-    <div className="col-span-full flex flex-col items-center justify-center h-[50vh] text-gray-500 font-poppins">
-    <DotLottieReact
-      src="/assets/NoFiles.lottie"
-      loop
-      autoplay
-      className="w-6/12"
-    />
-    No files found in this folder
-  </div>
+            // Fix: Ensuring Lottie is centered by spanning all columns
+            <div className="col-span-full flex flex-col items-center justify-center h-[50vh] text-gray-500 font-poppins">
+              <DotLottieReact
+                src="/assets/NoFiles.lottie"
+                loop
+                autoplay
+                className="w-6/12"
+              />
+              No files found in this folder
+            </div>
           )}
         </div>
       )}
@@ -1063,7 +1176,7 @@ export default function Eblotter() {
               <div className="space-y-2">
                 <Label>Categories</Label>
                 <div className="flex gap-2">
-                  <Select 
+                  <Select
                     key={categorySelectKey}
                     onValueChange={(value) => {
                       if (value === "new") {
@@ -1071,7 +1184,7 @@ export default function Eblotter() {
                       } else if (!selectedCategories.includes(value)) {
                         setSelectedCategories([...selectedCategories, value]);
                         // Reset the select component
-                        setCategorySelectKey(prev => prev + 1);
+                        setCategorySelectKey((prev) => prev + 1);
                       }
                     }}
                   >
@@ -1086,8 +1199,8 @@ export default function Eblotter() {
                         </div>
                       </SelectItem>
                       {availableCategories.map((category) => (
-                        <SelectItem 
-                          key={category.category_id} 
+                        <SelectItem
+                          key={category.category_id}
                           value={category.category_id.toString()}
                         >
                           {category.title}
@@ -1099,7 +1212,7 @@ export default function Eblotter() {
                 <div className="flex flex-wrap gap-2 mt-2">
                   {selectedCategories.map((categoryId) => {
                     const category = availableCategories.find(
-                      c => c.category_id.toString() === categoryId
+                      (c) => c.category_id.toString() === categoryId
                     );
                     return category ? (
                       <Badge
@@ -1111,9 +1224,13 @@ export default function Eblotter() {
                         <button
                           type="button"
                           className="ml-2 hover:text-red-600"
-                          onClick={() => setSelectedCategories(
-                            selectedCategories.filter(id => id !== categoryId)
-                          )}
+                          onClick={() =>
+                            setSelectedCategories(
+                              selectedCategories.filter(
+                                (id) => id !== categoryId
+                              )
+                            )
+                          }
                         >
                           ×
                         </button>
@@ -1124,7 +1241,7 @@ export default function Eblotter() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select 
+                <Select
                   value={newFolderStatus}
                   onValueChange={setNewFolderStatus}
                 >
@@ -1133,14 +1250,18 @@ export default function Eblotter() {
                   </SelectTrigger>
                   <SelectContent>
                     {statusOptions.map((status) => (
-                      <SelectItem 
-                        key={status} 
+                      <SelectItem
+                        key={status}
                         value={status}
                         className="capitalize"
                       >
-                        {status.split('_').map(word => 
-                          word.charAt(0).toUpperCase() + word.slice(1)
-                        ).join(' ')}
+                        {status
+                          .split("_")
+                          .map(
+                            (word) =>
+                              word.charAt(0).toUpperCase() + word.slice(1)
+                          )
+                          .join(" ")}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1232,13 +1353,16 @@ export default function Eblotter() {
               </div>
               <div className="space-y-2">
                 <Label>Categories</Label>
-                <Select 
+                <Select
                   key={categorySelectKey}
                   onValueChange={(value) => {
                     if (!editSelectedCategories.includes(value)) {
-                      setEditSelectedCategories([...editSelectedCategories, value]);
+                      setEditSelectedCategories([
+                        ...editSelectedCategories,
+                        value,
+                      ]);
                       // Reset the select component
-                      setCategorySelectKey(prev => prev + 1);
+                      setCategorySelectKey((prev) => prev + 1);
                     }
                   }}
                 >
@@ -1247,8 +1371,8 @@ export default function Eblotter() {
                   </SelectTrigger>
                   <SelectContent>
                     {availableCategories.map((category) => (
-                      <SelectItem 
-                        key={category.category_id} 
+                      <SelectItem
+                        key={category.category_id}
                         value={category.category_id.toString()}
                       >
                         {category.title}
@@ -1259,7 +1383,7 @@ export default function Eblotter() {
                 <div className="flex flex-wrap gap-2 mt-2">
                   {editSelectedCategories.map((categoryId) => {
                     const category = availableCategories.find(
-                      c => c.category_id.toString() === categoryId
+                      (c) => c.category_id.toString() === categoryId
                     );
                     return category ? (
                       <Badge
@@ -1271,9 +1395,13 @@ export default function Eblotter() {
                         <button
                           type="button"
                           className="ml-2 hover:text-red-600"
-                          onClick={() => setEditSelectedCategories(
-                            editSelectedCategories.filter(id => id !== categoryId)
-                          )}
+                          onClick={() =>
+                            setEditSelectedCategories(
+                              editSelectedCategories.filter(
+                                (id) => id !== categoryId
+                              )
+                            )
+                          }
                         >
                           ×
                         </button>
@@ -1284,7 +1412,7 @@ export default function Eblotter() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-status">Status</Label>
-                <Select 
+                <Select
                   value={editFolderStatus}
                   onValueChange={setEditFolderStatus}
                 >
@@ -1293,14 +1421,18 @@ export default function Eblotter() {
                   </SelectTrigger>
                   <SelectContent>
                     {statusOptions.map((status) => (
-                      <SelectItem 
-                        key={status} 
+                      <SelectItem
+                        key={status}
                         value={status}
                         className="capitalize"
                       >
-                        {status.split('_').map(word => 
-                          word.charAt(0).toUpperCase() + word.slice(1)
-                        ).join(' ')}
+                        {status
+                          .split("_")
+                          .map(
+                            (word) =>
+                              word.charAt(0).toUpperCase() + word.slice(1)
+                          )
+                          .join(" ")}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1431,7 +1563,7 @@ export default function Eblotter() {
         </DialogContent>
       </Dialog> */}
 
-{dialogContent && (
+      {dialogContent && (
         <Dialog
           open={dialogContent !== null}
           onOpenChange={() => {
@@ -1581,13 +1713,16 @@ export default function Eblotter() {
           </DialogContent>
         </Dialog>
       )}
-      
+
       {/* Permission Dialog */}
-      <PermissionDialog 
+      <PermissionDialog
         isOpen={showPermissionDialog}
         onClose={() => setShowPermissionDialog(false)}
         action={permissionAction}
       />
+
+      {/* Render the status meaning dialog based on the new state */}
+      {renderStatusMeaningDialog()}
     </div>
   );
 }
