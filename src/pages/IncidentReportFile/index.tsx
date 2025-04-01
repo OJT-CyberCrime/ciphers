@@ -1030,7 +1030,7 @@ export default function EblotterFile() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       {getFileIcon(file.file_path)}
-                      <h3 className="font-medium text-gray-900">
+                      <h3 className="font-medium text-gray-900 truncate w-[180px] text-ellipsis">
                         {file.title}
                       </h3>
                     </div>
@@ -1074,7 +1074,7 @@ export default function EblotterFile() {
                     }}
                     isListView={isListView} // Pass the isListView prop
                   />
-                  <div className="text-sm text-gray-500 mt-2">
+                  <div className="text-xs text-gray-500 mt-2">
                     Added by {file.created_by} on{" "}
                     {new Date(file.created_at).toLocaleDateString()}
                   </div>

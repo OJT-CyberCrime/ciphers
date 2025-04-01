@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { supabase } from "@/utils/supa";
 import Cookies from "js-cookie";
 import { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { ClockIcon, Plus, RefreshCwIcon } from "lucide-react";
 
 interface Category {
   category_id: number;
@@ -589,7 +589,7 @@ export default function CertificationOperations({
                 <Label htmlFor="edit-title">Folder Title</Label>
                 <Input
                   id="edit-title"
-                  placeholder="Enter certificate title"
+                  placeholder="Enter folder title"
                   value={editFolderTitle}
                   onChange={(e) => setEditFolderTitle(e.target.value)}
                   required
@@ -699,74 +699,119 @@ export default function CertificationOperations({
             setSelectedFolder(null);
           }}
         >
-          <DialogContent>
+          <DialogContent className="p-6 font-poppins">
             <DialogHeader>
-              <DialogTitle>{dialogContent}</DialogTitle>
+              <DialogTitle className="text-2xl font-semibold text-gray-900">
+                {dialogContent}
+              </DialogTitle>
             </DialogHeader>
+
             {dialogContent === "Folder Details" && selectedFolder ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Folder Info Section */}
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Certificate Title</h4>
-                  <p className="text-gray-900 text-lg font-medium">{selectedFolder.title}</p>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                    Folder Information
+                  </h4>
+                  <div className="space-y-2">
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-600">
+                        Folder Title
+                      </h5>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {selectedFolder.title}
+                      </p>
+                    </div>
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-600">
+                        Status
+                      </h5>
+                      <Badge
+                        variant="outline"
+                        className={`${
+                          getStatusBadgeClass(selectedFolder.status).class
+                        } py-1 px-2`}
+                      >
+                        {selectedFolder.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Categories Section */}
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Status</h4>
-                  <Badge 
-                    variant="outline" 
-                    className={`${getStatusBadgeClass(selectedFolder.status).class}`}
-                  >
-                    {selectedFolder.status.toUpperCase()}
-                  </Badge>
-                </div>
-                <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Categories</h4>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                    Categories
+                  </h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedFolder.categories.map((category) => (
-                      <Badge key={category.category_id} variant="outline" className="bg-gray-200">
+                      <Badge
+                        key={category.category_id}
+                        variant="outline"
+                        className="bg-gray-200 py-1 px-3"
+                      >
                         {category.title}
                       </Badge>
                     ))}
                   </div>
                 </div>
+
+                {/* Folder Activity Section */}
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Certificate Activity</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-600">
-                        Created: <span>
-                          {new Date(selectedFolder.created_at).toLocaleString()} by{" "}
-                          <span className="text-blue-900">{selectedFolder.created_by}</span>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                    Folder Activity
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <ClockIcon className="h-4 w-4 text-gray-600" />
+                      <p className="text-sm text-gray-600">
+                        Created:{" "}
+                        <span className="text-gray-900">
+                          {new Date(selectedFolder.created_at).toLocaleString()}
+                        </span>{" "}
+                        by{" "}
+                        <span className="font-semibold text-gray-900">
+                          {selectedFolder.created_by}
                         </span>
                       </p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-600">
-                        Last updated: {selectedFolder.updated_at ? (
-                          <span>
-                            {new Date(selectedFolder.updated_at).toLocaleString()} by{" "}
-                            <span className="text-blue-900">{selectedFolder.updated_by}</span>
+                    <div className="flex items-center gap-2">
+                      <RefreshCwIcon className="h-4 w-4 text-gray-600" />
+                      <p className="text-sm text-gray-600">
+                        Last updated:{" "}
+                        {selectedFolder.updated_at ? (
+                          <span className="text-gray-900">
+                            {new Date(
+                              selectedFolder.updated_at
+                            ).toLocaleString()}
                           </span>
-                        ) : 'Never'}
+                        ) : (
+                          <span className="italic text-gray-600">Never</span>
+                        )}
                       </p>
                     </div>
                   </div>
                 </div>
-                <DialogFooter className="flex justify-end">
+
+                {/* Footer with Close Button
+                <DialogFooter className="flex justify-end mt-6">
                   <Button
                     className="bg-blue-600 text-white hover:bg-blue-700"
                     onClick={() => setDialogContent(null)}
                   >
                     Close
                   </Button>
-                </DialogFooter>
+                </DialogFooter> */}
               </div>
-            ) : dialogContent === "Are you sure you want to archive this case?" ? (
-              <div className="space-y-4">
-                <DialogDescription>
-                  This action will archive the certificate folder and remove it from the active list. 
-                  You can access it later in the Archives section.
+            ) : dialogContent ===
+              "Are you sure you want to archive this folder?" ? (
+              <div className="space-y-6">
+                <DialogDescription className="text-sm text-gray-700">
+                  This action will archive the folder and remove it from the
+                  active folders list. You can access it later in the Archives
+                  section.
                 </DialogDescription>
-                <div className="flex justify-end space-x-2">
+                <div className="flex justify-end gap-3">
                   <Button
                     type="button"
                     variant="outline"
@@ -784,7 +829,7 @@ export default function CertificationOperations({
                       if (selectedFolder) {
                         await handleArchiveFolder();
                       } else {
-                        toast.error("No certificate folder selected for archiving");
+                        toast.error("No folder selected for archiving");
                       }
                     }}
                   >

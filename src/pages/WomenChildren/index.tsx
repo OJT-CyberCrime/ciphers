@@ -11,6 +11,7 @@ import {
   List,
   Grid,
   SortAsc,
+  Info,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 // import {
@@ -32,6 +33,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -88,6 +97,7 @@ export default function IncidentReport() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [isStatusMeaningDialogOpen, setIsStatusMeaningDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
@@ -248,6 +258,39 @@ export default function IncidentReport() {
     localStorage.setItem("viewPreference", JSON.stringify(view));
   };
 
+   // Add this function to handle the dialog content for status meanings
+   const renderStatusMeaningDialog = () => (
+    <Dialog open={isStatusMeaningDialogOpen} onOpenChange={() => setIsStatusMeaningDialogOpen(false)}>
+      <DialogContent className="max-w-md p-6">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold text-gray-900">
+            Status Badge Meanings
+          </DialogTitle>
+        </DialogHeader>
+        <DialogDescription>
+          <ul className="space-y-2">
+            <li className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-yellow-200 text-yellow-800">P</Badge>
+              <span className="text-gray-700">Pending - The folder is currently being processed.</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-green-200 text-green-800">R</Badge>
+              <span className="text-gray-700">Resolved - The folder has been processed successfully.</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-red-200 text-red-800">D</Badge>
+              <span className="text-gray-700">Dismissed - The folder has been dismissed and will not be processed.</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-blue-200 text-blue-800">UI</Badge>
+              <span className="text-gray-700">Under Investigation - The folder is currently under investigation.</span>
+            </li>
+          </ul>
+        </DialogDescription>
+      </DialogContent>
+    </Dialog>
+  );
+
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
       <div className="flex flex-col md:flex-row gap-4 mb-4 items-center justify-between">
@@ -308,14 +351,24 @@ export default function IncidentReport() {
           <ChevronRight size={16} />
         </BreadcrumbSeparator>
         <BreadcrumbItem>
-          <span className="text-gray-900">Women & Children Case</span>
+          <span className="text-gray-900">Women & Children</span>
         </BreadcrumbItem>
       </Breadcrumb>
 
-      <div className="flex justify-between items-center mb-6 ">
-        <h1 className="text-2xl font-medium font-poppins text-blue-900">
-          Women and Children Case
-        </h1>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center">
+          <h1 className="text-2xl font-medium font-poppins text-blue-900">
+            Women & Children
+          </h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-2 p-1"
+            onClick={() => setIsStatusMeaningDialogOpen(true)}
+          >
+            <Info className="w-4 h-4 text-gray-600" />
+          </Button>
+        </div>
         <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
           <Button
             onClick={() => handleViewChange(true)}
@@ -710,6 +763,9 @@ export default function IncidentReport() {
         setFolders={setFolders}
         availableCategories={availableCategories}
       />
+
+            {/* Render the status meaning dialog based on the new state */}
+            {renderStatusMeaningDialog()}
     </div>
   );
 }
