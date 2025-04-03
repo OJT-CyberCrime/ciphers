@@ -299,7 +299,7 @@ export default function Certifications() {
   }, []);
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-screen-xl mx-auto">
       <div className="flex flex-col md:flex-row gap-4 mb-4 items-center justify-between">
         <SearchBar
           value={searchQuery}

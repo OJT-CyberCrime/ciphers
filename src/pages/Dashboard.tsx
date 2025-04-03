@@ -199,7 +199,7 @@ interface RecentExtraction {
 
 // Add media queries for responsive design
 const styles = {
-  container: `p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 font-poppins`,
+  container: `p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 font-poppins max-w-screen-xl mx-auto`,
   cardGrid: `col-span-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2`,
   card: `border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center`,
   cardHeader: `flex flex-row items-center justify-between text-gray-900 font-medium pb-2`,

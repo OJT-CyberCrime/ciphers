@@ -211,7 +211,7 @@ export default function Archives() {
   }, [activeTab, isListView]);
 
   return (
-    <div className="p-6 font-poppins">
+    <div className="p-6 font-poppins max-w-screen-xl mx-auto">
       <div className="flex flex-col md:flex-row gap-4 mb-4 items-center justify-between">
         <SearchBar
           value={searchQuery}

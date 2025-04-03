@@ -788,7 +788,7 @@ export default function Users() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-screen-xl mx-auto">
       <h1 className="text-2xl font-medium text-blue-900 mb-20">
         Account Information
       </h1>
