@@ -65,10 +65,11 @@ export default function TwoFactorReset({ onCancel }: TwoFactorResetProps) {
       if (updateError) throw updateError;
 
       // Send magic link email
+      const emailRedirectTo = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
       const { error: emailError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/2fa-reset`,
+          emailRedirectTo: `${emailRedirectTo}/2fa-reset`,
           shouldCreateUser: false,
           captchaToken
         }
