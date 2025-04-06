@@ -2,10 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   FolderClosed,
   ChevronRight,
-  FileText,
   Undo,
-  SortAsc,
-  Plus,
   Grid,
   List,
 } from "lucide-react";
@@ -16,19 +13,6 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -53,7 +37,6 @@ import {
   getStatusBadgeClass,
   type Folder,
   type ArchivedFile,
-  type Category,
 } from "./components/ArchiveOperations";
 import { useLocation, Link } from "react-router-dom";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
@@ -61,18 +44,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Archives() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState("all");
   const [folders, setFolders] = useState<Folder[]>([]);
   const [archivedFiles, setArchivedFiles] = useState<ArchivedFile[]>([]);
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
-  const [isAddingFile, setIsAddingFile] = useState(false);
-  const [availableCategories, setAvailableCategories] = useState<Category[]>(
-    []
-  );
-  const [expandedFolders, setExpandedFolders] = useState<{
-    [key: number]: boolean;
-  }>({});
   const [restoreDialog, setRestoreDialog] = useState<{
     type: "folder" | "file";
     item: Folder | ArchivedFile | null;
@@ -81,12 +56,11 @@ export default function Archives() {
 
   // State for active tab
   const [activeTab, setActiveTab] = useState<string>(() => {
-    // Get the active tab from localStorage or default to "incident_reports"
     return localStorage.getItem("activeTab") || "incident_reports";
   });
 
   const [isListView, setIsListView] = useState(() => {
-    return localStorage.getItem("isListView") === "true"; // Retrieve from localStorage
+    return localStorage.getItem("isListView") === "true";
   });
 
   // Define the handleViewChange function
@@ -103,8 +77,7 @@ export default function Archives() {
         setFolders(archivedFolders);
         setArchivedFiles(files);
 
-        const categories = await fetchCategories();
-        setAvailableCategories(categories);
+        await fetchCategories();
       } catch (error) {
         console.error("Error loading content:", error);
       } finally {
@@ -115,15 +88,12 @@ export default function Archives() {
     loadContent();
   }, []);
 
-  // Filter folders and files based on search query and category
+  // Filter folders and files based on search query
   const filteredFolders = folders.filter((folder) => {
     const matchesSearch = folder.title
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      filter === "all" ||
-      folder.categories.some((cat) => cat.category_id.toString() === filter);
-    return matchesSearch && matchesCategory;
+    return matchesSearch;
   });
 
   const filteredFiles = archivedFiles.filter((file) => {
@@ -132,15 +102,6 @@ export default function Archives() {
 
   const previousPage = location.state?.from || "/dashboard";
   const previousPageName = location.state?.fromName || "Home";
-
-  // Toggle folder expansion
-  const toggleFolder = (folderId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpandedFolders((prev) => ({
-      ...prev,
-      [folderId]: !prev[folderId],
-    }));
-  };
 
   // Handle restore operations
   const handleRestore = async () => {
@@ -190,10 +151,10 @@ export default function Archives() {
     setRestoreDialog(null);
   };
 
-  const [sortCriteria, setSortCriteria] = useState("incident_report");
+  const sortCriteria = "incident_report";
 
   // Sort archived files based on the selected criteria
-  const sortedFiles = [...filteredFiles].sort((a, b) => {
+  const sortedFiles = [...filteredFiles].sort((a) => {
     if (sortCriteria === "incident_report") {
       return a.file_type === "regular" ? -1 : 1; // Prioritize incident reports
     } else if (sortCriteria === "extraction_certificate") {
@@ -419,7 +380,6 @@ export default function Archives() {
                         <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
                           <div
                             className="flex flex-col items-start p-5 cursor-pointer"
-                            onClick={(e) => toggleFolder(folder.folder_id, e)}
                           >
                             <div className="flex items-center gap-x-3 w-full">
                               <FolderClosed
@@ -609,7 +569,6 @@ export default function Archives() {
                         <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
                           <div
                             className="flex flex-col items-start p-5 cursor-pointer"
-                            onClick={(e) => toggleFolder(folder.folder_id, e)}
                           >
                             <div className="flex items-center gap-x-3 w-full">
                               <FolderClosed
@@ -820,7 +779,6 @@ export default function Archives() {
                         <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
                           <div
                             className="flex flex-col items-start p-5 cursor-pointer"
-                            onClick={(e) => toggleFolder(folder.folder_id, e)}
                           >
                             <div className="flex items-center gap-x-3 w-full">
                               <FolderClosed
@@ -1031,7 +989,6 @@ export default function Archives() {
                         <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
                           <div
                             className="flex flex-col items-start p-5 cursor-pointer"
-                            onClick={(e) => toggleFolder(folder.folder_id, e)}
                           >
                             <div className="flex items-center gap-x-3 w-full">
                               <FolderClosed

@@ -1,6 +1,5 @@
 import { supabase } from "@/utils/supa";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 
 interface Category {
   category_id: number;

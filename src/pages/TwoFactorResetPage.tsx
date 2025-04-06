@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/utils/supa';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,6 @@ export default function TwoFactorResetPage() {
         const hashParams = new URLSearchParams(location.hash.substring(1));
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
-        const type = hashParams.get('type');
 
         // If we have tokens from the URL, set them
         if (accessToken && refreshToken) {
