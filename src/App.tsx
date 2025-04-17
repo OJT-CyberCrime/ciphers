@@ -10,7 +10,7 @@ import Cookies from 'js-cookie';
 import { supabase } from "./utils/supa";
 import IncidentReport from "./pages/IncidentReport/index";
 import IncidentReportFile from "./pages/IncidentReportFile/index";
-import Eblotter from "./pages/Eblotter/index";
+import Eblotter from './pages/Eblotter/index';
 import EblotterFile from './pages/eblotterFile/index';
 import WomenChildren from './pages/WomenChildren/index';
 import WomenChildrenFile from './pages/WomenChildrenFile/index';
