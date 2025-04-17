@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/utils/supa";
 import Cookies from "js-cookie";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ClockIcon, Plus, RefreshCwIcon } from "lucide-react";
 
 interface Category {
@@ -28,6 +28,11 @@ interface Category {
   title: string;
   created_by: string;
   created_at: string;
+}
+
+// Add new interface for filtered categories
+interface FilteredCategory extends Category {
+  matches?: boolean;
 }
 
 interface Folder {
@@ -104,6 +109,18 @@ export default function CertificationOperations({
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryTitle, setNewCategoryTitle] = useState("");
   const [categorySelectKey, setCategorySelectKey] = useState(0);
+  const [addCategorySearchQuery, setAddCategorySearchQuery] = useState("");
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+  const [filteredAddCategories, setFilteredAddCategories] = useState<Category[]>([]);
+  const addCategorySearchInputRef = useRef<HTMLInputElement>(null);
+
+  // Filter categories based on search query for the add category dropdown
+  useEffect(() => {
+    const filtered = availableCategories.filter(category =>
+      category.title.toLowerCase().includes(addCategorySearchQuery.toLowerCase())
+    );
+    setFilteredAddCategories(filtered);
+  }, [addCategorySearchQuery, availableCategories]);
 
   // Initialize edit form when selectedFolder changes
   useEffect(() => {
@@ -409,9 +426,9 @@ export default function CertificationOperations({
       <Dialog open={isAddingFolder} onOpenChange={setIsAddingFolder}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Folder</DialogTitle>
+            <DialogTitle>Create New Certificate Folder</DialogTitle>
             <DialogDescription>
-              Enter the details for your new folder.
+              Enter the details for your new certificate folder.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddFolder}>
@@ -428,43 +445,82 @@ export default function CertificationOperations({
               </div>
               <div className="space-y-2">
                 <Label>Categories</Label>
-                <div className="flex gap-2">
-                  <Select 
-                    key={categorySelectKey}
-                    onValueChange={(value) => {
-                      if (value === "new") {
-                        setIsAddingCategory(true);
-                      } else if (!selectedCategories.includes(value)) {
-                        setSelectedCategories([...selectedCategories, value]);
-                        setCategorySelectKey(prev => prev + 1);
-                      }
-                    }}
+                <div className="relative w-full">
+                  <button
+                    type="button"
+                    className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white flex items-center gap-2 text-sm"
+                    onClick={() => setIsAddCategoryOpen(!isAddCategoryOpen)}
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="new" className="text-blue-600">
-                        <div className="flex items-center gap-2">
+                    <div className="flex-1 text-left truncate">
+                      <span className="text-gray-600">
+                        {selectedCategories.length > 0
+                          ? `${selectedCategories.length} selected`
+                          : "Select categories"}
+                      </span>
+                    </div>
+                    <svg
+                      className={`h-4 w-4 shrink-0 transition-transform text-gray-500 ${isAddCategoryOpen ? 'rotate-180' : ''}`}
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isAddCategoryOpen && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg overflow-hidden">
+                      <div className="p-2 border-b">
+                        <input
+                          ref={addCategorySearchInputRef}
+                          type="text"
+                          className="w-full h-8 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Search categories..."
+                          value={addCategorySearchQuery}
+                          onChange={(e) => setAddCategorySearchQuery(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      <div className="max-h-48 overflow-auto">
+                        <div 
+                          className="p-2 text-blue-600 hover:bg-blue-50 cursor-pointer flex items-center gap-2"
+                          onClick={() => {
+                            setIsAddingCategory(true);
+                            setIsAddCategoryOpen(false);
+                            setAddCategorySearchQuery("");
+                          }}
+                        >
                           <Plus size={16} />
                           Create new category
                         </div>
-                      </SelectItem>
-                      {availableCategories.map((category) => (
-                        <SelectItem 
-                          key={category.category_id} 
-                          value={category.category_id.toString()}
-                        >
-                          {category.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        {filteredAddCategories.map((category) => (
+                          <div
+                            key={category.category_id}
+                            className="p-2 hover:bg-gray-100 cursor-pointer"
+                            onClick={() => {
+                              if (!selectedCategories.includes(category.category_id.toString())) {
+                                setSelectedCategories([...selectedCategories, category.category_id.toString()]);
+                                setAddCategorySearchQuery("");
+                                setIsAddCategoryOpen(false);
+                              }
+                            }}
+                          >
+                            {category.title}
+                          </div>
+                        ))}
+                        {filteredAddCategories.length === 0 && addCategorySearchQuery && (
+                          <div className="p-2 text-gray-500 text-center text-sm">
+                            No categories found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {selectedCategories.map((categoryId) => {
                     const category = availableCategories.find(
-                      c => c.category_id.toString() === categoryId
+                      (c) => c.category_id.toString() === categoryId
                     );
                     return category ? (
                       <Badge
@@ -476,9 +532,13 @@ export default function CertificationOperations({
                         <button
                           type="button"
                           className="ml-2 hover:text-red-600"
-                          onClick={() => setSelectedCategories(
-                            selectedCategories.filter(id => id !== categoryId)
-                          )}
+                          onClick={() =>
+                            setSelectedCategories(
+                              selectedCategories.filter(
+                                (id) => id !== categoryId
+                              )
+                            )
+                          }
                         >
                           ×
                         </button>

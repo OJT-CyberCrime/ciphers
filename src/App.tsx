@@ -10,8 +10,8 @@ import Cookies from 'js-cookie';
 import { supabase } from "./utils/supa";
 import IncidentReport from "./pages/IncidentReport/index";
 import IncidentReportFile from "./pages/IncidentReportFile/index";
-import Eblotter from './pages/Eblotter';
-import EblotterFile from './pages/eblotter/index';
+import Eblotter from './pages/Eblotter/index';
+import EblotterFile from './pages/eblotterFile/index';
 import WomenChildren from './pages/WomenChildren/index';
 import WomenChildrenFile from './pages/WomenChildrenFile/index';
 import Extraction from "./pages/extraction/index";
@@ -115,7 +115,7 @@ const App: React.FC = () => {
                   <Eblotter />
                 </ProtectedRoute>
               } />
-              <Route path="/eblotter/:id" element={
+              <Route path="/eblotterfile/:id" element={
                 <ProtectedRoute>
                   <EblotterFile />
                 </ProtectedRoute>

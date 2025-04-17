@@ -13,7 +13,7 @@ import {
   SortAsc,
   Info,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 // import {
 //   ContextMenu,
 //   ContextMenuContent,
@@ -116,6 +116,10 @@ export default function IncidentReport() {
   const previousPage = "/dashboard";
   const previousPageName = "Home";
   const [sortCriteria, setSortCriteria] = useState("created_at");
+  const [filterSearchQuery, setFilterSearchQuery] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filteredFilterCategories, setFilteredFilterCategories] = useState<Category[]>([]);
+  const filterSearchInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch folders with their categories from Supabase
   useEffect(() => {
@@ -291,6 +295,14 @@ export default function IncidentReport() {
     </Dialog>
   );
 
+  // Filter categories based on search query for the filter dropdown
+  useEffect(() => {
+    const filtered = availableCategories.filter(category =>
+      category.title.toLowerCase().includes(filterSearchQuery.toLowerCase())
+    );
+    setFilteredFilterCategories(filtered);
+  }, [filterSearchQuery, availableCategories]);
+
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
       <div className="flex flex-col md:flex-row gap-4 mb-4 items-center justify-between">
@@ -300,22 +312,75 @@ export default function IncidentReport() {
           placeholder="Search reports..."
         />
 
-        <Select onValueChange={setFilter} defaultValue="all">
-          <SelectTrigger className="w-full md:w-48 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-            <SelectValue placeholder="Filter by category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {availableCategories.map((category) => (
-              <SelectItem
-                key={category.category_id}
-                value={category.category_id.toString()}
-              >
-                {category.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="relative w-full md:w-48">
+          <button
+            type="button"
+            className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white flex items-center gap-2 text-sm"
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+          >
+            <div className="flex-1 text-left truncate">
+              <span className="text-gray-600">
+                {filter === "all" 
+                  ? "All Categories" 
+                  : availableCategories.find(c => c.category_id.toString() === filter)?.title || "Filter by category"}
+              </span>
+            </div>
+            <svg
+              className={`h-4 w-4 shrink-0 transition-transform text-gray-500 ${isFilterOpen ? 'rotate-180' : ''}`}
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {isFilterOpen && (
+            <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg overflow-hidden">
+              <div className="p-2 border-b">
+                <input
+                  ref={filterSearchInputRef}
+                  type="text"
+                  className="w-full h-8 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Search categories..."
+                  value={filterSearchQuery}
+                  onChange={(e) => setFilterSearchQuery(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+              <div className="max-h-48 overflow-auto">
+                <div
+                  className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                  onClick={() => {
+                    setFilter("all");
+                    setFilterSearchQuery("");
+                    setIsFilterOpen(false);
+                  }}
+                >
+                  All Categories
+                </div>
+                {filteredFilterCategories.map((category) => (
+                  <div
+                    key={category.category_id}
+                    className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                    onClick={() => {
+                      setFilter(category.category_id.toString());
+                      setFilterSearchQuery("");
+                      setIsFilterOpen(false);
+                    }}
+                  >
+                    {category.title}
+                  </div>
+                ))}
+                {filteredFilterCategories.length === 0 && filterSearchQuery && (
+                  <div className="p-2 text-gray-500 text-center text-sm">
+                    No categories found
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         <Select onValueChange={setSortCriteria} defaultValue="created_at">
           <SelectTrigger className="w-full md:w-48 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 flex items-center gap-2">

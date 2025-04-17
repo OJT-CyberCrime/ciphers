@@ -180,7 +180,7 @@ export default function FolderOperations({
             updated_by: null,
             updated_at: null,
             is_archived: false,
-            is_blotter: false,
+            is_blotter: true,
             is_womencase: false,
             is_extraction: false,
           },
