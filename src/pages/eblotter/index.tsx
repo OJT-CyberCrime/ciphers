@@ -93,7 +93,7 @@ const getStatusBadgeClass = (status: string) => {
   }
 };
 
-export default function BlotterReport() {
+export default function Eblotter() {
   const [dialogContent, setDialogContent] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
