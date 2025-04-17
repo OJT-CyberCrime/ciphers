@@ -142,21 +142,20 @@ export default function FolderOperations({
   const handleAddFolder = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
-      // Get the user's ID from the users table using their email
+      const userData = JSON.parse(Cookies.get("user_data") || "{}");
+
       const { data: userData2, error: userError } = await supabase
-        .from('users')
-        .select('user_id')
-        .eq('email', userData.email)
+        .from("users")
+        .select("user_id")
+        .eq("email", userData.email)
         .single();
 
       if (userError) throw userError;
-      if (!userData2) throw new Error('User not found');
+      if (!userData2) throw new Error("User not found");
 
       // Create the folder first
       const { data: folderData, error: folderError } = await supabase
-        .from('folders')
+        .from("folders")
         .insert([
           {
             title: newFolderTitle,
@@ -167,9 +166,32 @@ export default function FolderOperations({
             is_archived: false,
             is_blotter: false,
             is_womencase: true,
-            is_extraction: false
-          }
+            is_extraction: false,
+          },
         ])
+        .select()
+        .single();
+
+      if (folderError) throw folderError;
+      if (!folderData) throw new Error("Failed to create folder");
+
+      // Add categories to folder_categories if any categories were selected
+      if (selectedCategories.length > 0) {
+        const folderCategoriesData = selectedCategories.map((categoryId) => ({
+          folder_id: folderData.folder_id,
+          category_id: parseInt(categoryId),
+        }));
+
+        const { error: categoriesError } = await supabase
+          .from("folder_categories")
+          .insert(folderCategoriesData);
+
+        if (categoriesError) throw categoriesError;
+      }
+
+      // Fetch the complete folder data with categories
+      const { data: newFolderWithCategories, error: fetchError } = await supabase
+        .from('folders')
         .select(`
           *,
           creator:created_by(name),
@@ -183,31 +205,16 @@ export default function FolderOperations({
             )
           )
         `)
+        .eq('folder_id', folderData.folder_id)
         .single();
 
-      if (folderError) throw folderError;
-      if (!folderData) throw new Error('Failed to create folder');
+      if (fetchError) throw fetchError;
 
-      // Add categories to folder_categories if any categories were selected
-      if (selectedCategories.length > 0) {
-        const folderCategoriesData = selectedCategories.map(categoryId => ({
-          folder_id: folderData.folder_id,
-          category_id: parseInt(categoryId)
-        }));
-
-        const { error: categoriesError } = await supabase
-          .from('folder_categories')
-          .insert(folderCategoriesData);
-
-        if (categoriesError) throw categoriesError;
-      }
-
-      // Format the categories data for the UI
       const formattedFolder = {
-        ...folderData,
-        created_by: folderData.creator?.name || folderData.created_by,
-        updated_by: folderData.updater?.name || folderData.updated_by,
-        categories: folderData.categories
+        ...newFolderWithCategories,
+        created_by: newFolderWithCategories.creator?.name || newFolderWithCategories.created_by,
+        updated_by: newFolderWithCategories.updater?.name || newFolderWithCategories.updated_by,
+        categories: newFolderWithCategories.categories
           .map((item: any) => item.categories)
           .filter(Boolean)
       };
@@ -220,7 +227,7 @@ export default function FolderOperations({
       setNewFolderStatus("pending");
       setSelectedCategories([]);
     } catch (error: any) {
-      console.error('Error adding folder:', error);
+      console.error("Error adding folder:", error);
       toast.error(error.message || "Failed to create folder");
     }
   };

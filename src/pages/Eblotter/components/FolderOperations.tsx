@@ -159,7 +159,6 @@ export default function FolderOperations({
     try {
       const userData = JSON.parse(Cookies.get("user_data") || "{}");
 
-      // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
         .from("users")
         .select("user_id")
@@ -185,21 +184,7 @@ export default function FolderOperations({
             is_extraction: false,
           },
         ])
-        .select(
-          `
-          *,
-          creator:created_by(name),
-          updater:updated_by(name),
-          categories:folder_categories(
-            categories(
-              category_id,
-              title,
-              created_by,
-              created_at
-            )
-          )
-        `
-        )
+        .select()
         .single();
 
       if (folderError) throw folderError;
@@ -219,14 +204,34 @@ export default function FolderOperations({
         if (categoriesError) throw categoriesError;
       }
 
-      // Format the categories data for the UI
+      // Fetch the complete folder data with categories
+      const { data: newFolderWithCategories, error: fetchError } = await supabase
+        .from('folders')
+        .select(`
+          *,
+          creator:created_by(name),
+          updater:updated_by(name),
+          categories:folder_categories(
+            categories(
+              category_id,
+              title,
+              created_by,
+              created_at
+            )
+          )
+        `)
+        .eq('folder_id', folderData.folder_id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const formattedFolder = {
-        ...folderData,
-        created_by: folderData.creator?.name || folderData.created_by,
-        updated_by: folderData.updater?.name || folderData.updated_by,
-        categories: folderData.categories
+        ...newFolderWithCategories,
+        created_by: newFolderWithCategories.creator?.name || newFolderWithCategories.created_by,
+        updated_by: newFolderWithCategories.updater?.name || newFolderWithCategories.updated_by,
+        categories: newFolderWithCategories.categories
           .map((item: any) => item.categories)
-          .filter(Boolean),
+          .filter(Boolean)
       };
 
       // Update the UI with the new folder
