@@ -317,6 +317,7 @@ export default function Archives() {
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Show archived folders */}
                   {filteredFolders
                     .filter(
                       (folder) =>
@@ -325,12 +326,15 @@ export default function Archives() {
                         !folder.is_extraction
                     )
                     .map((folder) => (
-                      <tr key={folder.folder_id} className="hover:bg-gray-100">
+                      <tr key={`folder-${folder.folder_id}`} className="hover:bg-gray-100">
                         <td
                           className="px-4 py-2 border-b truncate"
                           style={{ maxWidth: "150px" }}
                         >
-                          {folder.title}
+                          <div className="flex items-center gap-2">
+                            <FolderClosed size={16} className="text-gray-600" />
+                            {folder.title}
+                          </div>
                         </td>
                         <td className="px-4 py-2 border-b">
                           <Badge
@@ -360,12 +364,67 @@ export default function Archives() {
                         </td>
                       </tr>
                     ))}
+                  
+                  {/* Show archived files */}
+                  {sortedFiles
+                    .filter(file => file.file_type === "regular")
+                    .map((file) => (
+                      <tr key={`file-${file.file_id}`} className="hover:bg-gray-100">
+                        <td
+                          className="px-4 py-2 border-b truncate"
+                          style={{ maxWidth: "150px" }}
+                        >
+                          {file.title}
+                          {file.folder_title && (
+                            <div className="text-xs text-gray-500">
+                              in {file.folder_title}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          <Badge variant="outline" className="bg-gray-100">
+                            Archived
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          {file.archived_by}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          {new Date(file.archived_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          <Button
+                            onClick={() =>
+                              setRestoreDialog({ type: "file", item: file })
+                            }
+                            className="bg-blue-900 hover:bg-blue-700"
+                          >
+                            <Undo size={16} className="mr-2" /> Restore
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  
+                  {filteredFolders.length === 0 && sortedFiles.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="text-center py-4 text-gray-500">
+                        <DotLottieReact
+                          src="/assets/NoFiles.lottie"
+                          loop
+                          autoplay
+                          className="w-6/12 mx-auto"
+                        />
+                        No archived items found
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           ) : (
             // Grid view rendering logic
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* Show archived folders */}
               {filteredFolders
                 .filter(
                   (folder) =>
@@ -374,51 +433,109 @@ export default function Archives() {
                     !folder.is_extraction
                 )
                 .map((folder) => (
-                  <div key={folder.folder_id} className="space-y-4">
-                    <ContextMenu>
-                      <ContextMenuTrigger>
-                        <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
-                          <div
-                            className="flex flex-col items-start p-5 cursor-pointer"
+                  <div 
+                    key={`folder-${folder.folder_id}`} 
+                    className="space-y-4"
+                    style={{ willChange: 'transform' }}
+                  >
+                    <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-transform duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                      <div className="flex flex-col items-start p-5">
+                        <div className="flex items-center gap-x-3 w-full">
+                          <FolderClosed
+                            style={{ width: "40px", height: "40px" }}
+                            className="text-gray-600"
+                            fill="#4b5563"
+                          />
+                          <span
+                            className="font-poppins font-medium text-lg text-gray-900 text-left truncate"
+                            style={{
+                              maxWidth: "150px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
                           >
-                            <div className="flex items-center gap-x-3 w-full">
-                              <FolderClosed
-                                style={{ width: "40px", height: "40px" }}
-                                className="text-gray-600"
-                                fill="#4b5563"
-                              />
-                              <span
-                                className="font-poppins font-medium text-lg text-gray-900 text-left truncate"
-                                style={{
-                                  maxWidth: "150px",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}
-                              >
-                                {folder.title}
-                              </span>
-                              <Badge
-                                variant="outline"
-                                className={getStatusBadgeClass(folder.status)}
-                              >
-                                {folder.status}
-                              </Badge>
-                            </div>
-                          </div>
+                            {folder.title}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={getStatusBadgeClass(folder.status)}
+                          >
+                            {folder.status}
+                          </Badge>
                         </div>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem
+                        <Button
                           onClick={() =>
                             setRestoreDialog({ type: "folder", item: folder })
                           }
+                          className="mt-3 w-full bg-blue-900 hover:bg-blue-700"
                         >
                           <Undo size={16} className="mr-2" /> Restore
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 ))}
+
+              {/* Show archived files */}
+              {sortedFiles
+                .filter(file => file.file_type === "regular")
+                .map((file) => (
+                  <div 
+                    key={`file-${file.file_id}`} 
+                    className="space-y-4"
+                    style={{ willChange: 'transform' }}
+                  >
+                    <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-transform duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                      <div className="flex flex-col items-start p-5">
+                        <div className="flex items-center gap-x-3 w-full">
+                          <div className="text-gray-600">
+                            📄
+                          </div>
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span
+                              className="font-poppins font-medium text-lg text-gray-900 text-left truncate"
+                              style={{
+                                maxWidth: "150px",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {file.title}
+                            </span>
+                            {file.folder_title && (
+                              <span className="text-xs text-gray-500">
+                                in {file.folder_title}
+                              </span>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="bg-gray-100">
+                            Archived
+                          </Badge>
+                        </div>
+                        <Button
+                          onClick={() =>
+                            setRestoreDialog({ type: "file", item: file })
+                          }
+                          className="mt-3 w-full bg-blue-900 hover:bg-blue-700"
+                        >
+                          <Undo size={16} className="mr-2" /> Restore
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+              {filteredFolders.length === 0 && sortedFiles.length === 0 && (
+                <div className="col-span-full flex flex-col items-center justify-center h-64">
+                  <DotLottieReact
+                    src="/assets/NoFiles.lottie"
+                    loop
+                    autoplay
+                    className="w-6/12"
+                  />
+                  <p className="text-gray-500">No archived items found</p>
+                </div>
+              )}
             </div>
           )}
         </TabsContent>
@@ -501,15 +618,19 @@ export default function Archives() {
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Show archived folders */}
                   {filteredFolders
                     .filter((folder) => folder.is_womencase)
                     .map((folder) => (
-                      <tr key={folder.folder_id} className="hover:bg-gray-100">
+                      <tr key={`folder-${folder.folder_id}`} className="hover:bg-gray-100">
                         <td
                           className="px-4 py-2 border-b truncate"
                           style={{ maxWidth: "150px" }}
                         >
-                          {folder.title}
+                          <div className="flex items-center gap-2">
+                            <FolderClosed size={16} className="text-gray-600" />
+                            {folder.title}
+                          </div>
                         </td>
                         <td className="px-4 py-2 border-b">
                           <Badge
@@ -523,9 +644,7 @@ export default function Archives() {
                           {folder.archived_by}
                         </td>
                         <td className="px-4 py-2 border-b">
-                          {new Date(
-                            folder.archived_at || ""
-                          ).toLocaleDateString()}
+                          {new Date(folder.archived_at || "").toLocaleDateString()}
                         </td>
                         <td className="px-4 py-2 border-b">
                           <Button
@@ -539,19 +658,57 @@ export default function Archives() {
                         </td>
                       </tr>
                     ))}
+
+                  {/* Show archived files */}
+                  {sortedFiles
+                    .filter(file => file.file_type === "womenchildren")
+                    .map((file) => (
+                      <tr key={`file-${file.file_id}`} className="hover:bg-gray-100">
+                        <td
+                          className="px-4 py-2 border-b truncate"
+                          style={{ maxWidth: "150px" }}
+                        >
+                          {file.title}
+                          {file.folder_title && (
+                            <div className="text-xs text-gray-500">
+                              in {file.folder_title}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          <Badge variant="outline" className="bg-gray-100">
+                            Archived
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          {file.archived_by}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          {new Date(file.archived_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          <Button
+                            onClick={() =>
+                              setRestoreDialog({ type: "file", item: file })
+                            }
+                            className="bg-blue-900 hover:bg-blue-700"
+                          >
+                            <Undo size={16} className="mr-2" /> Restore
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+
                   {filteredFolders.length === 0 && sortedFiles.length === 0 && (
                     <tr>
-                      <td
-                        colSpan={5}
-                        className="text-center py-4 text-gray-500"
-                      >
+                      <td colSpan={5} className="text-center py-4 text-gray-500">
                         <DotLottieReact
                           src="/assets/NoFiles.lottie"
                           loop
                           autoplay
                           className="w-6/12 mx-auto"
                         />
-                        No archived files found
+                        No archived items found
                       </td>
                     </tr>
                   )}
@@ -560,73 +717,111 @@ export default function Archives() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* Show archived folders */}
               {filteredFolders
                 .filter((folder) => folder.is_womencase)
                 .map((folder) => (
-                  <div key={folder.folder_id} className="space-y-4">
-                    <ContextMenu>
-                      <ContextMenuTrigger>
-                        <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
-                          <div
-                            className="flex flex-col items-start p-5 cursor-pointer"
+                  <div 
+                    key={`folder-${folder.folder_id}`} 
+                    className="space-y-4"
+                    style={{ willChange: 'transform' }}
+                  >
+                    <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-transform duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                      <div className="flex flex-col items-start p-5">
+                        <div className="flex items-center gap-x-3 w-full">
+                          <FolderClosed
+                            style={{ width: "40px", height: "40px" }}
+                            className="text-gray-600"
+                            fill="#4b5563"
+                          />
+                          <span
+                            className="font-poppins font-medium text-lg text-gray-900 text-left truncate"
+                            style={{
+                              maxWidth: "150px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
                           >
-                            <div className="flex items-center gap-x-3 w-full">
-                              <FolderClosed
-                                style={{ width: "40px", height: "40px" }}
-                                className="text-gray-600"
-                                fill="#4b5563"
-                              />
-                              <span
-                                className="font-poppins font-medium text-lg text-gray-900 text-left truncate"
-                                style={{
-                                  maxWidth: "150px",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}
-                              >
-                                {folder.title}
-                              </span>
-                              <Badge
-                                variant="outline"
-                                className={getStatusBadgeClass(folder.status)}
-                              >
-                                {folder.status}
-                              </Badge>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-2">
-                              Archived by{" "}
-                              <span className="text-blue-600">
-                                {folder.archived_by}
-                              </span>{" "}
-                              on{" "}
-                              {new Date(
-                                folder.archived_at || ""
-                              ).toLocaleDateString()}
-                            </div>
-                          </div>
+                            {folder.title}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={getStatusBadgeClass(folder.status)}
+                          >
+                            {folder.status}
+                          </Badge>
                         </div>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem
+                        <Button
                           onClick={() =>
                             setRestoreDialog({ type: "folder", item: folder })
                           }
+                          className="mt-3 w-full bg-blue-900 hover:bg-blue-700"
                         >
                           <Undo size={16} className="mr-2" /> Restore
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 ))}
+
+              {/* Show archived files */}
+              {sortedFiles
+                .filter(file => file.file_type === "womenchildren")
+                .map((file) => (
+                  <div 
+                    key={`file-${file.file_id}`} 
+                    className="space-y-4"
+                    style={{ willChange: 'transform' }}
+                  >
+                    <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-transform duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                      <div className="flex flex-col items-start p-5">
+                        <div className="flex items-center gap-x-3 w-full">
+                          <div className="text-gray-600">
+                            📄
+                          </div>
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span
+                              className="font-poppins font-medium text-lg text-gray-900 text-left truncate"
+                              style={{
+                                maxWidth: "150px",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {file.title}
+                            </span>
+                            {file.folder_title && (
+                              <span className="text-xs text-gray-500">
+                                in {file.folder_title}
+                              </span>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="bg-gray-100">
+                            Archived
+                          </Badge>
+                        </div>
+                        <Button
+                          onClick={() =>
+                            setRestoreDialog({ type: "file", item: file })
+                          }
+                          className="mt-3 w-full bg-blue-900 hover:bg-blue-700"
+                        >
+                          <Undo size={16} className="mr-2" /> Restore
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
               {filteredFolders.length === 0 && sortedFiles.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 font-poppins">
+                <div className="col-span-full flex flex-col items-center justify-center h-64">
                   <DotLottieReact
                     src="/assets/NoFiles.lottie"
                     loop
                     autoplay
                     className="w-6/12"
                   />
-                  <p>No archived files found</p>
+                  <p className="text-gray-500">No archived items found</p>
                 </div>
               )}
             </div>
@@ -711,15 +906,19 @@ export default function Archives() {
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Show archived folders */}
                   {filteredFolders
                     .filter((folder) => folder.is_extraction)
                     .map((folder) => (
-                      <tr key={folder.folder_id} className="hover:bg-gray-100">
+                      <tr key={`folder-${folder.folder_id}`} className="hover:bg-gray-100">
                         <td
                           className="px-4 py-2 border-b truncate"
                           style={{ maxWidth: "150px" }}
                         >
-                          {folder.title}
+                          <div className="flex items-center gap-2">
+                            <FolderClosed size={16} className="text-gray-600" />
+                            {folder.title}
+                          </div>
                         </td>
                         <td className="px-4 py-2 border-b">
                           <Badge
@@ -733,9 +932,7 @@ export default function Archives() {
                           {folder.archived_by}
                         </td>
                         <td className="px-4 py-2 border-b">
-                          {new Date(
-                            folder.archived_at || ""
-                          ).toLocaleDateString()}
+                          {new Date(folder.archived_at || "").toLocaleDateString()}
                         </td>
                         <td className="px-4 py-2 border-b">
                           <Button
@@ -749,19 +946,57 @@ export default function Archives() {
                         </td>
                       </tr>
                     ))}
+
+                  {/* Show archived files */}
+                  {sortedFiles
+                    .filter(file => file.file_type === "extraction")
+                    .map((file) => (
+                      <tr key={`file-${file.file_id}`} className="hover:bg-gray-100">
+                        <td
+                          className="px-4 py-2 border-b truncate"
+                          style={{ maxWidth: "150px" }}
+                        >
+                          {file.title}
+                          {file.folder_title && (
+                            <div className="text-xs text-gray-500">
+                              in {file.folder_title}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          <Badge variant="outline" className="bg-gray-100">
+                            Archived
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          {file.archived_by}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          {new Date(file.archived_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          <Button
+                            onClick={() =>
+                              setRestoreDialog({ type: "file", item: file })
+                            }
+                            className="bg-blue-900 hover:bg-blue-700"
+                          >
+                            <Undo size={16} className="mr-2" /> Restore
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+
                   {filteredFolders.length === 0 && sortedFiles.length === 0 && (
                     <tr>
-                      <td
-                        colSpan={5}
-                        className="text-center py-4 text-gray-500"
-                      >
+                      <td colSpan={5} className="text-center py-4 text-gray-500">
                         <DotLottieReact
                           src="/assets/NoFiles.lottie"
                           loop
                           autoplay
                           className="w-6/12 mx-auto"
                         />
-                        No archived files found
+                        No archived items found
                       </td>
                     </tr>
                   )}
@@ -770,73 +1005,111 @@ export default function Archives() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* Show archived folders */}
               {filteredFolders
                 .filter((folder) => folder.is_extraction)
                 .map((folder) => (
-                  <div key={folder.folder_id} className="space-y-4">
-                    <ContextMenu>
-                      <ContextMenuTrigger>
-                        <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
-                          <div
-                            className="flex flex-col items-start p-5 cursor-pointer"
+                  <div 
+                    key={`folder-${folder.folder_id}`} 
+                    className="space-y-4"
+                    style={{ willChange: 'transform' }}
+                  >
+                    <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-transform duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                      <div className="flex flex-col items-start p-5">
+                        <div className="flex items-center gap-x-3 w-full">
+                          <FolderClosed
+                            style={{ width: "40px", height: "40px" }}
+                            className="text-gray-600"
+                            fill="#4b5563"
+                          />
+                          <span
+                            className="font-poppins font-medium text-lg text-gray-900 text-left truncate"
+                            style={{
+                              maxWidth: "150px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
                           >
-                            <div className="flex items-center gap-x-3 w-full">
-                              <FolderClosed
-                                style={{ width: "40px", height: "40px" }}
-                                className="text-gray-600"
-                                fill="#4b5563"
-                              />
-                              <span
-                                className="font-poppins font-medium text-lg text-gray-900 text-left truncate"
-                                style={{
-                                  maxWidth: "150px",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}
-                              >
-                                {folder.title}
-                              </span>
-                              <Badge
-                                variant="outline"
-                                className={getStatusBadgeClass(folder.status)}
-                              >
-                                {folder.status}
-                              </Badge>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-2">
-                              Archived by{" "}
-                              <span className="text-blue-600">
-                                {folder.archived_by}
-                              </span>{" "}
-                              on{" "}
-                              {new Date(
-                                folder.archived_at || ""
-                              ).toLocaleDateString()}
-                            </div>
-                          </div>
+                            {folder.title}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={getStatusBadgeClass(folder.status)}
+                          >
+                            {folder.status}
+                          </Badge>
                         </div>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem
+                        <Button
                           onClick={() =>
                             setRestoreDialog({ type: "folder", item: folder })
                           }
+                          className="mt-3 w-full bg-blue-900 hover:bg-blue-700"
                         >
                           <Undo size={16} className="mr-2" /> Restore
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 ))}
+
+              {/* Show archived files */}
+              {sortedFiles
+                .filter(file => file.file_type === "extraction")
+                .map((file) => (
+                  <div 
+                    key={`file-${file.file_id}`} 
+                    className="space-y-4"
+                    style={{ willChange: 'transform' }}
+                  >
+                    <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-transform duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                      <div className="flex flex-col items-start p-5">
+                        <div className="flex items-center gap-x-3 w-full">
+                          <div className="text-gray-600">
+                            📄
+                          </div>
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span
+                              className="font-poppins font-medium text-lg text-gray-900 text-left truncate"
+                              style={{
+                                maxWidth: "150px",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {file.title}
+                            </span>
+                            {file.folder_title && (
+                              <span className="text-xs text-gray-500">
+                                in {file.folder_title}
+                              </span>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="bg-gray-100">
+                            Archived
+                          </Badge>
+                        </div>
+                        <Button
+                          onClick={() =>
+                            setRestoreDialog({ type: "file", item: file })
+                          }
+                          className="mt-3 w-full bg-blue-900 hover:bg-blue-700"
+                        >
+                          <Undo size={16} className="mr-2" /> Restore
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
               {filteredFolders.length === 0 && sortedFiles.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 font-poppins">
+                <div className="col-span-full flex flex-col items-center justify-center h-64">
                   <DotLottieReact
                     src="/assets/NoFiles.lottie"
                     loop
                     autoplay
                     className="w-6/12"
                   />
-                  <p>No archived files found</p>
+                  <p className="text-gray-500">No archived items found</p>
                 </div>
               )}
             </div>
@@ -921,15 +1194,19 @@ export default function Archives() {
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Show archived folders */}
                   {filteredFolders
                     .filter((folder) => folder.is_blotter)
                     .map((folder) => (
-                      <tr key={folder.folder_id} className="hover:bg-gray-100">
+                      <tr key={`folder-${folder.folder_id}`} className="hover:bg-gray-100">
                         <td
                           className="px-4 py-2 border-b truncate"
                           style={{ maxWidth: "150px" }}
                         >
-                          {folder.title}
+                          <div className="flex items-center gap-2">
+                            <FolderClosed size={16} className="text-gray-600" />
+                            {folder.title}
+                          </div>
                         </td>
                         <td className="px-4 py-2 border-b">
                           <Badge
@@ -943,9 +1220,7 @@ export default function Archives() {
                           {folder.archived_by}
                         </td>
                         <td className="px-4 py-2 border-b">
-                          {new Date(
-                            folder.archived_at || ""
-                          ).toLocaleDateString()}
+                          {new Date(folder.archived_at || "").toLocaleDateString()}
                         </td>
                         <td className="px-4 py-2 border-b">
                           <Button
@@ -959,19 +1234,57 @@ export default function Archives() {
                         </td>
                       </tr>
                     ))}
-                  {filteredFolders.length === 0 && (
+
+                  {/* Show archived files */}
+                  {sortedFiles
+                    .filter(file => file.file_type === "eblotter")
+                    .map((file) => (
+                      <tr key={`file-${file.file_id}`} className="hover:bg-gray-100">
+                        <td
+                          className="px-4 py-2 border-b truncate"
+                          style={{ maxWidth: "150px" }}
+                        >
+                          {file.title}
+                          {file.folder_title && (
+                            <div className="text-xs text-gray-500">
+                              in {file.folder_title}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          <Badge variant="outline" className="bg-gray-100">
+                            Archived
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          {file.archived_by}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          {new Date(file.archived_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          <Button
+                            onClick={() =>
+                              setRestoreDialog({ type: "file", item: file })
+                            }
+                            className="bg-blue-900 hover:bg-blue-700"
+                          >
+                            <Undo size={16} className="mr-2" /> Restore
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+
+                  {filteredFolders.length === 0 && sortedFiles.length === 0 && (
                     <tr>
-                      <td
-                        colSpan={5}
-                        className="text-center py-4 text-gray-500"
-                      >
+                      <td colSpan={5} className="text-center py-4 text-gray-500">
                         <DotLottieReact
                           src="/assets/NoFiles.lottie"
                           loop
                           autoplay
                           className="w-6/12 mx-auto"
                         />
-                        No archived files found
+                        No archived items found
                       </td>
                     </tr>
                   )}
@@ -980,73 +1293,111 @@ export default function Archives() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* Show archived folders */}
               {filteredFolders
                 .filter((folder) => folder.is_blotter)
                 .map((folder) => (
-                  <div key={folder.folder_id} className="space-y-4">
-                    <ContextMenu>
-                      <ContextMenuTrigger>
-                        <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:bg-gray-100 w-full">
-                          <div
-                            className="flex flex-col items-start p-5 cursor-pointer"
+                  <div 
+                    key={`folder-${folder.folder_id}`} 
+                    className="space-y-4"
+                    style={{ willChange: 'transform' }}
+                  >
+                    <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-transform duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                      <div className="flex flex-col items-start p-5">
+                        <div className="flex items-center gap-x-3 w-full">
+                          <FolderClosed
+                            style={{ width: "40px", height: "40px" }}
+                            className="text-gray-600"
+                            fill="#4b5563"
+                          />
+                          <span
+                            className="font-poppins font-medium text-lg text-gray-900 text-left truncate"
+                            style={{
+                              maxWidth: "150px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
                           >
-                            <div className="flex items-center gap-x-3 w-full">
-                              <FolderClosed
-                                style={{ width: "40px", height: "40px" }}
-                                className="text-gray-600"
-                                fill="#4b5563"
-                              />
-                              <span
-                                className="font-poppins font-medium text-lg text-gray-900 text-left truncate"
-                                style={{
-                                  maxWidth: "150px",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}
-                              >
-                                {folder.title}
-                              </span>
-                              <Badge
-                                variant="outline"
-                                className={getStatusBadgeClass(folder.status)}
-                              >
-                                {folder.status}
-                              </Badge>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-2">
-                              Archived by{" "}
-                              <span className="text-blue-600">
-                                {folder.archived_by}
-                              </span>{" "}
-                              on{" "}
-                              {new Date(
-                                folder.archived_at || ""
-                              ).toLocaleDateString()}
-                            </div>
-                          </div>
+                            {folder.title}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={getStatusBadgeClass(folder.status)}
+                          >
+                            {folder.status}
+                          </Badge>
                         </div>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem
+                        <Button
                           onClick={() =>
                             setRestoreDialog({ type: "folder", item: folder })
                           }
+                          className="mt-3 w-full bg-blue-900 hover:bg-blue-700"
                         >
                           <Undo size={16} className="mr-2" /> Restore
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 ))}
-              {filteredFolders.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-64">
+
+              {/* Show archived files */}
+              {sortedFiles
+                .filter(file => file.file_type === "eblotter")
+                .map((file) => (
+                  <div 
+                    key={`file-${file.file_id}`} 
+                    className="space-y-4"
+                    style={{ willChange: 'transform' }}
+                  >
+                    <div className="flex flex-col bg-white border border-gray-300 rounded-xl shadow-sm transition-transform duration-200 hover:shadow-md hover:bg-gray-100 w-full">
+                      <div className="flex flex-col items-start p-5">
+                        <div className="flex items-center gap-x-3 w-full">
+                          <div className="text-gray-600">
+                            📄
+                          </div>
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span
+                              className="font-poppins font-medium text-lg text-gray-900 text-left truncate"
+                              style={{
+                                maxWidth: "150px",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {file.title}
+                            </span>
+                            {file.folder_title && (
+                              <span className="text-xs text-gray-500">
+                                in {file.folder_title}
+                              </span>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="bg-gray-100">
+                            Archived
+                          </Badge>
+                        </div>
+                        <Button
+                          onClick={() =>
+                            setRestoreDialog({ type: "file", item: file })
+                          }
+                          className="mt-3 w-full bg-blue-900 hover:bg-blue-700"
+                        >
+                          <Undo size={16} className="mr-2" /> Restore
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+              {filteredFolders.length === 0 && sortedFiles.length === 0 && (
+                <div className="col-span-full flex flex-col items-center justify-center h-64">
                   <DotLottieReact
                     src="/assets/NoFiles.lottie"
                     loop
                     autoplay
                     className="w-6/12"
                   />
-                  <p className="text-gray-500">No archived files found</p>
+                  <p className="text-gray-500">No archived items found</p>
                 </div>
               )}
             </div>

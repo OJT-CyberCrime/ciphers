@@ -92,25 +92,22 @@ export const fetchArchivedContent = async () => {
       })
     );
 
-    // Fetch archived files from all tables
+    // Fetch all archived files from all tables
     const [
       { data: regularFiles, error: regularFilesError },
       { data: eblotterFiles, error: eblotterError },
       { data: extractionFiles, error: extractionError },
       { data: womenchildrenFiles, error: womenchildrenError }
     ] = await Promise.all([
-      // Regular files from non-archived folders
+      // Regular files - get all archived files and their folder info
       supabase
         .from('files')
         .select(`
           *,
           updater:updated_by(name),
-          folders:folders!folder_id(title)
+          folders:folders!folder_id(title, is_archived)
         `)
-        .eq('is_archived', true)
-        .not('folder_id', 'in', (foldersData || []).map(f => f.folder_id).length > 0 
-          ? `(${(foldersData || []).map(f => f.folder_id).join(',')})` 
-          : '(0)'),
+        .eq('is_archived', true),
       
       // E-blotter files
       supabase
@@ -118,7 +115,7 @@ export const fetchArchivedContent = async () => {
         .select(`
           *,
           updater:updated_by(name),
-          folders:folders!folder_id(title)
+          folders:folders!folder_id(title, is_archived)
         `)
         .eq('is_archived', true),
       
@@ -128,7 +125,7 @@ export const fetchArchivedContent = async () => {
         .select(`
           *,
           updater:updated_by(name),
-          folders:folders!folder_id(title)
+          folders:folders!folder_id(title, is_archived)
         `)
         .eq('is_archived', true),
       
@@ -138,7 +135,7 @@ export const fetchArchivedContent = async () => {
         .select(`
           *,
           updater:updated_by(name),
-          folders:folders!folder_id(title)
+          folders:folders!folder_id(title, is_archived)
         `)
         .eq('is_archived', true)
     ]);
@@ -150,42 +147,50 @@ export const fetchArchivedContent = async () => {
 
     // Transform and combine all files
     const allFiles = [
-      ...(regularFiles || []).map((file: any) => ({
-        file_id: file.file_id,
-        title: file.title,
-        folder_id: file.folder_id,
-        folder_title: file.folders?.title || 'No Folder',
-        archived_by: file.updater?.name || file.updated_by,
-        archived_at: file.updated_at,
-        file_type: 'regular' as const
-      })),
-      ...(eblotterFiles || []).map((file: any) => ({
-        file_id: file.file_id,
-        title: file.title,
-        folder_id: file.folder_id,
-        folder_title: file.folders?.title || 'No Folder',
-        archived_by: file.updater?.name || file.updated_by,
-        archived_at: file.updated_at,
-        file_type: 'eblotter' as const
-      })),
-      ...(extractionFiles || []).map((file: any) => ({
-        file_id: file.extraction_id,
-        title: file.title,
-        folder_id: file.folder_id,
-        folder_title: file.folders?.title || 'No Folder',
-        archived_by: file.updater?.name || file.updated_by,
-        archived_at: file.updated_at,
-        file_type: 'extraction' as const
-      })),
-      ...(womenchildrenFiles || []).map((file: any) => ({
-        file_id: file.file_id,
-        title: file.title,
-        folder_id: file.folder_id,
-        folder_title: file.folders?.title || 'No Folder',
-        archived_by: file.updater?.name || file.updated_by,
-        archived_at: file.updated_at,
-        file_type: 'womenchildren' as const
-      }))
+      ...(regularFiles || [])
+        .filter((file: any) => !file.folders?.is_archived) // Only include files from non-archived folders
+        .map((file: any) => ({
+          file_id: file.file_id,
+          title: file.title,
+          folder_id: file.folder_id,
+          folder_title: file.folders?.title || 'No Folder',
+          archived_by: file.updater?.name || file.updated_by,
+          archived_at: file.updated_at,
+          file_type: 'regular' as const
+        })),
+      ...(eblotterFiles || [])
+        .filter((file: any) => !file.folders?.is_archived)
+        .map((file: any) => ({
+          file_id: file.file_id,
+          title: file.title,
+          folder_id: file.folder_id,
+          folder_title: file.folders?.title || 'No Folder',
+          archived_by: file.updater?.name || file.updated_by,
+          archived_at: file.updated_at,
+          file_type: 'eblotter' as const
+        })),
+      ...(extractionFiles || [])
+        .filter((file: any) => !file.folders?.is_archived)
+        .map((file: any) => ({
+          file_id: file.extraction_id,
+          title: file.title,
+          folder_id: file.folder_id,
+          folder_title: file.folders?.title || 'No Folder',
+          archived_by: file.updater?.name || file.updated_by,
+          archived_at: file.updated_at,
+          file_type: 'extraction' as const
+        })),
+      ...(womenchildrenFiles || [])
+        .filter((file: any) => !file.folders?.is_archived)
+        .map((file: any) => ({
+          file_id: file.file_id,
+          title: file.title,
+          folder_id: file.folder_id,
+          folder_title: file.folders?.title || 'No Folder',
+          archived_by: file.updater?.name || file.updated_by,
+          archived_at: file.updated_at,
+          file_type: 'womenchildren' as const
+        }))
     ];
 
     return {
