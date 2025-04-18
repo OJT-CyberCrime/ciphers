@@ -251,160 +251,160 @@ const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
   };
 
   return (
-<div className="flex flex-col min-h-screen md:flex-row md:h-screen md:overflow-hidden font-poppins">
-  {/* Top Section (Mobile) / Left Section (Desktop) - PNP Background */}
-  <div className="h-64 md:h-full md:w-1/2 relative bg-blue-900 order-1 md:order-none">
-    <img
-      src="/assets/PNP.webp"
-      alt="PNP"
-      className="object-cover h-full w-full opacity-40"
-    />
-    <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4 md:space-y-8 p-4">
-      <img
-        src="/assets/RACU.png"
-        alt="RACU Logo"
-        className="w-20 h-20 md:w-40 md:h-40 drop-shadow-2xl"
-      />
-      <div className="text-center space-y-2 md:space-y-4">
-        <p className="text-lg md:text-2xl font-medium text-white font-poppins max-w-md mx-auto text-center drop-shadow-[3px_3px_2px_rgba(0,0,0,0.5)]">
-          Camarines Sur Provincial <br />
-          <span className="text-white drop-shadow-[3px_3px_2px_rgba(0,0,0,0.5)]">
-            Cyber Response Team
-          </span>
-        </p>
-      </div>
-    </div>
-  </div>
-
-  {/* Bottom Section (Mobile) / Right Section (Desktop) - Login Form */}
-  <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 bg-gray-50 order-2 md:order-none">
-    {errorMessage && (
-      <Alert variant="destructive" className="mb-6 w-full max-w-md">
-        {errorMessage}
-        {remainingTime > 0 && (
-          <div>
-            <p>Time remaining: {Math.ceil(remainingTime)} seconds</p>
-          </div>
-        )}
-      </Alert>
-    )}
-
-    <div className="w-full max-w-md space-y-6">
-      <div className="text-left space-y-2 mb-6 md:mb-8">
-        <h2 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-900 to-blue-700 font-poppins">
-          Welcome to CRIMS
-        </h2>
-        <p className="text-sm font-medium text-gray-600 font-poppins">
-          Cybercrime Records and Incident Management System
-        </p>
-      </div>
-
-      {/* Rest of your login form content remains the same */}
-      {showTwoFactorSetup ? (
-        <TwoFactorSetup
-          userEmail={tempUserData?.email || ''}
-          onVerificationComplete={handleTwoFactorSetupComplete}
-          onCancel={() => {
-            setShowTwoFactorSetup(false);
-            setTempAuthData(null);
-            setTempUserData(null);
-          }}
+    <div className="flex flex-col min-h-screen md:flex-row md:h-screen md:overflow-hidden font-poppins">
+      {/* Top Section (Mobile) / Left Section (Desktop) - PNP Background */}
+      <div className="h-64 md:h-full md:w-1/2 relative bg-blue-900 order-1 md:order-none">
+        <img
+          src="/assets/PNP.webp"
+          alt="PNP"
+          className="object-cover h-full w-full opacity-40"
         />
-      ) : showTwoFactorVerify ? (
-        <>
-          {showTwoFactorReset ? (
-            <TwoFactorReset
-              onCancel={() => setShowTwoFactorReset(false)}
-            />
-          ) : (
-            <TwoFactorVerify
+        <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4 md:space-y-8 p-4">
+          <img
+            src="/assets/RACU.png"
+            alt="RACU Logo"
+            className="w-20 h-20 md:w-40 md:h-40 drop-shadow-2xl"
+          />
+          <div className="text-center space-y-2 md:space-y-4">
+            <p className="text-lg md:text-2xl font-medium text-white font-poppins max-w-md mx-auto text-center drop-shadow-[3px_3px_2px_rgba(0,0,0,0.5)]">
+              Camarines Sur Provincial <br />
+              <span className="text-white drop-shadow-[3px_3px_2px_rgba(0,0,0,0.5)]">
+                Cyber Response Team
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Section (Mobile) / Right Section (Desktop) - Login Form */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 bg-gray-50 order-2 md:order-none">
+        {errorMessage && (
+          <Alert variant="destructive" className="mb-6 w-full max-w-md">
+            {errorMessage}
+            {remainingTime > 0 && (
+              <div>
+                <p>Time remaining: {Math.ceil(remainingTime)} seconds</p>
+              </div>
+            )}
+          </Alert>
+        )}
+
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-left space-y-2 mb-6 md:mb-8">
+            <h2 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-900 to-blue-700 font-poppins">
+              Welcome to CRIMS
+            </h2>
+            <p className="text-sm font-medium text-gray-600 font-poppins">
+              Cybercrime Records and Incident Management System
+            </p>
+          </div>
+
+          {/* Rest of your login form content remains the same */}
+          {showTwoFactorSetup ? (
+            <TwoFactorSetup
               userEmail={tempUserData?.email || ''}
-              secret={twoFactorSecret || ''}
-              onVerificationComplete={handleTwoFactorVerifyComplete}
+              onVerificationComplete={handleTwoFactorSetupComplete}
               onCancel={() => {
-                setShowTwoFactorVerify(false);
+                setShowTwoFactorSetup(false);
                 setTempAuthData(null);
                 setTempUserData(null);
-                setTwoFactorSecret(null);
               }}
-            >
-              <Button
-                type="button"
-                variant="link"
-                className="mt-4 text-sm text-blue-600"
-                onClick={() => setShowTwoFactorReset(true)}
-              >
-                Lost access to your authenticator app?
-              </Button>
-            </TwoFactorVerify>
-          )}
-        </>
-      ) : (
-        <form onSubmit={handleLogin} className="space-y-6">
-          <Input
-            type="email"
-            placeholder="Enter Email Address"
-            className="p-4 text-lg h-12 w-full border border-gray-300 rounded-lg font-poppins focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-          />
-          <div className="relative">
-            <Input
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter Password"
-              className="p-4 text-lg h-12 w-full border border-gray-300 rounded-lg font-poppins focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              onMouseEnter={() => setShowPassword(true)}
-              onMouseLeave={() => setShowPassword(false)}
-              className="absolute inset-y-0 right-0 flex items-center pr-3"
-            >
-              {showPassword ? (
-                <EyeOff className="h-5 w-5 text-gray-500" />
+          ) : showTwoFactorVerify ? (
+            <>
+              {showTwoFactorReset ? (
+                <TwoFactorReset
+                  onCancel={() => setShowTwoFactorReset(false)}
+                />
               ) : (
-                <Eye className="h-5 w-5 text-gray-500" />
+                <TwoFactorVerify
+                  userEmail={tempUserData?.email || ''}
+                  secret={twoFactorSecret || ''}
+                  onVerificationComplete={handleTwoFactorVerifyComplete}
+                  onCancel={() => {
+                    setShowTwoFactorVerify(false);
+                    setTempAuthData(null);
+                    setTempUserData(null);
+                    setTwoFactorSecret(null);
+                  }}
+                >
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="mt-4 text-sm text-blue-600"
+                    onClick={() => setShowTwoFactorReset(true)}
+                  >
+                    Lost access to your authenticator app?
+                  </Button>
+                </TwoFactorVerify>
               )}
-            </button>
-          </div>
-          <Button
-            type="submit"
-            className="w-full bg-blue-900 text-white p-4 text-lg h-12 rounded-lg hover:bg-blue-800 transition-all duration-300 font-poppins flex items-center justify-center"
-            disabled={isLoading || retryTimeout !== null}
-          >
-            {isLoading ? (
-              <Loader className="animate-spin h-5 w-5 mr-2" />
-            ) : null}
-            {isLoading ? "Verifying..." : "Log In"}
-          </Button>
-          <div className="flex justify-center">
-            <HCaptcha
-              sitekey="2028db5a-e45c-418a-bb88-cd600e04402c"
-              onVerify={handleVerificationSuccess}
-              ref={captchaRef}
-            />
-          </div>
-        </form>
-      )}
+            </>
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-6">
+              <Input
+                type="email"
+                placeholder="Enter Email Address"
+                className="p-4 text-lg h-12 w-full border border-gray-300 rounded-lg font-poppins focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter Password"
+                  className="p-4 text-lg h-12 w-full border border-gray-300 rounded-lg font-poppins focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  onMouseEnter={() => setShowPassword(true)}
+                  onMouseLeave={() => setShowPassword(false)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-gray-500" />
+                  )}
+                </button>
+              </div>
+              <div className="flex justify-center">
+                <HCaptcha
+                  sitekey="2028db5a-e45c-418a-bb88-cd600e04402c"
+                  onVerify={handleVerificationSuccess}
+                  ref={captchaRef}
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-blue-900 text-white p-4 text-lg h-12 rounded-lg hover:bg-blue-800 transition-all duration-300 font-poppins flex items-center justify-center"
+                disabled={isLoading || retryTimeout !== null}
+              >
+                {isLoading ? (
+                  <Loader className="animate-spin h-5 w-5 mr-2" />
+                ) : null}
+                {isLoading ? "Verifying..." : "Log In"}
+              </Button>
+            </form>
+          )}
 
-      <div className="flex justify-center mt-4">
-        <Button
-          type="button"
-          className="flex items-center space-x-2 bg-blue-900 text-white p-4 rounded-lg hover:bg-blue-800 transition-all duration-300 font-poppins"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <ShieldCheckIcon className="w-5 h-5" />
-          <span>Data Privacy Notice</span>
-        </Button>
+          <div className="flex justify-center mt-4">
+            <Button
+              type="button"
+              className="flex items-center space-x-2 bg-blue-900 text-white p-4 rounded-lg hover:bg-blue-800 transition-all duration-300 font-poppins"
+              onClick={() => setIsModalOpen(true)}
+            >
+              <ShieldCheckIcon className="w-5 h-5" />
+              <span>Data Privacy Notice</span>
+            </Button>
+          </div>
+        </div>
+        <DataPrivacyModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
       </div>
     </div>
-    <DataPrivacyModal
-      isOpen={isModalOpen}
-      onClose={() => setIsModalOpen(false)}
-    />
-  </div>
-</div>
   );
 };
 

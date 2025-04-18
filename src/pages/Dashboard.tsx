@@ -171,6 +171,7 @@ interface FileCreator {
   created_by: string;
   creator: {
     name: string;
+    public_url: string | null;
   } | null;
 }
 
@@ -239,7 +240,7 @@ export default function Dashboard() {
     [] as { day: string; total: number }[]
   );
   const [officerData, setOfficerData] = useState(
-    [] as { officer: string; filesUploaded: number }[]
+    [] as { officer: string; filesUploaded: number; public_url: string | null }[]
   );
   const [totalRegularFiles, setTotalRegularFiles] = useState(0);
   const [totalEblotterFiles, setTotalEblotterFiles] = useState(0);
@@ -675,25 +676,25 @@ export default function Dashboard() {
         ] = await Promise.all([
           supabase
             .from("files")
-            .select("created_by, creator:users!created_by(name)")
+            .select("created_by, creator:users!created_by(name, public_url)")
             .gte("created_at", startOfMonth)
             .lte("created_at", endOfMonth)
             .then(({ data }) => (data || []) as unknown as FileCreator[]),
           supabase
             .from("eblotter_file")
-            .select("created_by, creator:users!created_by(name)")
+            .select("created_by, creator:users!created_by(name, public_url)")
             .gte("created_at", startOfMonth)
             .lte("created_at", endOfMonth)
             .then(({ data }) => (data || []) as unknown as FileCreator[]),
           supabase
             .from("womenchildren_file")
-            .select("created_by, creator:users!created_by(name)")
+            .select("created_by, creator:users!created_by(name, public_url)")
             .gte("created_at", startOfMonth)
             .lte("created_at", endOfMonth)
             .then(({ data }) => (data || []) as unknown as FileCreator[]),
           supabase
             .from("extraction")
-            .select("created_by, creator:users!created_by(name)")
+            .select("created_by, creator:users!created_by(name, public_url)")
             .gte("created_at", startOfMonth)
             .lte("created_at", endOfMonth)
             .then(({ data }) => (data || []) as unknown as FileCreator[]),
@@ -707,19 +708,28 @@ export default function Dashboard() {
           ...extractionFiles,
         ];
 
-        const officerCounts = new Map<string, number>();
+        const officerCounts = new Map<string, { filesUploaded: number; public_url: string | null }>();
 
         allFiles.forEach((file) => {
           const officerName = file.creator?.name || "Unknown";
+          const publicUrl = file.creator?.public_url || null;
+          const currentCount = officerCounts.get(officerName) || { filesUploaded: 0, public_url: publicUrl };
           officerCounts.set(
             officerName,
-            (officerCounts.get(officerName) || 0) + 1
+            { 
+              filesUploaded: currentCount.filesUploaded + 1,
+              public_url: publicUrl
+            }
           );
         });
 
         // Convert to array and sort by number of files
         const sortedOfficers = Array.from(officerCounts.entries())
-          .map(([officer, filesUploaded]) => ({ officer, filesUploaded }))
+          .map(([officer, data]) => ({ 
+            officer, 
+            filesUploaded: data.filesUploaded,
+            public_url: data.public_url
+          }))
           .sort((a, b) => b.filesUploaded - a.filesUploaded);
 
         setOfficerData(sortedOfficers);
@@ -974,25 +984,25 @@ export default function Dashboard() {
 
       // Process the data to get counts by time
       const timeCountMap: Map<string, number> = new Map();
-      
+
       // Process all folders with the selected category
       (folderData || []).forEach((folderCategory: any) => {
         const folder = folderCategory.folders;
-        
+
         // Process regular files
         if (folder && folder.files && Array.isArray(folder.files)) {
           folder.files.forEach((file: any) => {
             if (file && file.reporting_person_details && Array.isArray(file.reporting_person_details)) {
               file.reporting_person_details.forEach((report: any) => {
-                if (report.date_of_incident && 
-                    new Date(report.date_of_incident) >= startDate && 
-                    new Date(report.date_of_incident) <= endDate) {
-                  
+                if (report.date_of_incident &&
+                  new Date(report.date_of_incident) >= startDate &&
+                  new Date(report.date_of_incident) <= endDate) {
+
                   // Format the time for display (using just the hour)
                   const timeOfIncident = report.time_of_incident || "00:00:00";
                   const hour = timeOfIncident.split(":")[0];
                   const timeKey = `${hour}:00`;
-                  
+
                   // Increment the count for this time
                   timeCountMap.set(timeKey, (timeCountMap.get(timeKey) || 0) + 1);
                 }
@@ -1000,40 +1010,40 @@ export default function Dashboard() {
             }
           });
         }
-        
+
         // Process e-blotter files
         if (folder && folder.eblotter_file && Array.isArray(folder.eblotter_file)) {
           folder.eblotter_file.forEach((file: any) => {
             if (file && file.reporting_person_details && Array.isArray(file.reporting_person_details)) {
               file.reporting_person_details.forEach((report: any) => {
-                if (report.date_of_incident && 
-                    new Date(report.date_of_incident) >= startDate && 
-                    new Date(report.date_of_incident) <= endDate) {
-                  
+                if (report.date_of_incident &&
+                  new Date(report.date_of_incident) >= startDate &&
+                  new Date(report.date_of_incident) <= endDate) {
+
                   const timeOfIncident = report.time_of_incident || "00:00:00";
                   const hour = timeOfIncident.split(":")[0];
                   const timeKey = `${hour}:00`;
-                  
+
                   timeCountMap.set(timeKey, (timeCountMap.get(timeKey) || 0) + 1);
                 }
               });
             }
           });
         }
-        
+
         // Process women and children files
         if (folder && folder.womenchildren_file && Array.isArray(folder.womenchildren_file)) {
           folder.womenchildren_file.forEach((file: any) => {
             if (file && file.reporting_person_details && Array.isArray(file.reporting_person_details)) {
               file.reporting_person_details.forEach((report: any) => {
-                if (report.date_of_incident && 
-                    new Date(report.date_of_incident) >= startDate && 
-                    new Date(report.date_of_incident) <= endDate) {
-                  
+                if (report.date_of_incident &&
+                  new Date(report.date_of_incident) >= startDate &&
+                  new Date(report.date_of_incident) <= endDate) {
+
                   const timeOfIncident = report.time_of_incident || "00:00:00";
                   const hour = timeOfIncident.split(":")[0];
                   const timeKey = `${hour}:00`;
-                  
+
                   timeCountMap.set(timeKey, (timeCountMap.get(timeKey) || 0) + 1);
                 }
               });
@@ -1176,10 +1186,10 @@ export default function Dashboard() {
               {selectedData === "Incident Report"
                 ? "Incident Report"
                 : selectedData === "eblotterFiles"
-                ? "E-Blotter Files"
-                : selectedData === "womenChildrenFiles"
-                ? "Women & Children Files"
-                : "Extraction Files"}
+                  ? "E-Blotter Files"
+                  : selectedData === "womenChildrenFiles"
+                    ? "Women & Children Files"
+                    : "Extraction Files"}
             </span>
           </div>
           <div className="flex items-center justify-between mt-3">
@@ -1188,19 +1198,19 @@ export default function Dashboard() {
               className="mr-2 text-xs font-medium text-gray-700"
             >
               Select File Type:
-              </label>
-              <select
-                id="data-select"
-                value={selectedData}
-                onChange={handleDataChange}
+            </label>
+            <select
+              id="data-select"
+              value={selectedData}
+              onChange={handleDataChange}
               className="p-1 font-poppins border rounded-lg text-xs"
             >
               <option value="Incident Report">Incident Report</option>
               <option value="eblotterFiles">E-Blotter Files</option>
               <option value="womenChildrenFiles">Women & Children Files</option>
               <option value="extractionFiles">Extraction Files</option>
-              </select>
-            </div>
+            </select>
+          </div>
         </CardHeader>
 
         <CardContent className="h-36 p-2 flex items-center justify-center flex-grow">
@@ -1264,14 +1274,14 @@ export default function Dashboard() {
               Total this week: {" "}
               {selectedData === "officerUploads"
                 ? getSelectedData().data.reduce(
-                    (sum, item) =>
-                      sum + (item as { filesUploaded: number }).filesUploaded,
-                    0
-                  )
+                  (sum, item) =>
+                    sum + (item as { filesUploaded: number }).filesUploaded,
+                  0
+                )
                 : getSelectedData().data.reduce(
-                    (sum, item) => sum + (item as { total: number }).total,
-                    0
-                  )}
+                  (sum, item) => sum + (item as { total: number }).total,
+                  0
+                )}
             </span>
           )}
         </CardFooter>
@@ -1343,7 +1353,7 @@ export default function Dashboard() {
                     <span className="text-[11px]">{entry.name}</span>
                     <span className="text-[11px] font-medium">
                       ({entry.value})
-          </span>
+                    </span>
                   </div>
                 ))}
               </div>
@@ -1361,7 +1371,7 @@ export default function Dashboard() {
               Most used category: {" "}
               <span className="mr-1 ml-2">{categoryData[0]?.name}</span>
               <span>({categoryData[0]?.value} folders)</span>
-          </div>
+            </div>
           ) : (
             <span className="text-sm">No data to display</span>
           )}
@@ -1449,17 +1459,17 @@ export default function Dashboard() {
                   bottom: 5,
                 }}
               >
-                <XAxis 
-                  dataKey="time" 
+                <XAxis
+                  dataKey="time"
                   stroke="#2563eb"
                   className="text-sm"
                 />
-                <YAxis 
+                <YAxis
                   stroke="#2563eb"
                   allowDecimals={false}
                   className="text-sm"
                 />
-                <Tooltip 
+                <Tooltip
                   formatter={(value) => [`${value} incidents`, "Count"]}
                   labelFormatter={(label) => `Time of Incident: ${label}`}
                 />
@@ -1561,12 +1571,22 @@ export default function Dashboard() {
                   className="flex items-center justify-between p-2 border-b border-gray-200"
                 >
                   <div className="flex items-center">
-                    {/* Assuming officer.avatar is a valid URL */}
-                    <img
-                      src="/assets/RACU.png"
-                      alt={officer.officer}
-                      className="h-8 w-8 rounded-full mr-4"
-                    />
+                    {officer.public_url ? (
+                      <img
+                        src={officer.public_url}
+                        alt={officer.officer}
+                        className="h-9 w-9 rounded-full mr-4 object-cover border border-gray-300 "
+                        onError={(e) => {
+                          e.currentTarget.src = "/assets/RACU.png";
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src="/assets/RACU.png"
+                        alt={officer.officer}
+                        className="h-8 w-8 rounded-full mr-4"
+                      />
+                    )}
                     <span className="text-sm font-medium text-gray-900">
                       {officer.officer}
                     </span>
@@ -1598,7 +1618,7 @@ export default function Dashboard() {
       <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white">
         <CardHeader className="p-2">
           <CardTitle className="text-lg font-semibold text-gray-900">
-          Recent Files Upload
+            Recent Files Upload
           </CardTitle>
         </CardHeader>
 
@@ -1609,100 +1629,96 @@ export default function Dashboard() {
                 <Skeleton className="h-full w-full" />
               </div>
             ) : (
-              <table className="min-w-full border-collapse table-auto text-xs">
-                <thead className="bg-blue-100 text-blue-900">
-                  <tr>
-                    <th className="px-6 py-3 text-left border-b">File</th>
-                    <th className="px-6 py-3 text-left border-b">
-                      Uploaded By
-                    </th>
-                    <th className="px-6 py-3 text-left border-b">File Type</th>
-                    <th className="px-6 py-3 text-left border-b">
-                      Upload Time
-                    </th>
-                </tr>
-              </thead>
-              <tbody>
-                  {currentItems.map((file) => (
-                    <tr
-                      key={`${file.file_type}-${file.id}`}
-                      className="hover:bg-blue-50 transition-colors duration-200"
-                    >
-                      <td className="px-6 py-2 border-b">{file.title}</td>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse text-xs sm:text-sm">
+                  <thead className="bg-blue-100 text-blue-900">
+                    <tr>
+                      <th className="px-3 py-2 sm:px-6 sm:py-3 text-left border-b">File</th>
+                      <th className="px-3 py-2 sm:px-6 sm:py-3 text-left border-b hidden sm:table-cell">
+                        Uploaded By
+                      </th>
+                      <th className="px-3 py-2 sm:px-6 sm:py-3 text-left border-b">Type</th>
+                      <th className="px-3 py-2 sm:px-6 sm:py-3 text-left border-b hidden xs:table-cell">
+                        Upload Time
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentItems.map((file) => (
+                      <tr
+                        key={`${file.file_type}-${file.id}`}
+                        className="hover:bg-blue-50 transition-colors duration-200"
+                      >
+                        <td className="px-3 py-2 sm:px-6 sm:py-2 border-b truncate max-w-[120px] sm:max-w-none">
+                          {file.title}
+                        </td>
 
-                      {/* Uploaded By Column with Avatar (with fallback image) */}
-                      <td className="px-6 py-2 border-b flex items-center space-x-2">
-                        {/* Check if officer image exists, otherwise fallback to default image */}
-                        <img
-                          src="/assets/RACU.png" // Use the fallback image if uploaded_by_image is not provided
-                          alt={file.uploaded_by}
-                          className="h-8 w-8 rounded-full"
-                        />
-                        <span>{file.uploaded_by}</span>
-                      </td>
+                        {/* Uploaded By - Hidden on mobile */}
+                        <td className="px-3 py-2 sm:px-6 sm:py-2 border-b align-middle">
+                          {file.uploaded_by}
+                        </td>
 
-                      <td className="px-6 py-2 border-b">
-                        {getFileTypeDisplay(file.file_type)}
-                      </td>
-                      <td className="px-6 py-2 border-b">
-                        {new Date(file.created_at).toLocaleDateString("en-US", {
-                          month: "long",
-                          day: "numeric",
-                          year: "numeric",
-                        })} {" "}
-                        - {" "}
-                        {new Date(file.created_at).toLocaleTimeString("en-US", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: true,
-                          timeZone: "Asia/Taipei", // Taiwan timezone
-                        })}
-                      </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        <td className="px-3 py-2 sm:px-6 sm:py-2 border-b">
+                          {getFileTypeDisplay(file.file_type)}
+                        </td>
+
+                        {/* Upload Time - Simplified on mobile */}
+                        <td className="px-3 py-2 sm:px-6 sm:py-2 border-b hidden xs:table-cell">
+                          <div className="whitespace-nowrap">
+                            {new Date(file.created_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </div>
+                          <div className="text-xs text-gray-500 sm:hidden">
+                            {new Date(file.created_at).toLocaleTimeString("en-US", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: true,
+                            })}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </CardContent>
 
-        <CardFooter>
+        <CardFooter className="p-2">
           <Pagination>
-            <PaginationContent className="flex items-center space-x-2">
+            <PaginationContent className="flex items-center justify-center sm:justify-start space-x-1 sm:space-x-2">
               <PaginationItem>
-                <PaginationLink
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(0, prev - 1))
-                  }
-                  aria-disabled={currentPage === 0}
-                  className="text-xs mr-7"
-                >
-                  <PaginationPrevious />
-                </PaginationLink>
+                <PaginationPrevious
+                  onClick={() => setCurrentPage((prev) => Math.max(0, prev - 1))}
+                  className="h-8 w-8 sm:h-9 sm:w-9 text-xs"
+                  disabled={currentPage === 0}
+                />
               </PaginationItem>
 
-              {Array.from({ length: pageCount }, (_, i) => (
-                <PaginationItem key={i}>
-                  <PaginationLink
-                    onClick={() => setCurrentPage(i)}
-                    isActive={currentPage === i}
-                    className="text-xs"
-                  >
-                    {i + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
+              <div className="flex items-center gap-1 sm:gap-2">
+                {Array.from({ length: pageCount }, (_, i) => (
+                  <PaginationItem key={i}>
+                    <PaginationLink
+                      onClick={() => setCurrentPage(i)}
+                      isActive={currentPage === i}
+                      className="h-8 w-8 sm:h-9 sm:w-9 text-xs"
+                    >
+                      {i + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+              </div>
 
               <PaginationItem>
-                <PaginationLink
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(pageCount - 1, prev + 1))
-                  }
-                  aria-disabled={currentPage === pageCount - 1}
-                  className="text-xs mx-3"
-                >
-                  <PaginationNext />
-                </PaginationLink>
+                <PaginationNext
+                  onClick={() => setCurrentPage((prev) => Math.min(pageCount - 1, prev + 1))}
+                  className="h-8 w-8 sm:h-9 sm:w-9 text-xs"
+                  disabled={currentPage === pageCount - 1}
+                />
               </PaginationItem>
             </PaginationContent>
           </Pagination>
@@ -1710,7 +1726,7 @@ export default function Dashboard() {
       </Card>
 
       {/* Recent E-Blotter Entries */}
-      <Card 
+      <Card
         className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white"
       >
         <CardHeader className="p-2">
@@ -1719,7 +1735,7 @@ export default function Dashboard() {
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="h-52 overflow-auto">
+        <CardContent className="h-52 overflow-x-auto">
           {recentEblotters.length === 0 ? (
             <div className="text-center py-4">
               <p className="text-gray-500">No recent e-blotter entries found</p>
@@ -1746,14 +1762,9 @@ export default function Dashboard() {
                       </span>
                     </td>
                     <td className="px-6 py-2 border-b">{eblotter.title}</td>
-                    <td className="px-6 py-2 border-b flex items-center space-x-2">
-                      <img
-                        src="/assets/RACU.png"
-                        alt={eblotter.creator?.name || "Unknown"}
-                        className="h-8 w-8 rounded-full"
-                      />
-                      <span>{eblotter.creator?.name || "Unknown"}</span>
-                    </td>
+                    <td className="px-3 py-2 sm:px-6 sm:py-2 border-b align-middle">
+                    {eblotter.creator?.name || "Unknown"}
+                        </td>
                     <td className="px-6 py-2 border-b">
                       {new Date(eblotter.created_at).toLocaleDateString("en-US", {
                         month: "long",
@@ -1811,13 +1822,8 @@ export default function Dashboard() {
                       </span>
                     </td>
                     <td className="px-6 py-2 border-b">{extraction.title}</td>
-                    <td className="px-6 py-2 border-b flex items-center space-x-2">
-                      <img
-                        src="/assets/RACU.png"
-                        alt={extraction.creator?.name || "Unknown"}
-                        className="h-8 w-8 rounded-full"
-                      />
-                      <span>{extraction.creator?.name || extraction.created_by}</span>
+               <td className="px-3 py-2 sm:px-6 sm:py-2 border-b align-middle">
+                  {extraction.creator?.name || extraction.created_by}
                     </td>
                     <td className="px-6 py-2 border-b">
                       {new Date(extraction.created_at).toLocaleDateString("en-US", {

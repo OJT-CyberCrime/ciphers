@@ -205,11 +205,10 @@ const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
         </div>
       </div>
     </div>
-    <div className={`grid gap-2 ${
-      collageState.layout === "1x1" ? "grid-cols-1" :
-      collageState.layout === "2x2" ? "grid-cols-2" :
-      "grid-cols-3"
-    }`}>
+    <div className={`grid gap-2 ${collageState.layout === "1x1" ? "grid-cols-1" :
+        collageState.layout === "2x2" ? "grid-cols-2" :
+          "grid-cols-3"
+      }`}>
       {collageState.previewUrls.map((url, index) => (
         <div key={index} className="relative group">
           <img
@@ -409,7 +408,7 @@ export default function EblotterFile() {
           const [cols, rows] = collageState.layout.split('x').map(Number);
           const photoWidth = 800 / cols;
           const photoHeight = 800 / rows;
-          
+
           canvas.width = 800;
           canvas.height = 800;
 
@@ -506,7 +505,7 @@ export default function EblotterFile() {
       if (fileError) throw fileError;
 
       // Only insert reporting person details if at least one field is filled out
-      const hasReportingPersonData = 
+      const hasReportingPersonData =
         reportingPerson.full_name ||
         reportingPerson.age ||
         reportingPerson.birthday ||
@@ -534,7 +533,7 @@ export default function EblotterFile() {
       // Insert suspects
       if (suspects.length > 0 && fileData) {
         // Check if any suspect has data before inserting
-        const suspectsWithData = suspects.filter(suspect => 
+        const suspectsWithData = suspects.filter(suspect =>
           suspect.full_name ||
           suspect.age ||
           suspect.birthday ||
@@ -560,7 +559,7 @@ export default function EblotterFile() {
       toast.success("File uploaded successfully");
       setIsAddingFile(false);
       fetchFolderAndFiles(); // Refresh the files list
-      
+
       // Reset form
       setNewFileTitle("");
       setNewCaseTitle("");
@@ -729,38 +728,38 @@ export default function EblotterFile() {
     setIsListView(view);
     localStorage.setItem("isListView", JSON.stringify(view)); // Save the view state to localStorage
   };
-  
+
   // Handle click outside to close context menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-        const target = event.target as HTMLElement;
-        if (!target.closest(".context-menu") && !target.closest(".menu-trigger")) {
-            setContextMenuVisible({}); // Close all context menus
-        }
+      const target = event.target as HTMLElement;
+      if (!target.closest(".context-menu") && !target.closest(".menu-trigger")) {
+        setContextMenuVisible({}); // Close all context menus
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
-        document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
-    // Function to handle clicks outside the context menu
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        contextMenuRef.current &&
-        !contextMenuRef.current.contains(event.target as Node)
-      ) {
-        setShowOptions({}); // Close the context menu
-      }
+  // Function to handle clicks outside the context menu
+  const handleClickOutside = (event: MouseEvent) => {
+    if (
+      contextMenuRef.current &&
+      !contextMenuRef.current.contains(event.target as Node)
+    ) {
+      setShowOptions({}); // Close the context menu
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
     };
-  
-    useEffect(() => {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => {
-        document.removeEventListener("mousedown", handleClickOutside);
-      };
-    }, []);
+  }, []);
 
   // Update the click handler for the MoreVertical button
   const handleMoreOptionsClick = (e: React.MouseEvent, fileId: number) => {
@@ -842,9 +841,8 @@ export default function EblotterFile() {
             </h1>
             <Badge
               variant="outline"
-              className={`${
-                getStatusBadgeClass(folderDetails?.status || "N/A").class
-              } shadow-none`}
+              className={`${getStatusBadgeClass(folderDetails?.status || "N/A").class
+                } shadow-none`}
             >
               {getStatusBadgeClass(folderDetails?.status || "N/A").label}
             </Badge>
@@ -852,21 +850,17 @@ export default function EblotterFile() {
           <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
             <Button
               onClick={() => handleViewChange(true)}
-              className={`flex items-center justify-center w-10 h-8 rounded-s-full ${
-                isListView ? "bg-blue-200" : "bg-white"
-              } transition-colors hover:${
-                isListView ? "bg-blue-300" : "bg-gray-100"
-              }`}
+              className={`flex items-center justify-center w-10 h-8 rounded-s-full ${isListView ? "bg-blue-200" : "bg-white"
+                } transition-colors hover:${isListView ? "bg-blue-300" : "bg-gray-100"
+                }`}
             >
               <List size={16} color="black" />
             </Button>
             <Button
               onClick={() => handleViewChange(false)}
-              className={`flex items-center justify-center w-10 h-8 rounded-e-full ${
-                !isListView ? "bg-blue-200" : "bg-white"
-              } transition-colors hover:${
-                !isListView ? "bg-blue-300" : "bg-gray-100"
-              }`}
+              className={`flex items-center justify-center w-10 h-8 rounded-e-full ${!isListView ? "bg-blue-200" : "bg-white"
+                } transition-colors hover:${!isListView ? "bg-blue-300" : "bg-gray-100"
+                }`}
             >
               <Grid size={16} color="black" />
             </Button>
@@ -1027,15 +1021,15 @@ export default function EblotterFile() {
                     }));
                   }}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-3 min-w-0">
                       {getFileIcon(file.file_path)}
-                      <h3 className="font-medium text-gray-900 truncate w-[180px] text-ellipsis">
+                      <h3 className="font-medium text-gray-900 truncate text-sm sm:text-base">
                         {file.title}
                       </h3>
                     </div>
                     <button
-                      className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
+                      className="p-2 shrink-0 rounded-full hover:bg-gray-200 menu-trigger"
                       onClick={() =>
                         setShowOptions((prev) => ({
                           ...prev,
@@ -1046,6 +1040,7 @@ export default function EblotterFile() {
                       <MoreVertical className="w-4 h-4" />
                     </button>
                   </div>
+
                   <FileOperations
                     file={file}
                     showPreview={previewStates[file.file_id] || false}
@@ -1082,7 +1077,7 @@ export default function EblotterFile() {
 
                 {showOptions[file.file_id] && (
                   <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins"
-                  ref={contextMenuRef}>
+                    ref={contextMenuRef}>
                     <Button
                       variant="ghost"
                       className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
@@ -1252,10 +1247,10 @@ export default function EblotterFile() {
                             onChange={(e) => {
                               const files = e.target.files;
                               if (!files) return;
-                              
+
                               const newFiles = Array.from(files);
                               const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
-                              
+
                               setCollageState(prev => ({
                                 ...prev,
                                 files: [...prev.files, ...newFiles],
@@ -1266,11 +1261,10 @@ export default function EblotterFile() {
                           />
                         </div>
                         {collageState.previewUrls.length > 0 && (
-                          <div className={`grid gap-2 ${
-                            collageState.layout === "1x1" ? "grid-cols-1" :
-                            collageState.layout === "2x2" ? "grid-cols-2" :
-                            "grid-cols-3"
-                          }`}>
+                          <div className={`grid gap-2 ${collageState.layout === "1x1" ? "grid-cols-1" :
+                              collageState.layout === "2x2" ? "grid-cols-2" :
+                                "grid-cols-3"
+                            }`}>
                             {collageState.previewUrls.map((url, index) => (
                               <div key={index} className="relative group">
                                 <img

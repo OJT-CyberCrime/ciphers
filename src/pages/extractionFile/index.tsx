@@ -465,9 +465,8 @@ export default function extractionFile() {
             </h1>
             <Badge
               variant="outline"
-              className={`${
-                getStatusBadgeClass(folderDetails?.status || "N/A").class
-              } shadow-none`}
+              className={`${getStatusBadgeClass(folderDetails?.status || "N/A").class
+                } shadow-none`}
             >
               {getStatusBadgeClass(folderDetails?.status || "N/A").label}
             </Badge>
@@ -475,21 +474,17 @@ export default function extractionFile() {
           <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
             <Button
               onClick={() => handleViewChange(true)}
-              className={`flex items-center justify-center w-10 h-8 rounded-s-full ${
-                isListView ? "bg-blue-200" : "bg-white"
-              } transition-colors hover:${
-                isListView ? "bg-blue-300" : "bg-gray-100"
-              }`}
+              className={`flex items-center justify-center w-10 h-8 rounded-s-full ${isListView ? "bg-blue-200" : "bg-white"
+                } transition-colors hover:${isListView ? "bg-blue-300" : "bg-gray-100"
+                }`}
             >
               <List size={16} color="black" />
             </Button>
             <Button
               onClick={() => handleViewChange(false)}
-              className={`flex items-center justify-center w-10 h-8 rounded-e-full ${
-                !isListView ? "bg-blue-200" : "bg-white"
-              } transition-colors hover:${
-                !isListView ? "bg-blue-300" : "bg-gray-100"
-              }`}
+              className={`flex items-center justify-center w-10 h-8 rounded-e-full ${!isListView ? "bg-blue-200" : "bg-white"
+                } transition-colors hover:${!isListView ? "bg-blue-300" : "bg-gray-100"
+                }`}
             >
               <Grid size={16} color="black" />
             </Button>
@@ -650,25 +645,26 @@ export default function extractionFile() {
                     }));
                   }}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-3 min-w-0">
                       {getFileIcon(file.file_path)}
-                      <h3 className="font-medium text-gray-900 truncate w-[180px] text-ellipsis">
+                      <h3 className="font-medium text-gray-900 truncate text-sm sm:text-base">
                         {file.title}
                       </h3>
                     </div>
                     <button
-                      className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
+                      className="p-2 shrink-0 rounded-full hover:bg-gray-200 menu-trigger"
                       onClick={() =>
                         setShowOptions((prev) => ({
                           ...prev,
-                          [file.extraction_id]: !prev[file.extraction_id],
+                          [file.file_id]: !prev[file.file_id],
                         }))
                       }
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
                   </div>
+
                   <FileOperations
                     file={file}
                     showPreview={previewStates[file.extraction_id] || false}
@@ -705,7 +701,7 @@ export default function extractionFile() {
 
                 {showOptions[file.extraction_id] && (
                   <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins"
-                  ref={contextMenuRef}>
+                    ref={contextMenuRef}>
                     <Button
                       variant="ghost"
                       className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"

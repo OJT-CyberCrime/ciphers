@@ -287,7 +287,63 @@ export default function Users() {
   useEffect(() => {
     fetchCurrentUser();
     fetchUsers();
-  }, []);
+
+    // Set up realtime subscription for user updates
+    const channel = supabase
+      .channel('user_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'users'
+        },
+        (payload) => {
+          // Handle different types of updates
+          if (payload.eventType === 'UPDATE') {
+            const updatedUser = payload.new as UserData;
+            
+            // Update users list
+            setUsers(prevUsers => 
+              prevUsers.map(user => 
+                user.uuid === updatedUser.uuid ? updatedUser : user
+              )
+            );
+
+            // Update current user if it's their data
+            if (currentUser && currentUser.id === updatedUser.uuid) {
+              setCurrentUser(prev => ({
+                ...prev!,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                role: updatedUser.role || '',
+                public_url: updatedUser.public_url
+              }));
+
+              // If role changed to/from superadmin, refresh the page to update permissions
+              if (currentUser?.role !== updatedUser.role && 
+                  (currentUser?.role === 'superadmin' || updatedUser.role === 'superadmin')) {
+                window.location.reload();
+              }
+            }
+          } else if (payload.eventType === 'INSERT') {
+            const newUser = payload.new as UserData;
+            setUsers(prevUsers => [...prevUsers, newUser]);
+          } else if (payload.eventType === 'DELETE') {
+            const deletedUser = payload.old as UserData;
+            setUsers(prevUsers => 
+              prevUsers.filter(user => user.uuid !== deletedUser.uuid)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser]);
 
   const isSuperAdmin = () => {
     return currentUser?.role === "superadmin";
@@ -420,42 +476,42 @@ export default function Users() {
   const handleEditUser = (user: UserData) => {
     // Allow superadmin to edit their own information
     if (isSuperAdmin() && user.uuid === currentUser?.id) {
-        setSelectedUser(user);
-        editForm.reset({
-            name: currentUser?.name || "",
-            email: currentUser?.email || "",
-            password: "",
-            role: currentUser?.role || "",
-        });
-        setIsEditDialogOpen(true);
-        return;
+      setSelectedUser(user);
+      editForm.reset({
+        name: currentUser?.name || "",
+        email: currentUser?.email || "",
+        password: "",
+        role: currentUser?.role || "",
+      });
+      setIsEditDialogOpen(true);
+      return;
     }
 
     // Allow regular users to edit their own information
     if (isOwnAccount(user)) {
-        setSelectedUser(user);
-        editForm.reset({
-            name: user.name,
-            email: user.email,
-            password: "",
-            role: user.role || "",
-        });
-        setIsEditDialogOpen(true);
-        return;
-    }
-
-    // Check if the user can edit the selected user
-    if (!canEditUser(user)) {
-        showPermissionDenied();
-        return;
-    }
-
-    setSelectedUser(user);
-    editForm.reset({
+      setSelectedUser(user);
+      editForm.reset({
         name: user.name,
         email: user.email,
         password: "",
         role: user.role || "",
+      });
+      setIsEditDialogOpen(true);
+      return;
+    }
+
+    // Check if the user can edit the selected user
+    if (!canEditUser(user)) {
+      showPermissionDenied();
+      return;
+    }
+
+    setSelectedUser(user);
+    editForm.reset({
+      name: user.name,
+      email: user.email,
+      password: "",
+      role: user.role || "",
     });
     setIsEditDialogOpen(true);
   };
@@ -484,12 +540,12 @@ export default function Users() {
 
   const onSubmitEdit = async (values: z.infer<typeof editFormSchema>) => {
     try {
-      console.log("Form Values: ", values);
-      console.log("Selected User: ", currentUser?.id);
+      // console.log("Form Values: ", values);
+      // console.log("Selected User: ", currentUser?.id);
 
       // Check if we're editing from profile tab or user list
       const isProfileEdit = !selectedUser;
-      
+
       // Get the current user's data from the database if editing from profile tab
       let currentUserData;
       if (isProfileEdit) {
@@ -498,7 +554,7 @@ export default function Users() {
           .select("*")
           .eq("uuid", currentUser?.id)
           .single();
-        
+
         if (error) {
           throw error;
         }
@@ -631,7 +687,7 @@ export default function Users() {
       toast.error(error.message || "Failed to update user");
     }
   };
-  
+
 
   const confirmDeleteUser = async () => {
     try {
@@ -788,16 +844,18 @@ export default function Users() {
   };
 
   return (
-    <div className="p-6 max-w-screen-xl mx-auto">
-      <h1 className="text-2xl font-medium text-blue-900 mb-20">
+    <div className="p-4 md:p-6 max-w-screen-xl mx-auto">
+      {/* Header */}
+      <h1 className="text-xl md:text-2xl font-medium text-blue-900 mb-8 md:mb-20">
         Account Information
       </h1>
 
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Left Column: Profile Avatar */}
-        <div className="flex flex-col items-center w-full md:w-1/3">
+      {/* Main Content - Stacked on mobile, side by side on desktop */}
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+        {/* Left Column - Profile Section */}
+        <div className="flex flex-col items-center w-full md:w-1/3 p-4 rounded-lg shadow-sm md:shadow-none">
           <div className="relative">
-            <Avatar className="w-32 h-32 cursor-pointer group">
+            <Avatar className="w-24 h-24 md:w-32 md:h-32 cursor-pointer group">
               {currentUser?.public_url ? (
                 <AvatarImage
                   src={currentUser.public_url}
@@ -809,8 +867,8 @@ export default function Users() {
                   }}
                 />
               ) : (
-                <AvatarFallback 
-                  className="bg-blue-100 text-blue-700 font-semibold text-3xl cursor-pointer group-hover:bg-blue-200 transition-colors"
+                <AvatarFallback
+                  className="bg-blue-100 text-blue-700 font-semibold text-xl md:text-3xl cursor-pointer group-hover:bg-blue-200 transition-colors"
                   onClick={() => document.getElementById("main-avatar-upload")?.click()}
                 >
                   {currentUser?.name
@@ -823,7 +881,7 @@ export default function Users() {
                 onClick={() => document.getElementById("main-avatar-upload")?.click()}
                 className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-30 rounded-full transition-all cursor-pointer"
               >
-                <Edit className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Edit className="w-6 h-6 md:w-8 md:h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </Avatar>
           </div>
@@ -834,33 +892,38 @@ export default function Users() {
             onChange={handleMainAvatarChange}
             className="hidden"
           />
-          <h2 className="text-xl font-semibold mt-4 font-poppins">{currentUser?.name}</h2>
-          <p className="text-gray-600 font-poppins">{currentUser?.email}</p>
+          <h2 className="text-lg md:text-xl font-semibold mt-3 md:mt-4 font-poppins text-center">
+            {currentUser?.name}
+          </h2>
+          <p className="text-sm md:text-base text-gray-600 font-poppins text-center">
+            {currentUser?.email}
+          </p>
         </div>
 
-        {/* Right Column: Tabbed Card for Information and Password */}
-        <Card className="flex flex-col w-full md:w-2/3 shadow-sm font-poppins p-5">
-          <CardHeader>
+        {/* Right Column - Tabbed Card */}
+        <Card className="w-full md:w-2/3 shadow-sm font-poppins p-4 md:p-5">
+          <CardHeader className="p-2 md:p-0">
             <Tabs defaultValue="info">
-              <TabsList className="flex justify-around w-full mb-10">
-                <TabsTrigger value="info" className="flex items-center gap-2">
-                  <IdCard className="w-5 h-5" />
-                  Personal Information
+              <TabsList className="grid grid-cols-2 w-full mb-6 md:mb-10">
+                <TabsTrigger value="info" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+                  <IdCard className="w-4 h-4 md:w-5 md:h-5" />
+                  <span>Information</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="password"
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-1 md:gap-2 text-xs md:text-sm"
                 >
-                  <Lock className="w-4 h-4" />
-                  Change Password
+                  <Lock className="w-3 h-3 md:w-4 md:h-4" />
+                  <span>Password</span>
                 </TabsTrigger>
               </TabsList>
 
+              {/* Information Tab */}
               <TabsContent value="info" forceMount>
                 <Form {...editForm}>
                   <form
                     onSubmit={editForm.handleSubmit(onSubmitEdit)}
-                    className="space-y-4"
+                    className="space-y-3 md:space-y-4"
                   >
                     <FormField
                       control={editForm.control}
@@ -872,9 +935,10 @@ export default function Users() {
                             <Input
                               placeholder="Enter name"
                               {...field}
+                              className="text-sm md:text-base"
                               onChange={(e) => {
-                                field.onChange(e); // Update the form state
-                                handleNameChange(e.target.value); // Track changes
+                                field.onChange(e);
+                                handleNameChange(e.target.value);
                               }}
                             />
                           </FormControl>
@@ -892,10 +956,11 @@ export default function Users() {
                             <Input
                               type="email"
                               placeholder="Enter email"
+                              className="text-sm md:text-base"
                               {...field}
                               onChange={(e) => {
-                                field.onChange(e); // Update the form state
-                                handleEmailChange(e.target.value); // Track changes
+                                field.onChange(e);
+                                handleEmailChange(e.target.value);
                               }}
                             />
                           </FormControl>
@@ -903,10 +968,10 @@ export default function Users() {
                         </FormItem>
                       )}
                     />
-                    <div className="flex justify-end">
+                    <div className="flex justify-end pt-2">
                       <Button
                         type="submit"
-                        className="bg-blue-900 hover:bg-blue-800"
+                        className="bg-blue-900 hover:bg-blue-800 text-sm md:text-base"
                         disabled={!editForm.formState.isValid}
                       >
                         Save Changes
@@ -916,20 +981,21 @@ export default function Users() {
                 </Form>
               </TabsContent>
 
+              {/* Password Tab */}
               <TabsContent value="password">
                 <Form {...editForm}>
                   <form
                     onSubmit={editForm.handleSubmit(onSubmitEdit)}
-                    className="space-y-4"
+                    className="space-y-3 md:space-y-4"
                   >
                     <FormField
                       control={editForm.control}
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>
+                          <FormLabel className="flex items-center gap-1">
                             Password
-                            <span className="ml-1 text-xs text-gray-500 font-normal">
+                            <span className="text-xs text-gray-500 font-normal">
                               (optional)
                             </span>
                           </FormLabel>
@@ -937,6 +1003,7 @@ export default function Users() {
                             <Input
                               type="password"
                               placeholder="Enter new password"
+                              className="text-sm md:text-base"
                               {...field}
                             />
                           </FormControl>
@@ -948,10 +1015,10 @@ export default function Users() {
                         </FormItem>
                       )}
                     />
-                    <div className="flex justify-end">
+                    <div className="flex justify-end pt-2">
                       <Button
                         type="submit"
-                        className="bg-blue-900 hover:bg-blue-800"
+                        className="bg-blue-900 hover:bg-blue-800 text-sm md:text-base"
                       >
                         Update Password
                       </Button>
@@ -964,132 +1031,108 @@ export default function Users() {
         </Card>
       </div>
 
-      {/* Display all users if superadmin */}
+      {/* All Users Section (for superadmin) */}
       {isSuperAdmin() && (
-        <div className="mt-6 font-poppins">
-          <Card className="p-4 border-gray-300 bg-white shadow-sm">
-            <div className="flex justify-between items-center">
-              <CardHeader className="text-xl font-semibold">
-                All Users
-              </CardHeader>
+        <div className="w-full sm:px-4 flex justify-center mt-4 sm:mt-6 font-poppins">
+          <Card className="w-full p-2 sm:p-4 border-gray-300 bg-white shadow-sm">
+            <div className="flex flex-row justify-between items-center gap-3 mb-3 p-2">
+              <CardHeader className="text-base sm:text-lg font-semibold p-0">All Users</CardHeader>
               {canAddUser() && (
                 <Button
-                  className="bg-blue-900 text-white px-4 rounded-lg flex items-center hover:bg-blue-800 mr-9"
+                  className="bg-blue-900 text-white px-2.5 py-1 sm:px-4 sm:py-2 rounded-lg flex items-center hover:bg-blue-800 text-xs sm:text-sm"
                   onClick={() => setIsDialogOpen(true)}
                 >
-                  <UserPlus2 size={16} /> Add User
+                  <UserPlus2 size={12} className="mr-1 sm:mr-2 sm:size-4" />
+                  <span>Add User</span>
                 </Button>
               )}
             </div>
-
-            <CardContent>
-              <table className="min-w-full border-collapse table-auto">
-                <thead className="bg-blue-100 text-blue-900">
-                  <tr>
-                    <th className="px-6 py-3 text-left border-b">Avatar</th>
-                    <th className="px-6 py-3 text-left border-b">Name</th>
-                    <th className="px-6 py-3 text-left border-b">Email</th>
-                    <th className="px-6 py-3 text-left border-b">Role</th>
-                    <th className="px-6 py-3 text-left border-b">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {displayedUsers.map((user) => (
-                    <tr
-                      key={user.user_id}
-                      className="hover:bg-blue-50 transition-colors duration-200"
-                    >
-                      <td className="px-6 py-2 whitespace-nowrap">
-                        <Avatar className="w-10 h-10">
-                          {user.public_url ? (
-                            <AvatarImage
-                              src={user.public_url}
-                              alt={user.name}
-                              className="w-full h-full object-cover rounded-full"
-                              onError={(e) => {
-                                e.currentTarget.style.display = "none";
-                              }}
-                            />
-                          ) : (
-                            <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-lg font-poppins w-full h-full">
-                              {user.name
-                                ? user.name.split(" ")[0][0].toUpperCase()
-                                : "?"}
-                            </AvatarFallback>
-                          )}
-                        </Avatar>
-                      </td>
-                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                        {user.name}
-                      </td>
-                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                        {user.email}
-                      </td>
-                      <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                        {user.role}
-                      </td>
-                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleEditUser(user)}
-                          className="hover:bg-blue-100 border-none shadow-none bg-transparent"
-                        >
-                          <Pencil size={16} className="text-blue-900" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleDeleteUser(user)}
-                          className="hover:bg-red-100 border-none shadow-none bg-transparent"
-                        >
-                          <Trash2 size={16} className="text-red-600" />
-                        </Button>
-                      </td>
+            <CardContent className="overflow-x-auto p-1 sm:p-2">
+              <div className="min-w-full overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-blue-100 text-blue-900">
+                    <tr>
+                      <th className="px-2 py-1 sm:px-4 sm:py-2 text-left">Avatar</th>
+                      <th className="px-2 py-1 sm:px-4 sm:py-2 text-left">Name</th>
+                      <th className="px-2 py-1 sm:px-4 sm:py-2 text-left hidden sm:table-cell">Email</th>
+                      <th className="px-2 py-1 sm:px-4 sm:py-2 text-left">Role</th>
+                      <th className="px-2 py-1 sm:px-4 sm:py-2 text-left">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {displayedUsers.map((user) => (
+                      <tr key={user.user_id} className="hover:bg-blue-50">
+                        <td className="px-2 py-1 sm:px-4 sm:py-2">
+                          <Avatar className="w-6 h-6 sm:w-8 sm:h-8">
+                            {user.public_url ? (
+                              <AvatarImage
+                                src={user.public_url}
+                                alt={user.name}
+                                className="rounded-full"
+                                onError={(e) => (e.currentTarget.style.display = "none")}
+                              />
+                            ) : (
+                              <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-xs sm:text-sm">
+                                {user.name?.charAt(0).toUpperCase() ?? "?"}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                        </td>
+                        <td className="px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm">{user.name}</td>
+                        <td className="px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm hidden sm:table-cell">{user.email}</td>
+                        <td className="px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm">{user.role}</td>
+                        <td className="px-2 py-1 sm:px-4 sm:py-2 flex gap-1 sm:gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleEditUser(user)}
+                            className="h-6 w-6 sm:h-8 sm:w-8"
+                          >
+                            <Pencil size={12} className="text-blue-900 sm:w-3.5 sm:h-3.5" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleDeleteUser(user)}
+                            className="h-6 w-6 sm:h-8 sm:w-8"
+                          >
+                            <Trash2 size={12} className="text-red-600 sm:w-3.5 sm:h-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
-            <CardFooter>
-              <Pagination>
-                <PaginationContent className="flex items-center space-x-2">
-                  <PaginationItem>
-                    <PaginationLink
-                      onClick={() =>
-                        setCurrentPage((prev) => Math.max(0, prev - 1))
-                      }
-                      aria-disabled={currentPage === 0}
-                      className="text-xs mr-7"
-                    >
-                      <PaginationPrevious />
-                    </PaginationLink>
-                  </PaginationItem>
 
+            <CardFooter className="mt-2 sm:mt-4 p-1 sm:p-2">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      className="h-8 w-8 sm:h-10 sm:w-10 mr-8"
+                      onClick={() => setCurrentPage((prev) => Math.max(0, prev - 1))}
+                    />
+                  </PaginationItem>
                   {Array.from({ length: pageCount }, (_, i) => (
                     <PaginationItem key={i}>
                       <PaginationLink
+                        className="h-8 w-8 sm:h-10 sm:w-10 text-xs sm:text-sm"
                         onClick={() => setCurrentPage(i)}
                         isActive={currentPage === i}
-                        className="text-xs"
                       >
                         {i + 1}
                       </PaginationLink>
                     </PaginationItem>
                   ))}
-
                   <PaginationItem>
-                    <PaginationLink
+                    <PaginationNext
+                      className="h-8 w-8 sm:h-10 sm:w-10"
                       onClick={() =>
-                        setCurrentPage((prev) =>
-                          Math.min(pageCount - 1, prev + 1)
-                        )
+                        setCurrentPage((prev) => Math.min(pageCount - 1, prev + 1))
                       }
-                      aria-disabled={currentPage === pageCount - 1}
-                      className="text-xs mx-3"
-                    >
-                      <PaginationNext />
-                    </PaginationLink>
+                    />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
@@ -1098,9 +1141,10 @@ export default function Users() {
         </div>
       )}
 
+
       {/* Add User Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] overflow-y-auto max-h-[95vh]">
           <DialogHeader>
             <DialogTitle>Add New User</DialogTitle>
           </DialogHeader>
@@ -1237,7 +1281,7 @@ export default function Users() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] overflow-y-auto max-h-[95vh]">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
           </DialogHeader>

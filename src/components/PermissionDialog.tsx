@@ -33,14 +33,6 @@ export default function PermissionDialog({ isOpen, onClose, action = "perform th
             </ul>
           </DialogDescription>
         </DialogHeader>
-        {<DialogFooter>
-          <Button 
-            variant="outline" 
-            onClick={onClose}
-          >
-            Understood
-          </Button>
-        </DialogFooter>}
       </DialogContent>
     </Dialog>
   );

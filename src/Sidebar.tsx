@@ -10,6 +10,9 @@ import {
   ClipboardList,
   Archive,
   PersonStanding,
+  Menu,
+  X,
+  PanelRightOpen
 } from "lucide-react";
 import { logout } from "@/utils/auth";
 import { toast } from "sonner";
@@ -21,9 +24,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface SidebarProps {
   setIsLoggedIn: (value: boolean) => void;
+  mobileSidebarOpen: boolean;
+  setMobileSidebarOpen: (value: boolean) => void
 }
 
 export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const [userRole, setUserRole] = useState<string | undefined>(() => {
@@ -35,6 +41,11 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
   const userData = JSON.parse(Cookies.get("user_data") || "{}");
   const userId = userData.uuid;
   const [loading, setLoading] = useState(true);
+
+  // Close mobile sidebar when route changes
+  useEffect(() => {
+    setIsMobileSidebarOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -52,7 +63,6 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
         return;
       }
 
-      // Update role in cookie and state
       if (dbUser.role !== userRole) {
         const updatedUserData = { ...userData, role: dbUser.role };
         Cookies.set("user_data", JSON.stringify(updatedUserData));
@@ -73,7 +83,6 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
 
     fetchUserData();
 
-    // Real-time listener for updates
     const subscription = supabase
       .channel(`realtime-user-${userId}`)
       .on(
@@ -122,97 +131,134 @@ export default function Sidebar({ setIsLoggedIn }: SidebarProps) {
   };
 
   return (
-    <aside
-      className={`fixed top-0 left-0 h-screen w-64 ${
-        userRole === "wcpd"
-          ? "bg-indigo-50"
-          : "bg-white"
-      } shadow-sm p-5 flex flex-col z-50 border-r border-gray-200`}
-    >
-      {/* Profile Section */}
-      <div className="w-full p-4 border-b border-gray-200">
-        <div className="flex flex-col items-center space-y-2">
-          {loading ? (
-            <>
-              <Skeleton className="w-20 h-20 rounded-full" />
-              <Skeleton className="w-32 h-6" />
-              <Skeleton className="w-20 h-4" />
-            </>
-          ) : (
-            <>
-              {profilePic ? (
-                <img
-                  src={profilePic}
-                  alt="User Avatar"
-                  className="w-20 h-20 rounded-full border-2 border-blue-900 object-cover"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center">
-                  <span className="text-xl text-white">?</span>
-                </div>
-              )}
-              <div className="text-center font-poppins">
-                <p className="text-lg font-bold text-gray-800">{userName}</p>
-                <p className="text-xs text-gray-500">{userRole}</p>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Navigation Links - Scrollable */}
-      <div className="flex-1 overflow-y-auto mt-4">
-        <nav className="space-y-2 font-poppins text-sm px-2">
-          <SidebarLink
-            to="/dashboard"
-            icon={<Home size={20} />}
-            label="Dashboard"
-          />
-          <SidebarLink to="/users" icon={<Users size={20} />} label="Account" />
-          <SidebarLink
-            to="/incident-report"
-            icon={<FileText size={20} />}
-            label="Incident Reports"
-          />
-          <SidebarLink
-            to="/extraction"
-            icon={<FileCheck size={20} />}
-            label="Extraction Certifications"
-          />
-          <SidebarLink
-            to="/eblotter"
-            icon={<ClipboardList size={20} />}
-            label="Blotter Reports"
-          />
-          <SidebarLink
-            to="/archives"
-            icon={<Archive size={20} />}
-            label="Archives"
-          />
-          {userRole === "wcpd" || userRole === "superadmin" ? (
-            <SidebarLink
-              to="/wcp"
-              icon={<PersonStanding size={20} />}
-              label="Women and Children"
-            />
-          ) : null}
-        </nav>
-      </div>
-
-      {/* Logout Button */}
-      <div className="p-4 border-t border-gray-200">
-        <Button
-          className="w-full flex items-center justify-center gap-2 rounded-md px-4 py-2 bg-blue-900 hover:bg-blue-700 text-white"
-          onClick={handleLogout}
+    <>
+      {/* Mobile Header */}
+      <header className="md:hidden fixed top-0 left-0 w-full h-16 bg-blue-900 flex items-center justify-between px-4 z-40 shadow-lg">
+        {/* Menu Button */}
+        <button
+          className="p-2 rounded-md text-white"
+          onClick={() => setIsMobileSidebarOpen(true)}
         >
-          <LogOut size={18} />
-          Logout
-        </Button>
-        <p className="text-xs text-gray-400 mt-2 text-center">
-          CRIMS &copy; {new Date().getFullYear()} <br/> All rights reserved.
-        </p>
-      </div>
-    </aside>
+          <PanelRightOpen size={24} />
+        </button>
+
+        <h2 className="font-poppins font-medium text-white">CRIMS</h2>
+        {/* User Avatar */}
+        {loading ? (
+          <Skeleton className="w-8 h-8 rounded-full" />
+        ) : profilePic ? (
+          <img
+            src={profilePic}
+            alt="User Avatar"
+            className="w-8 h-8 rounded-full border-2 border-white object-cover"
+          />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+            <span className="text-sm text-white">?</span>
+          </div>
+        )}
+      </header>
+
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed top-0 left-0 h-screen w-64 ${userRole === "wcpd" ? "bg-indigo-50" : "bg-white"
+          } shadow-sm p-5 flex flex-col z-50 border-r border-gray-200 transform ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } md:translate-x-0 transition-transform duration-300 ease-in-out`}
+      >
+        {/* Mobile Close Button */}
+        <button
+          className="md:hidden absolute top-2 right-2 p-1 rounded-full hover:bg-gray-200"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        >
+          <X size={20} />
+        </button>
+
+        {/* Profile Section */}
+        <div className="w-full p-4 border-b border-gray-200">
+          <div className="flex flex-col items-center space-y-2">
+            {loading ? (
+              <>
+                <Skeleton className="w-16 h-16 md:w-20 md:h-20 rounded-full" />
+                <Skeleton className="w-32 h-6" />
+                <Skeleton className="w-20 h-4" />
+              </>
+            ) : (
+              <>
+                {profilePic ? (
+                  <img
+                    src={profilePic}
+                    alt="User Avatar"
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-blue-900 object-cover"
+                  />
+                ) : (
+                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-300 flex items-center justify-center">
+                    <span className="text-xl text-white">?</span>
+                  </div>
+                )}
+                <div className="text-center font-poppins">
+                  <p className="text-base md:text-lg font-bold text-gray-800">{userName}</p>
+                  <p className="text-xs text-gray-500">{userRole}</p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Navigation Links */}
+        <div className="flex-1 flex flex-col justify-between">
+          <nav className="space-y-2 font-poppins text-sm px-2 mt-4">
+            <SidebarLink
+              to="/dashboard"
+              icon={<Home size={20} />}
+              label="Dashboard"
+            />
+            <SidebarLink to="/users" icon={<Users size={20} />} label="Account" />
+            <SidebarLink
+              to="/incident-report"
+              icon={<FileText size={20} />}
+              label="Incident Reports"
+            />
+            <SidebarLink
+              to="/extraction"
+              icon={<FileCheck size={20} />}
+              label="Extraction Certifications"
+            />
+            <SidebarLink
+              to="/eblotter"
+              icon={<ClipboardList size={20} />}
+              label="Blotter Reports"
+            />
+            {userRole === "wcpd" || userRole === "superadmin" ? (
+              <SidebarLink
+                to="/wcp"
+                icon={<PersonStanding size={20} />}
+                label="Women and Children"
+              />
+            ) : null}
+                        <SidebarLink
+              to="/archives"
+              icon={<Archive size={20} />}
+              label="Archives"
+            />
+          </nav>
+
+          {/* Logout Button */}
+          <div className="p-4 border-t border-gray-200">
+            <Button
+              className="w-full flex items-center justify-center gap-2 rounded-md px-4 py-2 bg-blue-900 hover:bg-blue-700 text-white"
+              onClick={handleLogout}
+            >
+              <LogOut size={18} />
+              Logout
+            </Button>
+            <p className="text-xs text-gray-400 mt-2 text-center">
+              CRIMS &copy; {new Date().getFullYear()} <br /> All rights reserved.
+            </p>
+          </div>
+        </div>
+      </aside>
+    </>
   );
 }
 
@@ -232,7 +278,7 @@ function SidebarLink({
         cn(
           "flex items-center gap-3 px-3 py-2 rounded-md transition duration-200 hover:text-blue-900 hover:bg-blue-100",
           isActive ? "text-blue-900 font-semibold bg-blue-100" : "text-gray-900"
-        )        
+        )
       }
     >
       <span>{icon}</span>
