@@ -897,7 +897,6 @@ export default function FileOperations({
       toast.success('File updated successfully');
       setShowFileDialog(null);
       onFileUpdate(); // Refresh the files list
-      window.location.reload(); // Force a full page refresh
     } catch (error: any) {
       console.error('Error updating file:', error);
       toast.error(error.message || 'Failed to update file');

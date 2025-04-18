@@ -1005,8 +1005,8 @@ export default function EblotterFile() {
                       files.filter((f) => f.file_id !== selectedFile?.file_id)
                     );
                   } else {
-                    // Refresh the files list
-                    window.location.reload();
+                    // Refresh the files list by fetching latest data
+                    fetchFolderAndFiles();
                   }
                 }}
                 isListView={isListView} // Pass the isListView prop
@@ -1068,8 +1068,8 @@ export default function EblotterFile() {
                           )
                         );
                       } else {
-                        // Refresh the files list
-                        window.location.reload();
+                        // Refresh the files list by fetching latest data
+                        fetchFolderAndFiles();
                       }
                     }}
                     isListView={isListView} // Pass the isListView prop

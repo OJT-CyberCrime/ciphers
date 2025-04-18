@@ -1006,7 +1006,7 @@ export default function EblotterFile() {
                     );
                   } else {
                     // Refresh the files list
-                    window.location.reload();
+                    fetchFolderAndFiles();
                   }
                 }}
                 isListView={isListView} // Pass the isListView prop
@@ -1069,7 +1069,7 @@ export default function EblotterFile() {
                         );
                       } else {
                         // Refresh the files list
-                        window.location.reload();
+                        fetchFolderAndFiles();
                       }
                     }}
                     isListView={isListView} // Pass the isListView prop
