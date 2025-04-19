@@ -85,7 +85,7 @@ const App: React.FC = () => {
   // };
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-hidden pt-16 md:pt-0">
+    <div className={`min-h-screen bg-gray-50 overflow-hidden ${!isLoggedIn ? "pt-0" : "pt-16"} md:pt-0 m-0`}>
       <Toaster />
       <Router>
       <div className={`flex transition-all duration-300 ${isLoggedIn && !isMobile ? "ml-64" : "ml-0"}`}>

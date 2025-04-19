@@ -1917,7 +1917,7 @@ export default function FileOperations({
 
       {/* Archive Confirmation Dialog */}
       <Dialog open={showFileDialog === "archive"} onOpenChange={() => setShowFileDialog(null)}>
-        <DialogContent>
+      <DialogContent className="[&+.fixed]:bg-black/10">
           <DialogHeader>
             <DialogTitle>Archive File</DialogTitle>
             <DialogDescription>

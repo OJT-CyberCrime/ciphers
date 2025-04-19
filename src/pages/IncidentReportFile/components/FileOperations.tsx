@@ -6,6 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogOverlay,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1200,7 +1201,7 @@ export default function FileOperations({
         open={showFileDialog === "edit"}
         onOpenChange={() => setShowFileDialog(null)}
       >
-        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100">
+        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100 [&+.fixed]:bg-black/10">
           <SheetHeader>
             <SheetTitle className="text-2xl font-bold">Edit File</SheetTitle>
             <SheetDescription className="text-sm text-gray-500">
@@ -1684,7 +1685,7 @@ export default function FileOperations({
         open={showFileDialog === "details"}
         onOpenChange={() => setShowFileDialog(null)}
       >
-        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100 pr-0">
+        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100 pr-0 [&+.fixed]:bg-black/10">
           <SheetHeader>
             <SheetTitle>File Details</SheetTitle>
             <SheetDescription className="text-sm text-gray-500">
@@ -1917,7 +1918,7 @@ export default function FileOperations({
 
       {/* Archive Confirmation Dialog */}
       <Dialog open={showFileDialog === "archive"} onOpenChange={() => setShowFileDialog(null)}>
-        <DialogContent>
+        <DialogContent className="[&+.fixed]:bg-black/10">
           <DialogHeader>
             <DialogTitle>Archive File</DialogTitle>
             <DialogDescription>
