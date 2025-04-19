@@ -173,7 +173,11 @@ const getStatusBadgeClass = (status: string) => {
 };
 
 // Add the CollagePreview component definition before the main component
-const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
+const CollagePreview = ({
+  collageState,
+  onLayoutChange,
+  onPhotoRemove,
+}: {
   collageState: CollageState;
   onLayoutChange: (layout: string) => void;
   onPhotoRemove: (index: number) => void;
@@ -205,10 +209,15 @@ const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
         </div>
       </div>
     </div>
-    <div className={`grid gap-2 ${collageState.layout === "1x1" ? "grid-cols-1" :
-        collageState.layout === "2x2" ? "grid-cols-2" :
-          "grid-cols-3"
-      }`}>
+    <div
+      className={`grid gap-2 ${
+        collageState.layout === "1x1"
+          ? "grid-cols-1"
+          : collageState.layout === "2x2"
+          ? "grid-cols-2"
+          : "grid-cols-3"
+      }`}
+    >
       {collageState.previewUrls.map((url, index) => (
         <div key={index} className="relative group">
           <img
@@ -285,13 +294,17 @@ export default function WomenandChildrenFile() {
   const [permissionAction, setPermissionAction] = useState("");
   const formRef = useRef<HTMLFormElement | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
-  const [activeContextMenu, setActiveContextMenu] = useState<number | null>(null);
-  const [contextMenuVisible, setContextMenuVisible] = useState<{ [key: number]: boolean }>({});
+  const [activeContextMenu, setActiveContextMenu] = useState<number | null>(
+    null
+  );
+  const [contextMenuVisible, setContextMenuVisible] = useState<{
+    [key: number]: boolean;
+  }>({});
   const [isCollage, setIsCollage] = useState(false);
   const [collageState, setCollageState] = useState<CollageState>({
     files: [],
     previewUrls: [],
-    layout: '2x2'
+    layout: "2x2",
   });
 
   const userRole = JSON.parse(Cookies.get("user_data") || "{}").role;
@@ -394,18 +407,18 @@ export default function WomenandChildrenFile() {
 
           if (uploadError) throw uploadError;
 
-          const { data: { publicUrl: photoUrl } } = supabase.storage
-            .from("files")
-            .getPublicUrl(photoPath);
+          const {
+            data: { publicUrl: photoUrl },
+          } = supabase.storage.from("files").getPublicUrl(photoPath);
 
           collagePhotos.push(photoUrl);
         }
 
         if (collagePhotos.length > 0) {
           // Create a collage preview image using HTML Canvas
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          const [cols, rows] = collageState.layout.split('x').map(Number);
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          const [cols, rows] = collageState.layout.split("x").map(Number);
           const photoWidth = 800 / cols;
           const photoHeight = 800 / rows;
 
@@ -414,7 +427,7 @@ export default function WomenandChildrenFile() {
 
           // Load all images and draw them on the canvas
           const images = await Promise.all(
-            collageState.previewUrls.map(url => {
+            collageState.previewUrls.map((url) => {
               return new Promise<HTMLImageElement>((resolve) => {
                 const img = new Image();
                 img.crossOrigin = "anonymous";
@@ -437,7 +450,9 @@ export default function WomenandChildrenFile() {
           });
 
           // Convert canvas to blob and upload
-          const blob = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!)));
+          const blob = await new Promise<Blob>((resolve) =>
+            canvas.toBlob((blob) => resolve(blob!))
+          );
           const collageFileName = `collage_${Math.random()}.png`;
           filePath = `folder_${id}/${collageFileName}`;
 
@@ -450,9 +465,9 @@ export default function WomenandChildrenFile() {
 
           if (collageUploadError) throw collageUploadError;
 
-          const { data: { publicUrl: collagePublicUrl } } = supabase.storage
-            .from("files")
-            .getPublicUrl(filePath);
+          const {
+            data: { publicUrl: collagePublicUrl },
+          } = supabase.storage.from("files").getPublicUrl(filePath);
 
           publicUrl = collagePublicUrl;
         }
@@ -472,9 +487,9 @@ export default function WomenandChildrenFile() {
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl: filePublicUrl } } = supabase.storage
-          .from("files")
-          .getPublicUrl(filePath);
+        const {
+          data: { publicUrl: filePublicUrl },
+        } = supabase.storage.from("files").getPublicUrl(filePath);
 
         publicUrl = filePublicUrl;
       }
@@ -496,7 +511,7 @@ export default function WomenandChildrenFile() {
             investigator: newInvestigator,
             desk_officer: newDeskOfficer,
             is_collage: isCollage,
-            collage_photos: isCollage ? collagePhotos : null
+            collage_photos: isCollage ? collagePhotos : null,
           },
         ])
         .select()
@@ -521,9 +536,15 @@ export default function WomenandChildrenFile() {
             {
               wc_file_id: fileData.file_id,
               ...reportingPerson,
-              birthday: reportingPerson.birthday ? new Date(reportingPerson.birthday).toISOString() : null,
-              date_reported: reportingPerson.date_reported ? new Date(reportingPerson.date_reported).toISOString() : null,
-              date_of_incident: reportingPerson.date_of_incident ? new Date(reportingPerson.date_of_incident).toISOString() : null,
+              birthday: reportingPerson.birthday
+                ? new Date(reportingPerson.birthday).toISOString()
+                : null,
+              date_reported: reportingPerson.date_reported
+                ? new Date(reportingPerson.date_reported).toISOString()
+                : null,
+              date_of_incident: reportingPerson.date_of_incident
+                ? new Date(reportingPerson.date_of_incident).toISOString()
+                : null,
             },
           ]);
 
@@ -533,12 +554,13 @@ export default function WomenandChildrenFile() {
       // Insert suspects
       if (suspects.length > 0 && fileData) {
         // Check if any suspect has data before inserting
-        const suspectsWithData = suspects.filter(suspect =>
-          suspect.full_name ||
-          suspect.age ||
-          suspect.birthday ||
-          suspect.complete_address ||
-          suspect.contact_number
+        const suspectsWithData = suspects.filter(
+          (suspect) =>
+            suspect.full_name ||
+            suspect.age ||
+            suspect.birthday ||
+            suspect.complete_address ||
+            suspect.contact_number
         );
 
         if (suspectsWithData.length > 0) {
@@ -548,7 +570,9 @@ export default function WomenandChildrenFile() {
               suspectsWithData.map((suspect) => ({
                 wc_file_id: fileData.file_id,
                 ...suspect,
-                birthday: suspect.birthday ? new Date(suspect.birthday).toISOString() : null
+                birthday: suspect.birthday
+                  ? new Date(suspect.birthday).toISOString()
+                  : null,
               }))
             );
 
@@ -579,13 +603,13 @@ export default function WomenandChildrenFile() {
         time_reported: "",
         date_of_incident: "",
         time_of_incident: "",
-        place_of_incident: ""
+        place_of_incident: "",
       });
       setSuspects([]);
       setCollageState({
         files: [],
         previewUrls: [],
-        layout: "2x2"
+        layout: "2x2",
       });
       setIsCollage(false);
     } catch (error: any) {
@@ -595,32 +619,34 @@ export default function WomenandChildrenFile() {
   };
 
   // Add collage-related handlers
-  const handleCollagePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCollagePhotosChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const files = Array.from(e.target.files || []);
-    const urls = files.map(file => URL.createObjectURL(file));
-    setCollageState(prev => ({
+    const urls = files.map((file) => URL.createObjectURL(file));
+    setCollageState((prev) => ({
       ...prev,
       files: [...prev.files, ...files],
-      previewUrls: [...prev.previewUrls, ...urls]
+      previewUrls: [...prev.previewUrls, ...urls],
     }));
   };
 
   const handleLayoutChange = (layout: string) => {
-    setCollageState(prev => ({ ...prev, layout }));
+    setCollageState((prev) => ({ ...prev, layout }));
   };
 
   const handlePhotoRemove = (index: number) => {
-    setCollageState(prev => ({
+    setCollageState((prev) => ({
       ...prev,
       files: prev.files.filter((_, i) => i !== index),
-      previewUrls: prev.previewUrls.filter((_, i) => i !== index)
+      previewUrls: prev.previewUrls.filter((_, i) => i !== index),
     }));
   };
 
   // Cleanup URLs on unmount
   useEffect(() => {
     return () => {
-      collageState.previewUrls.forEach(url => URL.revokeObjectURL(url));
+      collageState.previewUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, []);
 
@@ -733,7 +759,10 @@ export default function WomenandChildrenFile() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest(".context-menu") && !target.closest(".menu-trigger")) {
+      if (
+        !target.closest(".context-menu") &&
+        !target.closest(".menu-trigger")
+      ) {
         setContextMenuVisible({}); // Close all context menus
       }
     };
@@ -841,8 +870,9 @@ export default function WomenandChildrenFile() {
             </h1>
             <Badge
               variant="outline"
-              className={`${getStatusBadgeClass(folderDetails?.status || "N/A").class
-                } shadow-none`}
+              className={`${
+                getStatusBadgeClass(folderDetails?.status || "N/A").class
+              } shadow-none`}
             >
               {getStatusBadgeClass(folderDetails?.status || "N/A").label}
             </Badge>
@@ -850,17 +880,21 @@ export default function WomenandChildrenFile() {
           <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
             <Button
               onClick={() => handleViewChange(true)}
-              className={`flex items-center justify-center w-10 h-8 rounded-s-full ${isListView ? "bg-blue-200" : "bg-white"
-                } transition-colors hover:${isListView ? "bg-blue-300" : "bg-gray-100"
-                }`}
+              className={`flex items-center justify-center w-10 h-8 rounded-s-full ${
+                isListView ? "bg-blue-200" : "bg-white"
+              } transition-colors hover:${
+                isListView ? "bg-blue-300" : "bg-gray-100"
+              }`}
             >
               <List size={16} color="black" />
             </Button>
             <Button
               onClick={() => handleViewChange(false)}
-              className={`flex items-center justify-center w-10 h-8 rounded-e-full ${!isListView ? "bg-blue-200" : "bg-white"
-                } transition-colors hover:${!isListView ? "bg-blue-300" : "bg-gray-100"
-                }`}
+              className={`flex items-center justify-center w-10 h-8 rounded-e-full ${
+                !isListView ? "bg-blue-200" : "bg-white"
+              } transition-colors hover:${
+                !isListView ? "bg-blue-300" : "bg-gray-100"
+              }`}
             >
               <Grid size={16} color="black" />
             </Button>
@@ -930,7 +964,9 @@ export default function WomenandChildrenFile() {
                       <td className="px-4 py-2 border-b flex space-x-2">
                         <button
                           className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
-                          onClick={(e) => handleMoreOptionsClick(e, file.file_id)}
+                          onClick={(e) =>
+                            handleMoreOptionsClick(e, file.file_id)
+                          }
                         >
                           <MoreVertical size={16} color="black" />
                         </button>
@@ -944,7 +980,10 @@ export default function WomenandChildrenFile() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditClick(file);
-                                setContextMenuVisible((prev) => ({ ...prev, [file.file_id]: false }));
+                                setContextMenuVisible((prev) => ({
+                                  ...prev,
+                                  [file.file_id]: false,
+                                }));
                               }}
                             >
                               <Pencil className="inline w-4 h-4 mr-2" /> Edit
@@ -954,10 +993,14 @@ export default function WomenandChildrenFile() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleArchiveClick(file);
-                                setContextMenuVisible((prev) => ({ ...prev, [file.file_id]: false }));
+                                setContextMenuVisible((prev) => ({
+                                  ...prev,
+                                  [file.file_id]: false,
+                                }));
                               }}
                             >
-                              <Archive className="inline w-4 h-4 mr-2" /> Archive
+                              <Archive className="inline w-4 h-4 mr-2" />{" "}
+                              Archive
                             </button>
                             <button
                               className="block w-full text-left p-2 hover:bg-gray-100"
@@ -965,10 +1008,14 @@ export default function WomenandChildrenFile() {
                                 e.stopPropagation();
                                 setSelectedFile(file);
                                 setShowFileDialog("details");
-                                setContextMenuVisible((prev) => ({ ...prev, [file.file_id]: false }));
+                                setContextMenuVisible((prev) => ({
+                                  ...prev,
+                                  [file.file_id]: false,
+                                }));
                               }}
                             >
-                              <Eye className="inline w-4 h-4 mr-2" /> View Details
+                              <Eye className="inline w-4 h-4 mr-2" /> View
+                              Details
                             </button>
                           </div>
                         )}
@@ -1076,8 +1123,10 @@ export default function WomenandChildrenFile() {
                 </div>
 
                 {showOptions[file.file_id] && (
-                  <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins"
-                    ref={contextMenuRef}>
+                  <div
+                    className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins"
+                    ref={contextMenuRef}
+                  >
                     <Button
                       variant="ghost"
                       className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
@@ -1152,6 +1201,7 @@ export default function WomenandChildrenFile() {
             <form ref={formRef} onSubmit={handleFileUpload}>
               <div className="space-y-4 py-4">
                 <div className="space-y-4 p-4 mr-6 rounded-lg bg-slate-50">
+                <h3 className="text-sm font-medium text-gray-500">Basic Information</h3>
                   <div className="space-y-2">
                     <Label htmlFor="title">File Name</Label>
                     <Input
@@ -1226,7 +1276,12 @@ export default function WomenandChildrenFile() {
                       <div className="space-y-4">
                         <div className="flex items-center gap-4">
                           <Label>Layout:</Label>
-                          <Select value={collageState.layout} onValueChange={(layout) => setCollageState(prev => ({ ...prev, layout }))}>
+                          <Select
+                            value={collageState.layout}
+                            onValueChange={(layout) =>
+                              setCollageState((prev) => ({ ...prev, layout }))
+                            }
+                          >
                             <SelectTrigger className="w-32">
                               <SelectValue placeholder="Choose layout" />
                             </SelectTrigger>
@@ -1238,7 +1293,9 @@ export default function WomenandChildrenFile() {
                           </Select>
                         </div>
                         <div>
-                          <Label htmlFor="collage_photos">Upload Photos for Collage</Label>
+                          <Label htmlFor="collage_photos">
+                            Upload Photos for Collage
+                          </Label>
                           <Input
                             id="collage_photos"
                             type="file"
@@ -1249,22 +1306,32 @@ export default function WomenandChildrenFile() {
                               if (!files) return;
 
                               const newFiles = Array.from(files);
-                              const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
+                              const newPreviewUrls = newFiles.map((file) =>
+                                URL.createObjectURL(file)
+                              );
 
-                              setCollageState(prev => ({
+                              setCollageState((prev) => ({
                                 ...prev,
                                 files: [...prev.files, ...newFiles],
-                                previewUrls: [...prev.previewUrls, ...newPreviewUrls]
+                                previewUrls: [
+                                  ...prev.previewUrls,
+                                  ...newPreviewUrls,
+                                ],
                               }));
                             }}
                             required={isCollage}
                           />
                         </div>
                         {collageState.previewUrls.length > 0 && (
-                          <div className={`grid gap-2 ${collageState.layout === "1x1" ? "grid-cols-1" :
-                              collageState.layout === "2x2" ? "grid-cols-2" :
-                                "grid-cols-3"
-                            }`}>
+                          <div
+                            className={`grid gap-2 ${
+                              collageState.layout === "1x1"
+                                ? "grid-cols-1"
+                                : collageState.layout === "2x2"
+                                ? "grid-cols-2"
+                                : "grid-cols-3"
+                            }`}
+                          >
                             {collageState.previewUrls.map((url, index) => (
                               <div key={index} className="relative group">
                                 <img
@@ -1291,8 +1358,13 @@ export default function WomenandChildrenFile() {
                           id="file"
                           type="file"
                           onChange={(e) => setFileUpload(e.target.files)}
+                          className="file:bg-gray-150 file:border-0 file:rounded-md file:px-2 file:py-1"
                           required={!isCollage}
                         />
+                        <p className="text-xs text-muted-foreground">
+                          Supported: Images (.jpg, .png), Docs (.pdf, .docx),
+                          Sheets (.xlsx), PPTs (.pptx)
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1300,7 +1372,7 @@ export default function WomenandChildrenFile() {
 
                 {/* Reporting Person Details */}
                 <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
-                  <h3 className="text-lg font-semibold">
+                <h3 className="text-sm font-medium text-gray-500">
                     Reporting Person Details
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -1471,9 +1543,9 @@ export default function WomenandChildrenFile() {
                 </div>
 
                 {/* Suspects Section */}
-                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg mr-6">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold">Suspects</h3>
+                  <h3 className="text-sm font-medium text-gray-500">Suspects</h3>
                     <Button
                       type="button"
                       variant="outline"
@@ -1624,7 +1696,9 @@ export default function WomenandChildrenFile() {
               type="button"
               onClick={() => {
                 if (formRef.current) {
-                  formRef.current.dispatchEvent(new Event("submit", { bubbles: true }));
+                  formRef.current.dispatchEvent(
+                    new Event("submit", { bubbles: true })
+                  );
                 }
               }}
               className="bg-blue-900 hover:bg-blue-800"

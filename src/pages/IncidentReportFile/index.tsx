@@ -1152,6 +1152,7 @@ export default function EblotterFile() {
             <form ref={formRef} onSubmit={handleFileUpload}>
               <div className="space-y-4 py-4">
                 <div className="space-y-4 p-4 mr-6 rounded-lg bg-slate-50">
+                <h3 className="text-sm font-medium text-gray-500">Basic Information</h3>
                   <div className="space-y-2">
                     <Label htmlFor="title">File Name</Label>
                     <Input
@@ -1291,8 +1292,13 @@ export default function EblotterFile() {
                           id="file"
                           type="file"
                           onChange={(e) => setFileUpload(e.target.files)}
+                          className="file:bg-gray-150 file:border-0 file:rounded-md file:px-2 file:py-1"
                           required={!isCollage}
                         />
+                        <p className="text-xs text-muted-foreground">
+                          Supported: Images (.jpg, .png), Docs (.pdf, .docx),
+                          Sheets (.xlsx), PPTs (.pptx)
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1300,7 +1306,7 @@ export default function EblotterFile() {
 
                 {/* Reporting Person Details */}
                 <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
-                  <h3 className="text-lg font-semibold">
+                <h3 className="text-sm font-medium text-gray-500">
                     Reporting Person Details
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -1471,9 +1477,9 @@ export default function EblotterFile() {
                 </div>
 
                 {/* Suspects Section */}
-                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg mr-6">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold">Suspects</h3>
+                  <h3 className="text-sm font-medium text-gray-500">Suspects</h3>
                     <Button
                       type="button"
                       variant="outline"

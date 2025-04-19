@@ -32,13 +32,13 @@ import {
 import { supabase } from "@/utils/supa";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetFooter,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -383,13 +383,79 @@ export default function extractionFile() {
 
   const [sortCriteria, setSortCriteria] = useState("created_at");
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
-  const [contextMenuVisible, setContextMenuVisible] = useState<{ [key: number]: boolean }>({});
+  const [contextMenuVisible, setContextMenuVisible] = useState<{
+    [key: number]: boolean;
+  }>({});
 
   // Update the click handler for the MoreVertical button
   const handleMoreOptionsClick = (e: React.MouseEvent, fileId: number) => {
     e.stopPropagation(); // Prevent row click
     setContextMenuVisible((prev) => ({ ...prev, [fileId]: !prev[fileId] })); // Toggle the context menu
   };
+
+  // Fetch folder details and files
+  const fetchFolderAndFiles = async () => {
+    if (!id) return;
+
+    try {
+      // Fetch folder details
+      const { data: folderData, error: folderError } = await supabase
+        .from("folders")
+        .select(
+          `
+            *,
+            creator:created_by(name)
+          `
+        )
+        .eq("folder_id", id)
+        .single();
+
+      if (folderError) throw folderError;
+
+      setFolderDetails({
+        ...folderData,
+        created_by: folderData.creator?.name || folderData.created_by,
+      });
+
+      // Fetch files in the folder
+      const { data: filesData, error: filesError } = await supabase
+        .from("extraction")
+        .select(
+          `
+            *,
+            creator:created_by(name),
+            updater:updated_by(name),
+            viewer:viewed_by(name),
+            downloader:downloaded_by(name),
+            printer:printed_by(name)
+          `
+        )
+        .eq("folder_id", id)
+        .eq("is_archived", false)
+        .order("created_at", { ascending: false });
+
+      if (filesError) throw filesError;
+
+      const formattedFiles = filesData.map((file) => ({
+        ...file,
+        created_by: file.creator?.name || file.created_by,
+        updated_by: file.updater?.name || file.updated_by,
+        viewed_by: file.viewer?.name || file.viewed_by,
+        downloaded_by: file.downloader?.name || file.downloaded_by,
+        printed_by: file.printer?.name || file.printed_by,
+      }));
+
+      setFiles(formattedFiles);
+    } catch (error) {
+      console.error("Error fetching folder data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFolderAndFiles();
+  }, [id]);
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
@@ -465,8 +531,9 @@ export default function extractionFile() {
             </h1>
             <Badge
               variant="outline"
-              className={`${getStatusBadgeClass(folderDetails?.status || "N/A").class
-                } shadow-none`}
+              className={`${
+                getStatusBadgeClass(folderDetails?.status || "N/A").class
+              } shadow-none`}
             >
               {getStatusBadgeClass(folderDetails?.status || "N/A").label}
             </Badge>
@@ -474,17 +541,21 @@ export default function extractionFile() {
           <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
             <Button
               onClick={() => handleViewChange(true)}
-              className={`flex items-center justify-center w-10 h-8 rounded-s-full ${isListView ? "bg-blue-200" : "bg-white"
-                } transition-colors hover:${isListView ? "bg-blue-300" : "bg-gray-100"
-                }`}
+              className={`flex items-center justify-center w-10 h-8 rounded-s-full ${
+                isListView ? "bg-blue-200" : "bg-white"
+              } transition-colors hover:${
+                isListView ? "bg-blue-300" : "bg-gray-100"
+              }`}
             >
               <List size={16} color="black" />
             </Button>
             <Button
               onClick={() => handleViewChange(false)}
-              className={`flex items-center justify-center w-10 h-8 rounded-e-full ${!isListView ? "bg-blue-200" : "bg-white"
-                } transition-colors hover:${!isListView ? "bg-blue-300" : "bg-gray-100"
-                }`}
+              className={`flex items-center justify-center w-10 h-8 rounded-e-full ${
+                !isListView ? "bg-blue-200" : "bg-white"
+              } transition-colors hover:${
+                !isListView ? "bg-blue-300" : "bg-gray-100"
+              }`}
             >
               <Grid size={16} color="black" />
             </Button>
@@ -554,7 +625,9 @@ export default function extractionFile() {
                       <td className="px-4 py-2 border-b flex space-x-2">
                         <button
                           className="p-2 rounded-full hover:bg-gray-200 menu-trigger"
-                          onClick={(e) => handleMoreOptionsClick(e, file.extraction_id)}
+                          onClick={(e) =>
+                            handleMoreOptionsClick(e, file.extraction_id)
+                          }
                         >
                           <MoreVertical size={16} color="black" />
                         </button>
@@ -568,7 +641,10 @@ export default function extractionFile() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditClick(file);
-                                setContextMenuVisible((prev) => ({ ...prev, [file.extraction_id]: false }));
+                                setContextMenuVisible((prev) => ({
+                                  ...prev,
+                                  [file.extraction_id]: false,
+                                }));
                               }}
                             >
                               <Pencil className="inline w-4 h-4 mr-2" /> Edit
@@ -578,10 +654,14 @@ export default function extractionFile() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleArchiveClick(file);
-                                setContextMenuVisible((prev) => ({ ...prev, [file.extraction_id]: false }));
+                                setContextMenuVisible((prev) => ({
+                                  ...prev,
+                                  [file.extraction_id]: false,
+                                }));
                               }}
                             >
-                              <Archive className="inline w-4 h-4 mr-2" /> Archive
+                              <Archive className="inline w-4 h-4 mr-2" />{" "}
+                              Archive
                             </button>
                             <button
                               className="block w-full text-left p-2 hover:bg-gray-100"
@@ -589,10 +669,14 @@ export default function extractionFile() {
                                 e.stopPropagation();
                                 setSelectedFile(file);
                                 setShowFileDialog("details");
-                                setContextMenuVisible((prev) => ({ ...prev, [file.extraction_id]: false }));
+                                setContextMenuVisible((prev) => ({
+                                  ...prev,
+                                  [file.extraction_id]: false,
+                                }));
                               }}
                             >
-                              <Eye className="inline w-4 h-4 mr-2" /> View Details
+                              <Eye className="inline w-4 h-4 mr-2" /> View
+                              Details
                             </button>
                           </div>
                         )}
@@ -620,11 +704,13 @@ export default function extractionFile() {
                   // Remove the file from the UI if it was archived
                   if (showFileDialog === "archive") {
                     setFiles(
-                      files.filter((f) => f.extraction_id !== selectedFile?.extraction_id)
+                      files.filter(
+                        (f) => f.extraction_id !== selectedFile?.extraction_id
+                      )
                     );
                   } else {
                     // Refresh the files list
-                    window.location.reload();
+                    fetchFolderAndFiles();
                   }
                 }}
                 isListView={isListView}
@@ -657,7 +743,7 @@ export default function extractionFile() {
                       onClick={() =>
                         setShowOptions((prev) => ({
                           ...prev,
-                          [file.file_id]: !prev[file.file_id],
+                          [file.extraction_id]: !prev[file.extraction_id], // Changed from file.file_id to file.extraction_id
                         }))
                       }
                     >
@@ -683,12 +769,13 @@ export default function extractionFile() {
                       if (showFileDialog === "archive") {
                         setFiles(
                           files.filter(
-                            (f) => f.extraction_id !== selectedFile?.extraction_id
+                            (f) =>
+                              f.extraction_id !== selectedFile?.extraction_id
                           )
                         );
                       } else {
                         // Refresh the files list
-                        window.location.reload();
+                        fetchFolderAndFiles();
                       }
                     }}
                     isListView={isListView}
@@ -700,8 +787,10 @@ export default function extractionFile() {
                 </div>
 
                 {showOptions[file.extraction_id] && (
-                  <div className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins"
-                    ref={contextMenuRef}>
+                  <div
+                    className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins"
+                    ref={contextMenuRef}
+                  >
                     <Button
                       variant="ghost"
                       className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
@@ -764,221 +853,314 @@ export default function extractionFile() {
       </div>
 
       {/* Add File Dialog */}
-      <Dialog open={isAddingFile} onOpenChange={setIsAddingFile}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add New Certificate of Extraction</DialogTitle>
-            <DialogDescription>
+      <Sheet open={isAddingFile} onOpenChange={setIsAddingFile}>
+        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar scrollbar-thumb-gray-400 scrollbar-track-gray-100 pr-0">
+          <SheetHeader>
+            <SheetTitle className="text-xl">
+              Add New Certificate of Extraction
+            </SheetTitle>
+            <SheetDescription className="text-sm">
               Enter the details for the new certificate.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleFileUpload} className="space-y-4">
-            <ScrollArea className="h-[60vh] pr-4">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Case Title</Label>
-                    <Input
-                      id="title"
-                      value={newFile.title}
-                      onChange={(e) =>
-                        setNewFile({ ...newFile, title: e.target.value })
-                      }
-                      required
-                    />
+            </SheetDescription>
+          </SheetHeader>
+          <div className="overflow-y-auto">
+            <form onSubmit={handleFileUpload} className="flex flex-col h-full">
+              <div className="flex-1 overflow-y-auto pr-4 space-y-6">
+
+                {/* Basic Information Section */}
+                <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
+                <h3 className="text-sm font-medium text-gray-500">
+                    Basic Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Case Title</Label>
+                      <Input
+                        id="title"
+                        value={newFile.title}
+                        onChange={(e) =>
+                          setNewFile({ ...newFile, title: e.target.value })
+                        }
+                        placeholder="Enter case title"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="control_num">Control Number</Label>
+                      <Input
+                        id="control_num"
+                        type="text"
+                        value={newFile.control_num}
+                        onChange={(e) =>
+                          setNewFile({
+                            ...newFile,
+                            control_num: e.target.value,
+                          })
+                        }
+                        placeholder="Enter control number"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="date_release">Date of Release</Label>
+                      <Input
+                        id="date_release"
+                        type="date"
+                        value={newFile.date_release}
+                        onChange={(e) =>
+                          setNewFile({
+                            ...newFile,
+                            date_release: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="station_unit">Station/Unit</Label>
+                      <Input
+                        id="station_unit"
+                        value={newFile.station_unit}
+                        onChange={(e) =>
+                          setNewFile({
+                            ...newFile,
+                            station_unit: e.target.value,
+                          })
+                        }
+                        placeholder="Enter station/unit"
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="control_num">Control Number</Label>
-                    <Input
-                      id="control_num"
-                      type="text"
-                      value={newFile.control_num}
-                      onChange={(e) =>
-                        setNewFile({ ...newFile, control_num: e.target.value })
-                      }
-                      required
-                    />
+                </div>
+
+                {/* Parties Involved Section */}
+                <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
+                <h3 className="text-sm font-medium text-gray-500">
+                    Parties Involved
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="complainant">Complainant</Label>
+                      <Input
+                        id="complainant"
+                        value={newFile.complainant}
+                        onChange={(e) =>
+                          setNewFile({
+                            ...newFile,
+                            complainant: e.target.value,
+                          })
+                        }
+                        placeholder="Enter complainant name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="respondent">Respondent</Label>
+                      <Input
+                        id="respondent"
+                        value={newFile.respondent}
+                        onChange={(e) =>
+                          setNewFile({ ...newFile, respondent: e.target.value })
+                        }
+                        placeholder="Enter respondent name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="witnesses">Witnesses</Label>
+                      <Input
+                        id="witnesses"
+                        value={newFile.witnesses}
+                        onChange={(e) =>
+                          setNewFile({ ...newFile, witnesses: e.target.value })
+                        }
+                        placeholder="Enter witness names"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="investigator">Investigator</Label>
+                      <Input
+                        id="investigator"
+                        value={newFile.investigator}
+                        onChange={(e) =>
+                          setNewFile({
+                            ...newFile,
+                            investigator: e.target.value,
+                          })
+                        }
+                        placeholder="Enter investigator name"
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="complainant">Complainant</Label>
-                    <Input
-                      id="complainant"
-                      value={newFile.complainant}
-                      onChange={(e) =>
-                        setNewFile({ ...newFile, complainant: e.target.value })
-                      }
-                      required
-                    />
+                </div>
+
+                {/* Supporting Personnel Section */}
+                <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
+                <h3 className="text-sm font-medium text-gray-500">
+                    Supporting Personnel
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="assisted_by">Assisted By</Label>
+                      <Input
+                        id="assisted_by"
+                        value={newFile.assisted_by}
+                        onChange={(e) =>
+                          setNewFile({
+                            ...newFile,
+                            assisted_by: e.target.value,
+                          })
+                        }
+                        placeholder="Enter assisting officer"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="accompanied_by">Accompanied By</Label>
+                      <Input
+                        id="accompanied_by"
+                        value={newFile.accompanied_by}
+                        onChange={(e) =>
+                          setNewFile({
+                            ...newFile,
+                            accompanied_by: e.target.value,
+                          })
+                        }
+                        placeholder="Enter accompanying officer"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signatories">Signatories</Label>
+                      <Input
+                        id="signatories"
+                        value={newFile.signatories}
+                        onChange={(e) =>
+                          setNewFile({
+                            ...newFile,
+                            signatories: e.target.value,
+                          })
+                        }
+                        placeholder="Enter signatory names"
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="assisted_by">Assisted By</Label>
-                    <Input
-                      id="assisted_by"
-                      value={newFile.assisted_by}
-                      onChange={(e) =>
-                        setNewFile({ ...newFile, assisted_by: e.target.value })
-                      }
-                      required
-                    />
+                </div>
+
+                {/* Contact Information Section */}
+                <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
+                <h3 className="text-sm font-medium text-gray-500">
+                    Contact Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="contact_num">Contact Number</Label>
+                      <Input
+                        id="contact_num"
+                        value={newFile.contact_num}
+                        onChange={(e) =>
+                          setNewFile({
+                            ...newFile,
+                            contact_num: e.target.value,
+                          })
+                        }
+                        placeholder="Enter contact number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fb_account">Facebook Account</Label>
+                      <Input
+                        id="fb_account"
+                        value={newFile.fb_account}
+                        onChange={(e) =>
+                          setNewFile({ ...newFile, fb_account: e.target.value })
+                        }
+                        placeholder="Enter Facebook profile"
+                      />
+                    </div>
                   </div>
+                </div>
+
+                {/* Incident Details Section */}
+                <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
+                  <h3 className="text-lg font-semibold">
+                    Incident Details
+                  </h3>
                   <div className="space-y-2">
-                    <Label htmlFor="accompanied_by">Accompanied By</Label>
-                    <Input
-                      id="accompanied_by"
-                      value={newFile.accompanied_by}
-                      onChange={(e) =>
-                        setNewFile({
-                          ...newFile,
-                          accompanied_by: e.target.value,
-                        })
+                    <Label htmlFor="incident_summary">Incident Summary</Label>
+                    <RichTextEditor
+                      content={newFile.incident_summary || ""}
+                      onChange={(content) =>
+                        setNewFile({ ...newFile, incident_summary: content })
                       }
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="witnesses">Witnesses</Label>
-                    <Input
-                      id="witnesses"
-                      value={newFile.witnesses}
-                      onChange={(e) =>
-                        setNewFile({ ...newFile, witnesses: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="respondent">Respondent</Label>
-                    <Input
-                      id="respondent"
-                      value={newFile.respondent}
-                      onChange={(e) =>
-                        setNewFile({ ...newFile, respondent: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="investigator">Investigator</Label>
-                    <Input
-                      id="investigator"
-                      value={newFile.investigator}
-                      onChange={(e) =>
-                        setNewFile({ ...newFile, investigator: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="contact_num">Contact Number</Label>
-                    <Input
-                      id="contact_num"
-                      value={newFile.contact_num}
-                      onChange={(e) =>
-                        setNewFile({ ...newFile, contact_num: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fb_account">Facebook Account</Label>
-                    <Input
-                      id="fb_account"
-                      value={newFile.fb_account}
-                      onChange={(e) =>
-                        setNewFile({ ...newFile, fb_account: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="station_unit">Station/Unit</Label>
-                    <Input
-                      id="station_unit"
-                      value={newFile.station_unit}
-                      onChange={(e) =>
-                        setNewFile({ ...newFile, station_unit: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="date_release">Date of Release</Label>
-                    <Input
-                      id="date_release"
-                      type="date"
-                      value={newFile.date_release}
-                      onChange={(e) =>
-                        setNewFile({ ...newFile, date_release: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signatories">Signatories</Label>
-                    <Input
-                      id="signatories"
-                      value={newFile.signatories}
-                      onChange={(e) =>
-                        setNewFile({ ...newFile, signatories: e.target.value })
-                      }
-                      required
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="incident_summary">Incident Summary</Label>
-                  <RichTextEditor
-                    content={newFile.incident_summary || ""}
-                    onChange={(content) =>
-                      setNewFile({ ...newFile, incident_summary: content })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="file">Upload File</Label>
-                  <Input
-                    id="file"
-                    type="file"
-                    onChange={(e) => setFileUpload(e.target.files)}
-                    required
-                  />
+
+                {/* File Upload Section */}
+                <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Attachments
+                  </h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="file">Upload Supporting Document</Label>
+                    <Input
+                      id="file"
+                      type="file"
+                      onChange={(e) => setFileUpload(e.target.files)}
+                      className="file:bg-blue-50 file:border-0 file:rounded-md file:px-2 file:py-1"
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Supported: Images (.jpg, .png), Docs (.pdf, .docx), Sheets
+                      (.xlsx), PPTs (.pptx)
+                    </p>
+                  </div>
                 </div>
               </div>
-            </ScrollArea>
-            <DialogFooter className="mt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setIsAddingFile(false);
-                  setNewFile({
-                    title: "",
-                    control_num: "",
-                    complainant: "",
-                    assisted_by: "",
-                    accompanied_by: "",
-                    witnesses: "",
-                    respondent: "",
-                    investigator: "",
-                    contact_num: "",
-                    fb_account: "",
-                    station_unit: "",
-                    date_release: new Date().toISOString().split("T")[0],
-                    signatories: "",
-                    incident_summary: "",
-                  });
-                  setFileUpload(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                Add Certificate
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+
+              {/* Footer with Actions */}
+              <SheetFooter className="mt-6 pt-4 border-t mr-6">
+                <div className="flex justify-end gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsAddingFile(false);
+                      setNewFile({
+                        title: "",
+                        control_num: "",
+                        complainant: "",
+                        assisted_by: "",
+                        accompanied_by: "",
+                        witnesses: "",
+                        respondent: "",
+                        investigator: "",
+                        contact_num: "",
+                        fb_account: "",
+                        station_unit: "",
+                        date_release: new Date().toISOString().split("T")[0],
+                        signatories: "",
+                        incident_summary: "",
+                      });
+                      setFileUpload(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-blue-900 hover:bg-blue-800"
+                  >
+                    Save Certificate
+                  </Button>
+                </div>
+              </SheetFooter>
+            </form>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Add the PermissionDialog */}
       <PermissionDialog

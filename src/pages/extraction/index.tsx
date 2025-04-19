@@ -236,8 +236,18 @@ export default function Certifications() {
     setDialogContent("Folder Details");
   };
 
-  const handleEditClick = (folder: Folder, e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent folder click
+  // const handleEditClick = (folder: Folder, e: React.MouseEvent) => {
+  //   e.preventDefault(); // Prevent folder click
+  //   if (!canEditOrArchive()) {
+  //     setPermissionAction("edit this folder");
+  //     setShowPermissionDialog(true);
+  //     return;
+  //   }
+  //   setSelectedFolder(folder);
+  //   setIsEditingFolder(true);
+  // };
+
+  const handleEditClick = (folder: Folder) => {
     if (!canEditOrArchive()) {
       setPermissionAction("edit this folder");
       setShowPermissionDialog(true);
@@ -247,8 +257,18 @@ export default function Certifications() {
     setIsEditingFolder(true);
   };
 
-  const handleArchiveClick = (folder: Folder, e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent folder click
+  // const handleArchiveClick = (folder: Folder, e: React.MouseEvent) => {
+  //   e.preventDefault(); // Prevent folder click
+  //   if (!canEditOrArchive()) {
+  //     setPermissionAction("archive this folder");
+  //     setShowPermissionDialog(true);
+  //     return;
+  //   }
+  //   setSelectedFolder(folder);
+  //   setDialogContent("Are you sure you want to archive this folder?");
+  // };
+
+  const handleArchiveClick = (folder: Folder) => {
     if (!canEditOrArchive()) {
       setPermissionAction("archive this folder");
       setShowPermissionDialog(true);
@@ -257,6 +277,7 @@ export default function Certifications() {
     setSelectedFolder(folder);
     setDialogContent("Are you sure you want to archive this folder?");
   };
+
   const [sortCriteria, setSortCriteria] = useState("created_at");
   const handleViewChange = (view: boolean) => {
     setIsListView(view);
@@ -309,6 +330,20 @@ export default function Certifications() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  const sortedFolders = [...filteredFolders].sort((a, b) => {
+    switch (sortCriteria) {
+      case "title":
+        return a.title.localeCompare(b.title);
+      case "status":
+        return a.status.localeCompare(b.status);
+      case "created_at":
+      default:
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+    }
+  });
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
@@ -600,14 +635,14 @@ export default function Certifications() {
                           <Button
                             variant="ghost"
                             className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                            onClick={(e) => handleEditClick(folder, e)}
+                            onClick={(e) => handleEditClick(folder)}
                           >
                             <Pencil className="inline w-4 h-4 mr-2" /> Edit
                           </Button>
                           <Button
                             variant="ghost"
                             className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                            onClick={(e) => handleArchiveClick(folder, e)}
+                            onClick={(e) => handleArchiveClick(folder)}
                           >
                             <Archive className="inline w-4 h-4 mr-2" /> Archive
                           </Button>
@@ -651,67 +686,102 @@ export default function Certifications() {
             Array.from({ length: 4 }).map((_, index) => (
               <Skeleton key={index} className="h-32 w-full rounded-lg" />
             ))
-          ) : filteredFolders.length > 0 ? (
-            filteredFolders.map((folder) => (
+          ) : sortedFolders.length > 0 ? (
+            sortedFolders.map((folder) => (
               <div
                 key={folder.folder_id}
-                className="relative bg-white p-4 rounded-lg border border-gray-200 hover:border-blue-500 cursor-pointer transition-all duration-200"
+                className="relative bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-500 cursor-pointer transition-all duration-200 aspect-w-1 aspect-h-1"
                 onClick={(e) => {
-                  // Only navigate if not clicking menu or its items
                   if (!e.defaultPrevented) {
                     handleFolderClick(folder);
                   }
                 }}
               >
-                <div className="flex items-center gap-x-3 w-full">
+                <div className="flex items-center justify-between gap-x-3 w-full text-lg">
                   <FolderClosed
                     style={{ width: "40px", height: "40px" }}
                     className="text-gray-600"
                     fill="#4b5563"
                   />
-                  <span className="font-poppins font-medium text-lg text-gray-900 text-left overflow-hidden whitespace-nowrap text-ellipsis">
+                  <span className="flex-1 font-poppins font-medium text-gray-900 text-left overflow-hidden whitespace-nowrap text-ellipsis pr-4">
                     {folder.title}
                   </span>
                   <Badge
                     variant="outline"
-                    className={getStatusBadgeClass(folder.status).class}
+                    className={`rounded-full mr-5 text-xs font-poppins ${
+                      getStatusBadgeClass(folder.status).class
+                    }`}
                   >
                     {getStatusBadgeClass(folder.status).label}
                   </Badge>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2 overflow-hidden">
+                  {folder.categories && folder.categories.length > 0 ? (
+                    folder.categories.slice(0, 3).map((category) => (
+                      <Badge
+                        key={category.category_id}
+                        variant="outline"
+                        className="bg-gray-200 text-black"
+                      >
+                        {category.title}
+                      </Badge>
+                    ))
+                  ) : (
+                    <Badge variant="outline" className="bg-gray-200 text-black">
+                      No categories
+                    </Badge>
+                  )}
+                  {folder.categories.length > 3 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Badge
+                            variant="outline"
+                            className="bg-gray-200 cursor-pointer"
+                          >
+                            +{folder.categories.length - 3}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {folder.categories
+                            .slice(3)
+                            .map((cat) => cat.title)
+                            .join(", ")}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
 
-                  {/* Kebab menu button */}
-                  <div className="ml-auto">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="p-2 rounded-full hover:bg-gray-200"
-                      onClick={(e) => {
-                        e.preventDefault(); // Prevent default
-                        e.stopPropagation(); // Stop event from bubbling up
-                        setContextMenuVisible((prev) => ({
-                          ...prev,
-                          [folder.folder_id]: !prev[folder.folder_id],
-                        }));
-                      }}
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </div>
+                {/* Kebab menu button */}
+                <div className="absolute top-4 right-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setContextMenuVisible((prev) => ({
+                        ...prev,
+                        [folder.folder_id]: !prev[folder.folder_id],
+                      }));
+                    }}
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
                 </div>
 
                 {/* Context menu */}
                 {contextMenuVisible[folder.folder_id] && (
-                  <div
-                    ref={contextMenuRef}
-                    className="absolute top-10 right-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
-                  >
+                  <div className="absolute top-10 right-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10 context-menu">
                     <Button
                       variant="ghost"
                       className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        handleEditClick(folder, e);
+                        handleEditClick(folder);
                         setContextMenuVisible((prev) => ({
                           ...prev,
                           [folder.folder_id]: false,
@@ -726,7 +796,11 @@ export default function Certifications() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        handleArchiveClick(folder, e);
+                        handleArchiveClick(folder);
+                        setContextMenuVisible((prev) => ({
+                          ...prev,
+                          [folder.folder_id]: false,
+                        }));
                       }}
                     >
                       <Archive className="inline w-4 h-4 mr-2" /> Archive
@@ -748,27 +822,11 @@ export default function Certifications() {
                     </Button>
                   </div>
                 )}
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {folder.categories && folder.categories.length > 0 ? (
-                    folder.categories.map((category) => (
-                      <Badge
-                        key={category.category_id}
-                        variant="outline"
-                        className="bg-gray-200 text-black"
-                      >
-                        {category.title}
-                      </Badge>
-                    ))
-                  ) : (
-                    <Badge variant="outline" className="bg-gray-200 text-black">
-                      No categories
-                    </Badge>
-                  )}
-                </div>
               </div>
             ))
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 font-poppins">
+            // Fix: Ensuring Lottie is centered by spanning all columns
+            <div className="col-span-full flex flex-col items-center justify-center h-[50vh] text-gray-500 font-poppins">
               <DotLottieReact
                 src="/assets/NoFiles.lottie"
                 loop
