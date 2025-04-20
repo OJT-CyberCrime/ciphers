@@ -294,6 +294,7 @@ export default function EblotterFile() {
     layout: '2x2'
   });
 
+  const [sortCriteria, setSortCriteria] = useState("created_at");
   const userRole = JSON.parse(Cookies.get("user_data") || "{}").role;
 
   const canEditOrArchive = () => {
@@ -699,6 +700,12 @@ export default function EblotterFile() {
       ) ||
       (file.incident_summary?.toLowerCase() || "").includes(
         searchQuery.toLowerCase()
+      ) ||
+      (file.title?.toLowerCase() || "").includes(
+        searchQuery.toLowerCase()
+      ) ||
+      (file.blotter_number?.toLowerCase() || "").includes(
+        searchQuery.toLowerCase()
       );
     const fileExtension = file.file_path?.split(".").pop()?.toLowerCase() || "";
 
@@ -720,12 +727,23 @@ export default function EblotterFile() {
 
     return matchesSearch && matchesFilter;
   });
+
+  // Sort filtered files based on sort criteria
+  const sortedAndFilteredFiles = [...filteredFiles].sort((a, b) => {
+    if (sortCriteria === "created_at") {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    } else if (sortCriteria === "title") {
+      return a.title.localeCompare(b.title);
+    }
+    return 0;
+  });
+
   const [isListView, setIsListView] = useState(() => {
     // Retrieve the view state from localStorage
     const savedView = localStorage.getItem("isListView");
     return savedView ? JSON.parse(savedView) : false; // Default to grid view if not set
   });
-  const [sortCriteria, setSortCriteria] = useState("created_at");
+
   // Function to handle view change
   const handleViewChange = (view: boolean) => {
     setIsListView(view);
@@ -880,7 +898,7 @@ export default function EblotterFile() {
           </div>
         ) : isListView ? (
           <div className="overflow-x-auto">
-            {files.length === 0 ? (
+            {sortedAndFilteredFiles.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 font-poppins">
                 <DotLottieReact
                   src="/assets/NoFiles.lottie"
@@ -888,7 +906,7 @@ export default function EblotterFile() {
                   autoplay
                   className="w-6/12"
                 />
-                No files found in this folder
+                No files found matching your criteria
               </div>
             ) : (
               <table className="min-w-full bg-gray-50 font-poppins">
@@ -909,7 +927,7 @@ export default function EblotterFile() {
                   </tr>
                 </thead>
                 <tbody>
-                  {files.map((file) => (
+                  {sortedAndFilteredFiles.map((file) => (
                     <tr
                       key={file.file_id}
                       className="hover:bg-gray-100 cursor-pointer transition-colors"
@@ -1010,9 +1028,9 @@ export default function EblotterFile() {
               />
             )}
           </div>
-        ) : filteredFiles.length > 0 ? (
+        ) : sortedAndFilteredFiles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 font-poppins">
-            {filteredFiles.map((file) => (
+            {sortedAndFilteredFiles.map((file) => (
               <div key={file.file_id} className="relative">
                 <div
                   className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow aspect-square"
@@ -1137,7 +1155,7 @@ export default function EblotterFile() {
               autoplay
               className="w-6/12"
             />
-            No files found in this folder
+            No files found matching your criteria
           </div>
         )}
       </div>

@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { supabase } from "@/utils/supa";
 import Cookies from "js-cookie";
 import { useState, useEffect, useRef } from "react";
-import { ClockIcon, Plus, RefreshCwIcon } from "lucide-react";
+import { ClockIcon, Loader, Plus, RefreshCwIcon } from "lucide-react";
 
 interface Category {
   category_id: number;
@@ -119,6 +119,7 @@ export default function FolderOperations({
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [filteredAddCategories, setFilteredAddCategories] = useState<Category[]>([]);
   const addCategorySearchInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filter categories based on search query
   useEffect(() => {
@@ -157,6 +158,7 @@ export default function FolderOperations({
   const handleAddFolder = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setIsSubmitting(true);
       const userData = JSON.parse(Cookies.get("user_data") || "{}");
 
       const { data: userData2, error: userError } = await supabase
@@ -253,6 +255,7 @@ export default function FolderOperations({
     if (!selectedFolder) return;
 
     try {
+      setIsSubmitting(true);
       const userData = JSON.parse(Cookies.get("user_data") || "{}");
 
       // Get the user's ID from the users table using their email
@@ -509,7 +512,7 @@ export default function FolderOperations({
                         />
                       </div>
                       <div className="max-h-48 overflow-auto">
-                        <div 
+                        <div
                           className="p-2 text-blue-600 hover:bg-blue-50 cursor-pointer flex items-center gap-2"
                           onClick={() => {
                             setIsAddingCategory(true);
@@ -616,8 +619,16 @@ export default function FolderOperations({
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                Create Folder
+              <Button type="submit" className="bg-blue-900 hover:bg-blue-800" disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader className="animate-spin h-5 w-5 mr-2" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Folder"
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -785,8 +796,16 @@ export default function FolderOperations({
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                Save Changes
+              <Button type="submit" className="bg-blue-900 hover:bg-blue-800" disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader className="animate-spin h-5 w-5 mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -831,9 +850,8 @@ export default function FolderOperations({
                       </h5>
                       <Badge
                         variant="outline"
-                        className={`${
-                          getStatusBadgeClass(selectedFolder.status).class
-                        } py-1 px-2`}
+                        className={`${getStatusBadgeClass(selectedFolder.status).class
+                          } py-1 px-2`}
                       >
                         {selectedFolder.status.toUpperCase()}
                       </Badge>

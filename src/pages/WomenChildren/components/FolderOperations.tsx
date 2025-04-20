@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { supabase } from "@/utils/supa";
 import Cookies from "js-cookie";
 import { useState, useEffect, useRef } from "react";
-import { ClockIcon, Plus, RefreshCwIcon } from "lucide-react";
+import { ClockIcon, Loader, Plus, RefreshCwIcon } from "lucide-react";
 
 interface Category {
   category_id: number;
@@ -113,6 +113,7 @@ export default function FolderOperations({
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [filteredAddCategories, setFilteredAddCategories] = useState<Category[]>([]);
   const addCategorySearchInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filter categories based on search query for the add category dropdown
   useEffect(() => {
@@ -142,6 +143,7 @@ export default function FolderOperations({
   const handleAddFolder = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setIsSubmitting(true);
       const userData = JSON.parse(Cookies.get("user_data") || "{}");
 
       const { data: userData2, error: userError } = await supabase
@@ -238,8 +240,9 @@ export default function FolderOperations({
     if (!selectedFolder) return;
 
     try {
+      setIsSubmitting(true);
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+
       // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
         .from('users')
@@ -317,7 +320,7 @@ export default function FolderOperations({
       };
 
       // Update the folders state
-      setFolders(folders.map(f => 
+      setFolders(folders.map(f =>
         f.folder_id === selectedFolder.folder_id ? formattedFolder : f
       ));
 
@@ -339,7 +342,7 @@ export default function FolderOperations({
 
     try {
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+
       // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
         .from('users')
@@ -378,7 +381,7 @@ export default function FolderOperations({
     e.preventDefault();
     try {
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+
       // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
         .from('users')
@@ -483,7 +486,7 @@ export default function FolderOperations({
                         />
                       </div>
                       <div className="max-h-48 overflow-auto">
-                        <div 
+                        <div
                           className="p-2 text-blue-600 hover:bg-blue-50 cursor-pointer flex items-center gap-2"
                           onClick={() => {
                             setIsAddingCategory(true);
@@ -550,7 +553,7 @@ export default function FolderOperations({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select 
+                <Select
                   value={newFolderStatus}
                   onValueChange={setNewFolderStatus}
                 >
@@ -559,12 +562,12 @@ export default function FolderOperations({
                   </SelectTrigger>
                   <SelectContent>
                     {statusOptions.map((status) => (
-                      <SelectItem 
-                        key={status} 
+                      <SelectItem
+                        key={status}
                         value={status}
                         className="capitalize"
                       >
-                        {status.split('_').map(word => 
+                        {status.split('_').map(word =>
                           word.charAt(0).toUpperCase() + word.slice(1)
                         ).join(' ')}
                       </SelectItem>
@@ -586,8 +589,16 @@ export default function FolderOperations({
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                Create Folder
+              <Button type="submit" className="bg-blue-900 hover:bg-blue-800" disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader className="animate-spin h-5 w-5 mr-2" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Folder"
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -658,7 +669,7 @@ export default function FolderOperations({
               </div>
               <div className="space-y-2">
                 <Label>Categories</Label>
-                <Select 
+                <Select
                   key={categorySelectKey}
                   onValueChange={(value) => {
                     if (!editSelectedCategories.includes(value)) {
@@ -673,8 +684,8 @@ export default function FolderOperations({
                   </SelectTrigger>
                   <SelectContent>
                     {availableCategories.map((category) => (
-                      <SelectItem 
-                        key={category.category_id} 
+                      <SelectItem
+                        key={category.category_id}
                         value={category.category_id.toString()}
                       >
                         {category.title}
@@ -710,7 +721,7 @@ export default function FolderOperations({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-status">Status</Label>
-                <Select 
+                <Select
                   value={editFolderStatus}
                   onValueChange={setEditFolderStatus}
                 >
@@ -719,12 +730,12 @@ export default function FolderOperations({
                   </SelectTrigger>
                   <SelectContent>
                     {statusOptions.map((status) => (
-                      <SelectItem 
-                        key={status} 
+                      <SelectItem
+                        key={status}
                         value={status}
                         className="capitalize"
                       >
-                        {status.split('_').map(word => 
+                        {status.split('_').map(word =>
                           word.charAt(0).toUpperCase() + word.slice(1)
                         ).join(' ')}
                       </SelectItem>
@@ -744,8 +755,16 @@ export default function FolderOperations({
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                Save Changes
+              <Button type="submit" className="bg-blue-900 hover:bg-blue-800" disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader className="animate-spin h-5 w-5 mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -790,9 +809,8 @@ export default function FolderOperations({
                       </h5>
                       <Badge
                         variant="outline"
-                        className={`${
-                          getStatusBadgeClass(selectedFolder.status).class
-                        } py-1 px-2`}
+                        className={`${getStatusBadgeClass(selectedFolder.status).class
+                          } py-1 px-2`}
                       >
                         {selectedFolder.status.toUpperCase()}
                       </Badge>

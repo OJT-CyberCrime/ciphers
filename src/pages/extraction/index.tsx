@@ -539,8 +539,8 @@ export default function Certifications() {
                     </td>
                   </tr>
                 ))
-              ) : filteredFolders.length > 0 ? (
-                filteredFolders.map((folder) => (
+              ) : sortedFolders.length > 0 ? (
+                sortedFolders.map((folder) => (
                   <tr
                     key={folder.folder_id}
                     className="hover:bg-gray-100 cursor-pointer transition-colors"

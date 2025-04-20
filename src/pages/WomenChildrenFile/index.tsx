@@ -296,6 +296,7 @@ export default function WomenandChildrenFile() {
   const formRef = useRef<HTMLFormElement | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sortCriteria, setSortCriteria] = useState("created_at");
   const [activeContextMenu, setActiveContextMenu] = useState<number | null>(
     null
   );
@@ -720,12 +721,11 @@ export default function WomenandChildrenFile() {
   // Filter files based on search query and type
   const filteredFiles = files.filter((file) => {
     const matchesSearch =
-      (file.case_title?.toLowerCase() || "").includes(
-        searchQuery.toLowerCase()
-      ) ||
-      (file.incident_summary?.toLowerCase() || "").includes(
-        searchQuery.toLowerCase()
-      );
+      (file.title?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (file.case_title?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (file.incident_summary?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (file.blotter_number?.toLowerCase() || "").includes(searchQuery.toLowerCase());
+
     const fileExtension = file.file_path?.split(".").pop()?.toLowerCase() || "";
 
     let matchesFilter = true;
@@ -746,12 +746,23 @@ export default function WomenandChildrenFile() {
 
     return matchesSearch && matchesFilter;
   });
+
+  // Sort files based on criteria
+  const sortedFiles = [...filteredFiles].sort((a, b) => {
+    if (sortCriteria === "created_at") {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    } else if (sortCriteria === "title") {
+      return a.title.localeCompare(b.title);
+    }
+    return 0;
+  });
+
   const [isListView, setIsListView] = useState(() => {
     // Retrieve the view state from localStorage
     const savedView = localStorage.getItem("isListView");
     return savedView ? JSON.parse(savedView) : false; // Default to grid view if not set
   });
-  const [sortCriteria, setSortCriteria] = useState("created_at");
+ 
   // Function to handle view change
   const handleViewChange = (view: boolean) => {
     setIsListView(view);
@@ -914,7 +925,7 @@ export default function WomenandChildrenFile() {
           </div>
         ) : isListView ? (
           <div className="overflow-x-auto">
-            {files.length === 0 ? (
+            {sortedFiles.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 font-poppins">
                 <DotLottieReact
                   src="/assets/NoFiles.lottie"
@@ -922,7 +933,7 @@ export default function WomenandChildrenFile() {
                   autoplay
                   className="w-6/12"
                 />
-                No files found in this folder
+                No files found
               </div>
             ) : (
               <table className="min-w-full bg-gray-50 font-poppins">
@@ -943,7 +954,7 @@ export default function WomenandChildrenFile() {
                   </tr>
                 </thead>
                 <tbody>
-                  {files.map((file) => (
+                  {sortedFiles.map((file) => (
                     <tr
                       key={file.file_id}
                       className="hover:bg-gray-100 cursor-pointer transition-colors"
@@ -1057,136 +1068,138 @@ export default function WomenandChildrenFile() {
               />
             )}
           </div>
-        ) : filteredFiles.length > 0 ? (
+        ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 font-poppins">
-            {filteredFiles.map((file) => (
-              <div key={file.file_id} className="relative">
-                <div
-                  className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow aspect-square"
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    setShowOptions((prev) => ({
-                      ...prev,
-                      [file.file_id]: !prev[file.file_id],
-                    }));
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {getFileIcon(file.file_path)}
-                      <h3 className="font-medium text-gray-900 truncate text-sm sm:text-base">
-                        {file.title}
-                      </h3>
-                    </div>
-                    <button
-                      className="p-2 shrink-0 rounded-full hover:bg-gray-200 menu-trigger"
-                      onClick={() =>
-                        setShowOptions((prev) => ({
-                          ...prev,
-                          [file.file_id]: !prev[file.file_id],
-                        }))
-                      }
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <FileOperations
-                    file={file}
-                    showPreview={previewStates[file.file_id] || false}
-                    setShowPreview={(show) => {
-                      setPreviewStates((prev) => ({
+            {sortedFiles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 col-span-full">
+                <DotLottieReact
+                  src="/assets/NoFiles.lottie"
+                  loop
+                  autoplay
+                  className="w-6/12"
+                />
+                No files found
+              </div>
+            ) : (
+              sortedFiles.map((file) => (
+                <div key={file.file_id} className="relative">
+                  <div
+                    className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow aspect-square"
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setShowOptions((prev) => ({
                         ...prev,
-                        [file.file_id]: show,
+                        [file.file_id]: !prev[file.file_id],
                       }));
                     }}
-                    showFileDialog={showFileDialog}
-                    setShowFileDialog={setShowFileDialog}
-                    selectedFile={selectedFile}
-                    setSelectedFile={setSelectedFile}
-                    onFileUpdate={() => {
-                      // Remove the file from the UI if it was archived
-                      if (showFileDialog === "archive") {
-                        setFiles(
-                          files.filter(
-                            (f) => f.file_id !== selectedFile?.file_id
-                          )
-                        );
-                      } else {
-                        // Refresh the files list
-                        fetchFolderAndFiles();
-                      }
-                    }}
-                    isListView={isListView} // Pass the isListView prop
-                  />
-                  <div className="text-sm text-gray-500 mt-2">
-                    Added by {file.created_by} on{" "}
-                    {new Date(file.created_at).toLocaleDateString()}
-                  </div>
-                </div>
-
-                {showOptions[file.file_id] && (
-                  <div
-                    className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins"
-                    ref={contextMenuRef}
                   >
-                    <Button
-                      variant="ghost"
-                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditClick(file);
-                        setShowOptions((prev) => ({
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {getFileIcon(file.file_path)}
+                        <h3 className="font-medium text-gray-900 truncate text-sm sm:text-base">
+                          {file.title}
+                        </h3>
+                      </div>
+                      <button
+                        className="p-2 shrink-0 rounded-full hover:bg-gray-200 menu-trigger"
+                        onClick={() =>
+                          setShowOptions((prev) => ({
+                            ...prev,
+                            [file.file_id]: !prev[file.file_id],
+                          }))
+                        }
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <FileOperations
+                      file={file}
+                      showPreview={previewStates[file.file_id] || false}
+                      setShowPreview={(show) => {
+                        setPreviewStates((prev) => ({
                           ...prev,
-                          [file.file_id]: false,
+                          [file.file_id]: show,
                         }));
                       }}
-                    >
-                      <Pencil className="inline w-4 h-4 mr-2" /> Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleArchiveClick(file);
-                        setShowOptions((prev) => ({
-                          ...prev,
-                          [file.file_id]: false,
-                        }));
+                      showFileDialog={showFileDialog}
+                      setShowFileDialog={setShowFileDialog}
+                      selectedFile={selectedFile}
+                      setSelectedFile={setSelectedFile}
+                      onFileUpdate={() => {
+                        // Remove the file from the UI if it was archived
+                        if (showFileDialog === "archive") {
+                          setFiles(
+                            files.filter(
+                              (f) => f.file_id !== selectedFile?.file_id
+                            )
+                          );
+                        } else {
+                          // Refresh the files list
+                          fetchFolderAndFiles();
+                        }
                       }}
-                    >
-                      <Archive className="inline w-4 h-4 mr-2" /> Archive
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedFile(file);
-                        setShowFileDialog("details");
-                        setShowOptions((prev) => ({
-                          ...prev,
-                          [file.file_id]: false,
-                        }));
-                      }}
-                    >
-                      <Eye className="inline w-4 h-4 mr-2" /> View Details
-                    </Button>
+                      isListView={isListView} // Pass the isListView prop
+                    />
+                    <div className="text-sm text-gray-500 mt-2">
+                      Added by {file.created_by} on{" "}
+                      {new Date(file.created_at).toLocaleDateString()}
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8">
-            <DotLottieReact
-              src="/assets/NoFiles.lottie"
-              loop
-              autoplay
-              className="w-6/12"
-            />
-            No files found in this folder
+
+                  {showOptions[file.file_id] && (
+                    <div
+                      className="absolute top-10 right-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 font-poppins"
+                      ref={contextMenuRef}
+                    >
+                      <Button
+                        variant="ghost"
+                        className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditClick(file);
+                          setShowOptions((prev) => ({
+                            ...prev,
+                            [file.file_id]: false,
+                          }));
+                        }}
+                      >
+                        <Pencil className="inline w-4 h-4 mr-2" /> Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleArchiveClick(file);
+                          setShowOptions((prev) => ({
+                            ...prev,
+                            [file.file_id]: false,
+                          }));
+                        }}
+                      >
+                        <Archive className="inline w-4 h-4 mr-2" /> Archive
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="block w-full text-left p-2 hover:bg-gray-100 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFile(file);
+                          setShowFileDialog("details");
+                          setShowOptions((prev) => ({
+                            ...prev,
+                            [file.file_id]: false,
+                          }));
+                        }}
+                      >
+                        <Eye className="inline w-4 h-4 mr-2" /> View Details
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>

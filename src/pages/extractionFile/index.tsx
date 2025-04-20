@@ -163,7 +163,8 @@ export default function extractionFile() {
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [permissionAction, setPermissionAction] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [sortCriteria, setSortCriteria] = useState("created_at");
+  
   const userRole = JSON.parse(Cookies.get("user_data") || "{}").role;
 
   const canEditOrArchive = () => {
@@ -348,12 +349,40 @@ export default function extractionFile() {
     fetchFolderAndFiles();
   }, [id]);
 
-  // Filter files based on search query
+  // Filter files based on search query and type
   const filteredFiles = files.filter((file) => {
     const matchesSearch =
       file.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       file.incident_summary.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+    
+    const fileExtension = file.file_path?.split(".").pop()?.toLowerCase() || "";
+    let matchesFilter = true;
+    
+    if (filter !== "all") {
+      const documentTypes = ["pdf", "doc", "docx", "txt"];
+      const imageTypes = ["jpg", "jpeg", "png", "gif", "bmp"];
+
+      if (filter === "document") {
+        matchesFilter = documentTypes.includes(fileExtension);
+      } else if (filter === "image") {
+        matchesFilter = imageTypes.includes(fileExtension);
+      } else if (filter === "other") {
+        matchesFilter = !documentTypes.includes(fileExtension) && !imageTypes.includes(fileExtension);
+      }
+    }
+
+    return matchesSearch && matchesFilter;
+  });
+
+  // Sort filtered files based on sort criteria
+  const sortedFiles = [...filteredFiles].sort((a, b) => {
+    switch (sortCriteria) {
+      case "title":
+        return a.title.localeCompare(b.title);
+      case "created_at":
+      default:
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
   });
 
   // Update the helper function to return an object with class and label
@@ -384,7 +413,6 @@ export default function extractionFile() {
     localStorage.setItem("isListView", JSON.stringify(view)); // Save the view state to localStorage
   };
 
-  const [sortCriteria, setSortCriteria] = useState("created_at");
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [contextMenuVisible, setContextMenuVisible] = useState<{
     [key: number]: boolean;
@@ -575,7 +603,7 @@ export default function extractionFile() {
           </div>
         ) : isListView ? (
           <div className="overflow-x-auto">
-            {files.length === 0 ? (
+            {sortedFiles.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-500 py-8 font-poppins">
                 <DotLottieReact
                   src="/assets/NoFiles.lottie"
@@ -604,7 +632,7 @@ export default function extractionFile() {
                   </tr>
                 </thead>
                 <tbody>
-                  {files.map((file) => (
+                  {sortedFiles.map((file) => (
                     <tr
                       key={file.extraction_id}
                       className="hover:bg-gray-100 cursor-pointer transition-colors"
@@ -689,40 +717,10 @@ export default function extractionFile() {
                 </tbody>
               </table>
             )}
-            {selectedFile && (
-              <FileOperations
-                file={selectedFile}
-                showPreview={previewStates[selectedFile.extraction_id] || false}
-                setShowPreview={(show) => {
-                  setPreviewStates((prev) => ({
-                    ...prev,
-                    [selectedFile.extraction_id]: show,
-                  }));
-                }}
-                showFileDialog={showFileDialog}
-                setShowFileDialog={setShowFileDialog}
-                selectedFile={selectedFile}
-                setSelectedFile={setSelectedFile}
-                onFileUpdate={() => {
-                  // Remove the file from the UI if it was archived
-                  if (showFileDialog === "archive") {
-                    setFiles(
-                      files.filter(
-                        (f) => f.extraction_id !== selectedFile?.extraction_id
-                      )
-                    );
-                  } else {
-                    // Refresh the files list
-                    fetchFolderAndFiles();
-                  }
-                }}
-                isListView={isListView}
-              />
-            )}
           </div>
-        ) : filteredFiles.length > 0 ? (
+        ) : sortedFiles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 font-poppins">
-            {filteredFiles.map((file) => (
+            {sortedFiles.map((file) => (
               <div key={file.extraction_id} className="relative">
                 <div
                   className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow aspect-square"
@@ -746,7 +744,7 @@ export default function extractionFile() {
                       onClick={() =>
                         setShowOptions((prev) => ({
                           ...prev,
-                          [file.extraction_id]: !prev[file.extraction_id], // Changed from file.file_id to file.extraction_id
+                          [file.extraction_id]: !prev[file.extraction_id],
                         }))
                       }
                     >
