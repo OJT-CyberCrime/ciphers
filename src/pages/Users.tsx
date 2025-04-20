@@ -853,7 +853,7 @@ export default function Users() {
       {/* Main Content - Stacked on mobile, side by side on desktop */}
       <div className="flex flex-col md:flex-row gap-4 md:gap-6">
         {/* Left Column - Profile Section */}
-        <div className="flex flex-col items-center w-full md:w-1/3 p-4 rounded-lg shadow-sm md:shadow-none">
+        <div className="flex flex-col items-center w-full md:w-1/3 p-4 rounded-lg md:shadow-none">
           <div className="relative">
             <Avatar className="w-24 h-24 md:w-32 md:h-32 cursor-pointer group">
               {currentUser?.public_url ? (

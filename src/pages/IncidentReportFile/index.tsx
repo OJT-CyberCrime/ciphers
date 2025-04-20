@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import SearchBar from "@/Search";
@@ -18,6 +17,7 @@ import {
   Eye,
   MoreVertical,
   SortAsc,
+  Loader,
   List,
   Grid,
   X,
@@ -356,12 +356,15 @@ export default function EblotterFile() {
     }
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Handle file upload
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
 
     try {
+      setIsSubmitting(true)
       const userData = JSON.parse(Cookies.get("user_data") || "{}");
 
       // Get the user's ID from the users table using their email
@@ -1634,8 +1637,16 @@ export default function EblotterFile() {
                 }
               }}
               className="bg-blue-900 hover:bg-blue-800"
-            >
-              Upload File
+              disabled={isSubmitting}
+              >
+                  {isSubmitting ? (
+                  <>
+                    <Loader className="animate-spin h-5 w-5 mr-2" />
+                    Uploading...
+                  </>
+                ) : (
+                  "Upload File"
+                )}
             </Button>
           </SheetFooter>
         </SheetContent>

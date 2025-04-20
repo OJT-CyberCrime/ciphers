@@ -21,6 +21,7 @@ import {
   List,
   Grid,
   X,
+  Loader,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -294,6 +295,7 @@ export default function WomenandChildrenFile() {
   const [permissionAction, setPermissionAction] = useState("");
   const formRef = useRef<HTMLFormElement | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeContextMenu, setActiveContextMenu] = useState<number | null>(
     null
   );
@@ -375,6 +377,7 @@ export default function WomenandChildrenFile() {
     if (!id) return;
 
     try {
+      setIsSubmitting(true)
       const userData = JSON.parse(Cookies.get("user_data") || "{}");
 
       // Get the user's ID from the users table using their email
@@ -1702,8 +1705,16 @@ export default function WomenandChildrenFile() {
                 }
               }}
               className="bg-blue-900 hover:bg-blue-800"
-            >
-              Upload File
+              disabled={isSubmitting}
+              >
+                  {isSubmitting ? (
+                  <>
+                    <Loader className="animate-spin h-5 w-5 mr-2" />
+                    Uploading...
+                  </>
+                ) : (
+                  "Upload File"
+                )}
             </Button>
           </SheetFooter>
         </SheetContent>

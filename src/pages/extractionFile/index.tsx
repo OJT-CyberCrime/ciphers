@@ -20,6 +20,7 @@ import {
   SortAsc,
   Grid,
   List,
+  Loader,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -161,6 +162,7 @@ export default function extractionFile() {
   const previousPageName = "Certification of Extraction"; // Name for breadcrumb
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [permissionAction, setPermissionAction] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const userRole = JSON.parse(Cookies.get("user_data") || "{}").role;
 
@@ -196,6 +198,7 @@ export default function extractionFile() {
     if (!id || !fileUpload?.[0]) return;
 
     try {
+      setIsSubmitting(true);
       const userData = JSON.parse(Cookies.get("user_data") || "{}");
 
       const { data: userData2, error: userError } = await supabase
@@ -1084,7 +1087,7 @@ export default function extractionFile() {
 
                 {/* Incident Details Section */}
                 <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
-                  <h3 className="text-lg font-semibold">
+                <h3 className="text-sm font-medium text-gray-500">
                     Incident Details
                   </h3>
                   <div className="space-y-2">
@@ -1121,7 +1124,7 @@ export default function extractionFile() {
               </div>
 
               {/* Footer with Actions */}
-              <SheetFooter className="mt-6 pt-4 border-t mr-6">
+              <SheetFooter className="mt-6 pt-4 mr-6">
                 <div className="flex justify-end gap-3">
                   <Button
                     type="button"
@@ -1152,8 +1155,16 @@ export default function extractionFile() {
                   <Button
                     type="submit"
                     className="bg-blue-900 hover:bg-blue-800"
+                    disabled={isSubmitting}
                   >
-                    Save Certificate
+                      {isSubmitting ? (
+                      <>
+                        <Loader className="animate-spin h-5 w-5 mr-2" />
+                        Uploading...
+                      </>
+                    ) : (
+                      "Upload File"
+                    )}
                   </Button>
                 </div>
               </SheetFooter>

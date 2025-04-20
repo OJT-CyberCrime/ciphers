@@ -27,7 +27,8 @@ import {
   Printer,
   X,
   CheckCircle,
-  Edit
+  Edit,
+  Loader
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -166,16 +167,15 @@ const CollagePreview = ({ collageState, onLayoutChange, onPhotoRemove }: {
         </SelectContent>
       </Select>
     </div>
-    <div className={`grid gap-2 ${
-      collageState.layout === '1x1' ? 'grid-cols-1' :
-      collageState.layout === '2x2' ? 'grid-cols-2' :
-      'grid-cols-3'
-    }`}>
+    <div className={`grid gap-2 ${collageState.layout === '1x1' ? 'grid-cols-1' :
+        collageState.layout === '2x2' ? 'grid-cols-2' :
+          'grid-cols-3'
+      }`}>
       {Array.isArray(collageState.previewUrls) && collageState.previewUrls.map((url, index) => (
         <div key={index} className="relative group">
-          <img 
-            src={url} 
-            alt={`Collage photo ${index + 1}`} 
+          <img
+            src={url}
+            alt={`Collage photo ${index + 1}`}
             className="w-full h-40 object-cover rounded-md"
           />
           <button
@@ -222,10 +222,10 @@ export default function FileOperations({
           return publicUrl;
         });
 
-        const layout = currentFile.collage_photos.length === 1 
+        const layout = currentFile.collage_photos.length === 1
           ? "1x1"
-          : currentFile.collage_photos.length <= 4 
-            ? "2x2" 
+          : currentFile.collage_photos.length <= 4
+            ? "2x2"
             : "3x3";
 
         setCollageState({
@@ -285,6 +285,7 @@ export default function FileOperations({
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Add state for reporting person and suspects
   const [reportingPerson, setReportingPerson] = useState<ReportingPersonDetails | null>(null);
@@ -434,7 +435,7 @@ export default function FileOperations({
   const handleFileView = async () => {
     try {
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+
       // Get the user's ID and name from the users table using their email
       const { data: userData2, error: userError } = await supabase
         .from('users')
@@ -482,7 +483,7 @@ export default function FileOperations({
 
       // Get user data from cookies
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+
       // Get the user's ID and name from the users table using their email
       const { data: userData2, error: userError } = await supabase
         .from('users')
@@ -512,9 +513,9 @@ export default function FileOperations({
       const { data, error } = await supabase.storage
         .from('files')
         .download(currentFile.file_path);
-      
+
       if (error) throw error;
-      
+
       // Create download link
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
@@ -551,7 +552,7 @@ export default function FileOperations({
 
       // Get user data from cookies
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+
       // Get the user's ID and name from the users table using their email
       const { data: userData2, error: userError } = await supabase
         .from('users')
@@ -600,10 +601,10 @@ export default function FileOperations({
   const handleArchiveFile = async () => {
     try {
       const fileToArchive = selectedFile || file;
-      
+
       // Get user data from cookies
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+
       // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
         .from('users')
@@ -616,7 +617,7 @@ export default function FileOperations({
 
       const { error } = await supabase
         .from('files')
-        .update({ 
+        .update({
           is_archived: true,
           updated_by: userData2.user_id,
           updated_at: new Date().toISOString()
@@ -637,6 +638,7 @@ export default function FileOperations({
   const handleEditFile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
+      setIsSubmitting(true);
       const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
       const fileTitle = formData.get('title') as string;
@@ -648,7 +650,7 @@ export default function FileOperations({
       const uploadedFile = (formData.get('file') as unknown) as globalThis.File | null;
 
       const userData = JSON.parse(Cookies.get('user_data') || '{}');
-      
+
       // Get the user's ID from the users table using their email
       const { data: userData2, error: userError } = await supabase
         .from('users')
@@ -666,10 +668,10 @@ export default function FileOperations({
       if (isCollage) {
         // Handle collage photos
         let updatedCollagePhotos: string[] = [];
-        
+
         // Keep existing photos that weren't removed
         if (collageState.existingPhotos) {
-          const keptPhotos = collageState.existingPhotos.filter((_, index) => 
+          const keptPhotos = collageState.existingPhotos.filter((_, index) =>
             collageState.previewUrls.some(url => url.includes(_.split('/').pop()!))
           );
           updatedCollagePhotos = [...keptPhotos];
@@ -702,7 +704,7 @@ export default function FileOperations({
           const [cols, rows] = collageState.layout.split('x').map(Number);
           const photoWidth = 800 / cols;
           const photoHeight = 800 / rows;
-          
+
           canvas.width = 800;
           canvas.height = 800;
 
@@ -804,7 +806,7 @@ export default function FileOperations({
       // Update reporting person details
       if (reportingPerson) {
         // Check if there's any data to save
-        const hasReportingPersonData = 
+        const hasReportingPersonData =
           reportingPerson.full_name ||
           reportingPerson.age ||
           reportingPerson.birthday ||
@@ -934,19 +936,18 @@ export default function FileOperations({
     // Handle collage preview
     if (currentFile.is_collage && Array.isArray(currentFile.collage_photos) && currentFile.collage_photos.length > 0) {
       return (
-        <div className={`grid gap-4 p-4 ${
-          currentFile.collage_photos.length === 1 ? 'grid-cols-1' :
-          currentFile.collage_photos.length <= 4 ? 'grid-cols-2' :
-          'grid-cols-3'
-        }`}>
+        <div className={`grid gap-4 p-4 ${currentFile.collage_photos.length === 1 ? 'grid-cols-1' :
+            currentFile.collage_photos.length <= 4 ? 'grid-cols-2' :
+              'grid-cols-3'
+          }`}>
           {currentFile.collage_photos.map((photoPath, index) => {
             const { data: { publicUrl } } = supabase.storage
               .from('files')
               .getPublicUrl(photoPath);
-            
+
             return (
               <div key={index} className="relative aspect-square">
-                <img 
+                <img
                   src={publicUrl}
                   alt={`Collage photo ${index + 1}`}
                   className="w-full h-full object-cover rounded-lg"
@@ -961,8 +962,8 @@ export default function FileOperations({
     if (imageTypes.includes(ext)) {
       return (
         <div className="relative aspect-video">
-          <img 
-            src={signedUrl} 
+          <img
+            src={signedUrl}
             alt={currentFile.case_title}
             className="w-full h-full object-contain"
             onError={() => setError('Failed to load image')}
@@ -1023,19 +1024,18 @@ export default function FileOperations({
     if (currentFile.is_collage && Array.isArray(currentFile.collage_photos) && currentFile.collage_photos.length > 0) {
       return (
         <div className="w-full h-48 bg-gray-100 rounded-lg border overflow-hidden">
-          <div className={`grid h-full gap-1 ${
-            currentFile.collage_photos.length === 1 ? 'grid-cols-1' :
-            currentFile.collage_photos.length <= 4 ? 'grid-cols-2' :
-            'grid-cols-3'
-          }`}>
+          <div className={`grid h-full gap-1 ${currentFile.collage_photos.length === 1 ? 'grid-cols-1' :
+              currentFile.collage_photos.length <= 4 ? 'grid-cols-2' :
+                'grid-cols-3'
+            }`}>
             {currentFile.collage_photos.slice(0, 4).map((photoPath, index) => {
               const { data: { publicUrl } } = supabase.storage
                 .from('files')
                 .getPublicUrl(photoPath);
-              
+
               return (
                 <div key={index} className="relative">
-                  <img 
+                  <img
                     src={publicUrl}
                     alt={`Collage photo ${index + 1}`}
                     className="w-full h-full object-cover"
@@ -1066,8 +1066,8 @@ export default function FileOperations({
     if (imageTypes.includes(ext)) {
       return (
         <div className="w-full h-48 bg-gray-100 rounded-lg border overflow-hidden">
-          <img 
-            src={signedUrl || undefined} 
+          <img
+            src={signedUrl || undefined}
             alt={currentFile.case_title}
             className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer"
             onClick={() => {
@@ -1112,7 +1112,7 @@ export default function FileOperations({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M15 3h6v6M14 10l6.1-6.1M9 21H3v-6M10 14l-6.1 6.1"/>
+                <path d="M15 3h6v6M14 10l6.1-6.1M9 21H3v-6M10 14l-6.1 6.1" />
               </svg>
             </Button>
           </div>
@@ -1123,17 +1123,17 @@ export default function FileOperations({
     // For other file types
     return (
       <div className="w-full h-48 bg-gray-100 flex flex-col items-center justify-center rounded-lg border hover:border-blue-300 transition-colors cursor-pointer"
-           onClick={() => {
-             setSelectedFile(currentFile);
-             setShowPreview(true);
-           }}>
+        onClick={() => {
+          setSelectedFile(currentFile);
+          setShowPreview(true);
+        }}>
         {getFileIcon(currentFile.file_path)}
         <span className="mt-2 text-sm text-gray-600">Click to preview</span>
         <span className="text-xs text-gray-500">{ext.toUpperCase()}</span>
       </div>
     );
   };
-  const formRef = useRef <HTMLFormElement | null>(null); // Create a ref for the form
+  const formRef = useRef<HTMLFormElement | null>(null); // Create a ref for the form
   return (
     <>
       {/* Preview Sheet */}
@@ -1317,11 +1317,10 @@ export default function FileOperations({
                             />
                           </div>
                           {collageState.previewUrls.length > 0 && (
-                            <div className={`grid gap-2 ${
-                              collageState.layout === "1x1" ? "grid-cols-1" :
-                              collageState.layout === "2x2" ? "grid-cols-2" :
-                              "grid-cols-3"
-                            }`}>
+                            <div className={`grid gap-2 ${collageState.layout === "1x1" ? "grid-cols-1" :
+                                collageState.layout === "2x2" ? "grid-cols-2" :
+                                  "grid-cols-3"
+                              }`}>
                               {collageState.previewUrls.map((url, index) => (
                                 <div key={index} className="relative group">
                                   <img
@@ -1673,8 +1672,16 @@ export default function FileOperations({
                 }
               }}
               className="bg-blue-900 text-white hover:bg-blue-700"
+              disabled={isSubmitting}
             >
-              Save Changes
+              {isSubmitting ? (
+                <>
+                  <Loader className="animate-spin h-5 w-5 mr-2" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -1729,71 +1736,71 @@ export default function FileOperations({
             </div>
 
             {/* Reporting Person Details */}
-            {reportingPerson && (reportingPerson.full_name || 
-             reportingPerson.age || 
-             reportingPerson.birthday || 
-             reportingPerson.gender || 
-             reportingPerson.complete_address || 
-             reportingPerson.contact_number || 
-             reportingPerson.date_reported || 
-             reportingPerson.time_reported || 
-             reportingPerson.date_of_incident || 
-             reportingPerson.time_of_incident || 
-             reportingPerson.place_of_incident) && (
-              <div className="space-y-4 p-4 rounded-lg mr-6 bg-slate-50">
-                <p className="text-lg font-semibold">Reporting Person Details</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Full Name</Label>
-                    <p className="text-gray-900 mt-1">{reportingPerson.full_name}</p>
-                  </div>
-                  <div>
-                    <Label>Age</Label>
-                    <p className="text-gray-900 mt-1">{reportingPerson.age}</p>
-                  </div>
-                  <div>
-                    <Label>Birthday</Label>
-                    <p className="text-gray-900 mt-1">{formatDateForInput(reportingPerson.birthday)}</p>
-                  </div>
-                  <div>
-                    <Label>Gender</Label>
-                    <p className="text-gray-900 mt-1">{reportingPerson.gender}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <Label>Complete Address</Label>
-                    <div className="mt-1 p-3 bg-slate-50 border rounded-md whitespace-pre-wrap font-poppins text-sm">
-                      {reportingPerson.complete_address}
+            {reportingPerson && (reportingPerson.full_name ||
+              reportingPerson.age ||
+              reportingPerson.birthday ||
+              reportingPerson.gender ||
+              reportingPerson.complete_address ||
+              reportingPerson.contact_number ||
+              reportingPerson.date_reported ||
+              reportingPerson.time_reported ||
+              reportingPerson.date_of_incident ||
+              reportingPerson.time_of_incident ||
+              reportingPerson.place_of_incident) && (
+                <div className="space-y-4 p-4 rounded-lg mr-6 bg-slate-50">
+                  <p className="text-lg font-semibold">Reporting Person Details</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Full Name</Label>
+                      <p className="text-gray-900 mt-1">{reportingPerson.full_name}</p>
                     </div>
-                  </div>
-                  <div>
-                    <Label>Contact Number</Label>
-                    <p className="text-gray-900 mt-1">{reportingPerson.contact_number}</p>
-                  </div>
-                  <div>
-                    <Label>Date Reported</Label>
-                    <p className="text-gray-900 mt-1">{formatDateForInput(reportingPerson.date_reported)}</p>
-                  </div>
-                  <div>
-                    <Label>Time Reported</Label>
-                    <p className="text-gray-900 mt-1">{formatTimeToAMPM(reportingPerson.time_reported)}</p>
-                  </div>
-                  <div>
-                    <Label>Date of Incident</Label>
-                    <p className="text-gray-900 mt-1">{formatDateForInput(reportingPerson.date_of_incident)}</p>
-                  </div>
-                  <div>
-                    <Label>Time of Incident</Label>
-                    <p className="text-gray-900 mt-1">{formatTimeToAMPM(reportingPerson.time_of_incident)}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <Label>Place of Incident</Label>
-                    <div className="mt-1 p-3 bg-slate-50 border rounded-md whitespace-pre-wrap font-poppins text-sm">
-                      {reportingPerson.place_of_incident}
+                    <div>
+                      <Label>Age</Label>
+                      <p className="text-gray-900 mt-1">{reportingPerson.age}</p>
+                    </div>
+                    <div>
+                      <Label>Birthday</Label>
+                      <p className="text-gray-900 mt-1">{formatDateForInput(reportingPerson.birthday)}</p>
+                    </div>
+                    <div>
+                      <Label>Gender</Label>
+                      <p className="text-gray-900 mt-1">{reportingPerson.gender}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <Label>Complete Address</Label>
+                      <div className="mt-1 p-3 bg-slate-50 border rounded-md whitespace-pre-wrap font-poppins text-sm">
+                        {reportingPerson.complete_address}
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Contact Number</Label>
+                      <p className="text-gray-900 mt-1">{reportingPerson.contact_number}</p>
+                    </div>
+                    <div>
+                      <Label>Date Reported</Label>
+                      <p className="text-gray-900 mt-1">{formatDateForInput(reportingPerson.date_reported)}</p>
+                    </div>
+                    <div>
+                      <Label>Time Reported</Label>
+                      <p className="text-gray-900 mt-1">{formatTimeToAMPM(reportingPerson.time_reported)}</p>
+                    </div>
+                    <div>
+                      <Label>Date of Incident</Label>
+                      <p className="text-gray-900 mt-1">{formatDateForInput(reportingPerson.date_of_incident)}</p>
+                    </div>
+                    <div>
+                      <Label>Time of Incident</Label>
+                      <p className="text-gray-900 mt-1">{formatTimeToAMPM(reportingPerson.time_of_incident)}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <Label>Place of Incident</Label>
+                      <div className="mt-1 p-3 bg-slate-50 border rounded-md whitespace-pre-wrap font-poppins text-sm">
+                        {reportingPerson.place_of_incident}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Suspects Section */}
             {suspects.length > 0 && (

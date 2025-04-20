@@ -24,6 +24,8 @@ import {
   CheckCircle,
   Edit,
   Eye,
+  Loader2,
+  Loader,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -114,10 +116,12 @@ export default function FileOperations({
   onFileUpdate,
   selectedFile,
   setSelectedFile,
+  isListView
 }: FileOperationsProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Ensure we have valid file data
   if (!file || !file.file_path) {
@@ -416,6 +420,7 @@ export default function FileOperations({
   const handleEditFile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
+      setIsSubmitting(true);
       const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
       const title = formData.get("title") as string;
@@ -505,12 +510,12 @@ export default function FileOperations({
           signatories,
           incident_summary,
           ...(uploadedFile &&
-          uploadedFile instanceof globalThis.File &&
-          uploadedFile.size > 0
+            uploadedFile instanceof globalThis.File &&
+            uploadedFile.size > 0
             ? {
-                file_path: filePath,
-                public_url: publicUrl,
-              }
+              file_path: filePath,
+              public_url: publicUrl,
+            }
             : {}),
           updated_by: userData2.user_id,
           updated_at: new Date().toISOString(),
@@ -525,6 +530,8 @@ export default function FileOperations({
     } catch (error: any) {
       console.error("Error updating file:", error);
       toast.error(error.message || "Failed to update file");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -708,8 +715,8 @@ export default function FileOperations({
 
   return (
     <>
-      {/* Preview Dialog */}
-      <Dialog
+      {/* Preview Sheet */}
+      <Sheet
         open={showPreview}
         onOpenChange={(open) => {
           setShowPreview(open);
@@ -718,212 +725,285 @@ export default function FileOperations({
           }
         }}
       >
-        <DialogContent className="max-w-6xl w-4/5 h-[80vh] overflow-y-auto bg-white shadow-lg rounded-lg font-poppins scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-          <DialogHeader>
+        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100">
+          <SheetHeader>
             <div className="flex justify-between items-center">
               <div>
-                <DialogTitle className="text-2xl font-semibold">
+                <SheetTitle className="text-xl font-semibold">
                   {currentFile.title}
-                </DialogTitle>
-                <p className="text-sm text-gray-500 mt-1">
-                  {ext.toUpperCase()} Document • Added by{" "}
-                  {currentFile.created_by}
-                </p>
+                </SheetTitle>
+                <SheetDescription className="text-xs text-gray-500 mt-1">
+                  {ext.toUpperCase()} Document • Added by {currentFile.created_by}
+                </SheetDescription>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setSelectedFile(null);
-                  setShowPreview(false);
-                }}
-              >
-                <X size={20} />
-              </Button>
             </div>
-          </DialogHeader>
+          </SheetHeader>
 
           {/* Scrollable Preview Content */}
-          <div className="flex-1 overflow-auto rounded-lg border max-h-[calc(80vh-150px)] p-4 bg-gray-50">
+          <div className="flex-1 overflow-auto rounded-lg border max-h-[calc(100vh-150px)] mt-5">
             {renderPreviewContent()}
           </div>
 
-          <DialogFooter className="flex justify-between items-center">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+          <div className="flex gap-2 justify-center">
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+              onClick={handleFileDownload}
+            >
+              <Download size={16} />
+              Download
+            </Button>
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+              onClick={handleFilePrint}
+            >
+              <Printer size={16} />
+              Print
+            </Button>
+          </div>
+
+          <SheetFooter className="flex justify-between items-center mt-auto">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
               {currentFile.viewed_at && (
                 <span>
-                  Last viewed:{" "}
-                  {new Date(currentFile.viewed_at).toLocaleString()}
+                  Last viewed: {new Date(currentFile.viewed_at).toLocaleString()}
                 </span>
               )}
             </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {/* File Operations Dialog */}
       <Sheet
         open={showFileDialog === "edit"}
         onOpenChange={() => setShowFileDialog(null)}
       >
-        <SheetContent className="w-full max-w-6xl p-6 overflow-y-auto bg-white">
+        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar scrollbar-thumb-gray-400 scrollbar-track-gray-100 pr-0">
           <SheetHeader>
-            <SheetTitle className="text-xl font-semibold">Edit File</SheetTitle>
+            <SheetTitle className="text-xl">
+              Edit Case File
+            </SheetTitle>
+            <SheetDescription className="text-sm">
+              Update case details and documentation
+            </SheetDescription>
           </SheetHeader>
-          <hr className="my-1 border-gray-300" />
 
-          <form onSubmit={handleEditFile} className="h-full flex flex-col">
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Case Title</Label>
-                    <Input
-                      id="title"
-                      name="title"
-                      defaultValue={(selectedFile || file).title}
-                      required
-                    />
+          <div className="overflow-y-auto">
+            <form onSubmit={handleEditFile} className="h-full flex flex-col">
+              <div className="flex-1 overflow-y-auto pr-4 space-y-6">
+
+                {/* Basic Information Section */}
+                <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
+                  <h3 className="text-sm font-medium text-gray-500">Basic Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Case Title</Label>
+                      <Input
+                        id="title"
+                        name="title"
+                        defaultValue={(selectedFile || file).title}
+                        required
+                        className="border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="control_num">Control Number</Label>
+                      <Input
+                        id="control_num"
+                        name="control_num"
+                        defaultValue={(selectedFile || file).control_num}
+                        required
+                        className="border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="date_release">Date of Release</Label>
+                      <Input
+                        id="date_release"
+                        name="date_release"
+                        type="date"
+                        defaultValue={(selectedFile || file).date_release}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="station_unit">Station/Unit</Label>
+                      <Input
+                        id="station_unit"
+                        name="station_unit"
+                        defaultValue={(selectedFile || file).station_unit}
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="control_num">Control Number</Label>
-                    <Input
-                      id="control_num"
-                      name="control_num"
-                      defaultValue={(selectedFile || file).control_num}
-                      required
-                    />
+                </div>
+
+                {/* Parties Involved Section */}
+                <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
+                  <h3 className="text-sm font-medium text-gray-500">Parties Involved</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="complainant">Complainant</Label>
+                      <Input
+                        id="complainant"
+                        name="complainant"
+                        defaultValue={(selectedFile || file).complainant}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="respondent">Respondent</Label>
+                      <Input
+                        id="respondent"
+                        name="respondent"
+                        defaultValue={(selectedFile || file).respondent}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="witnesses">Witnesses</Label>
+                      <Input
+                        id="witnesses"
+                        name="witnesses"
+                        defaultValue={(selectedFile || file).witnesses}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="investigator">Investigator</Label>
+                      <Input
+                        id="investigator"
+                        name="investigator"
+                        defaultValue={(selectedFile || file).investigator}
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="complainant">Complainant</Label>
-                    <Input
-                      id="complainant"
-                      name="complainant"
-                      defaultValue={(selectedFile || file).complainant}
-                      required
-                    />
+                </div>
+
+                {/* Supporting Personnel Section */}
+                <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr6">
+                  <h3 className="text-sm font-medium text-gray-500">Case Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="assisted_by">Signatories</Label>
+                      <Input
+                        id="assisted_by"
+                        name="assisted_by"
+                        defaultValue={(selectedFile || file).assisted_by}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="accompanied_by">Signatories</Label>
+                      <Input
+                        id="accompanied_by"
+                        name="accompanied_by"
+                        defaultValue={(selectedFile || file).accompanied_by}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signatories">Signatories</Label>
+                      <Input
+                        id="signatories"
+                        name="signatories"
+                        defaultValue={(selectedFile || file).signatories}
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="assisted_by">Assisted By</Label>
-                    <Input
-                      id="assisted_by"
-                      name="assisted_by"
-                      defaultValue={(selectedFile || file).assisted_by}
-                      required
-                    />
+                </div>
+
+                {/* Contact Information Section */}
+                <div className="space-y-4 p-4 bg-slate-50 rounded-lg mr-6">
+                  <h3 className="text-sm font-medium text-gray-500">Contact Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="contact_num">Contact Number</Label>
+                      <Input
+                        id="contact_num"
+                        name="contact_num"
+                        defaultValue={(selectedFile || file).contact_num}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fb_account">Facebook Account</Label>
+                      <Input
+                        id="fb_account"
+                        name="fb_account"
+                        defaultValue={(selectedFile || file).fb_account}
+                        required
+                      />
+                    </div>
                   </div>
+                </div>
+
+                {/* Incident Details Section */}
+                <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
+                  <h3 className="text-sm font-medium text-gray-500">Incident Details</h3>
                   <div className="space-y-2">
-                    <Label htmlFor="accompanied_by">Accompanied By</Label>
-                    <Input
-                      id="accompanied_by"
-                      name="accompanied_by"
-                      defaultValue={(selectedFile || file).accompanied_by}
+                    <Label htmlFor="incident_summary">Incident Summary</Label>
+                    <Textarea
+                      id="incident_summary"
+                      name="incident_summary"
+                      defaultValue={(selectedFile || file).incident_summary}
                       required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="witnesses">Witnesses</Label>
-                    <Input
-                      id="witnesses"
-                      name="witnesses"
-                      defaultValue={(selectedFile || file).witnesses}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="respondent">Respondent</Label>
-                    <Input
-                      id="respondent"
-                      name="respondent"
-                      defaultValue={(selectedFile || file).respondent}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="investigator">Investigator</Label>
-                    <Input
-                      id="investigator"
-                      name="investigator"
-                      defaultValue={(selectedFile || file).investigator}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="contact_num">Contact Number</Label>
-                    <Input
-                      id="contact_num"
-                      name="contact_num"
-                      defaultValue={(selectedFile || file).contact_num}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fb_account">Facebook Account</Label>
-                    <Input
-                      id="fb_account"
-                      name="fb_account"
-                      defaultValue={(selectedFile || file).fb_account}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="station_unit">Station/Unit</Label>
-                    <Input
-                      id="station_unit"
-                      name="station_unit"
-                      defaultValue={(selectedFile || file).station_unit}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="date_release">Date of Release</Label>
-                    <Input
-                      id="date_release"
-                      name="date_release"
-                      type="date"
-                      defaultValue={(selectedFile || file).date_release}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signatories">Signatories</Label>
-                    <Input
-                      id="signatories"
-                      name="signatories"
-                      defaultValue={(selectedFile || file).signatories}
-                      required
+                      className="min-h-32 border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="incident_summary">Incident Summary</Label>
-                  <Textarea
-                    id="incident_summary"
-                    name="incident_summary"
-                    defaultValue={(selectedFile || file).incident_summary}
-                    required
-                    className="h-32 resize-none border-gray-300 rounded-md"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="file">Update File (Optional)</Label>
-                  <Input id="file" name="file" type="file" />
+
+                {/* File Upload Section */}
+                <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
+                  <h3 className="text-sm font-medium text-gray-500">Attachments</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="file">Update File</Label>
+                    <Input
+                      id="file"
+                      name="file"
+                      type="file"
+                      className="file:bg-blue-50 file:border-0 file:rounded-md file:px-2 file:py-1"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Supported: Images (.jpg, .png), Docs (.pdf, .docx), Sheets
+                      (.xlsx), PPTs (.pptx)
+                    </p>
+                  </div>
                 </div>
               </div>
-            </ScrollArea>
-            <SheetFooter className="mt-4 pt-4 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowFileDialog(null)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-blue-900 hover:bg-blue-800">
-                Save Changes
-              </Button>
-            </SheetFooter>
-          </form>
+
+              <SheetFooter className="mt-6 pt-4 mr-6">
+                <div className="flex justify-end gap-3 w-full">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowFileDialog(null)}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-blue-900 hover:bg-blue-800"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader className="animate-spin h-5 w-5 mr-2" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                </div>
+              </SheetFooter>
+            </form>
+          </div>
         </SheetContent>
       </Sheet>
 
@@ -969,238 +1049,251 @@ export default function FileOperations({
 
 
       {/* Vew Details Sheet*/}
-      <Sheet
-        open={showFileDialog === "details"}
-        onOpenChange={() => setShowFileDialog(null)}
-      >
-                <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100 pr-0 overflow-y-auto">
-        <SheetHeader>
-            <SheetTitle>File Details</SheetTitle>
-            <SheetDescription className="text-sm text-gray-500">
-              View complete details of the file.
-            </SheetDescription>
-          </SheetHeader>
+      <Sheet open={showFileDialog === "details"} onOpenChange={() => setShowFileDialog(null)}>
+  <SheetContent className="max-w-6xl w-full h-screen flex flex-col bg-white">
+    <SheetHeader>
+      <SheetTitle>
+        File Details
+      </SheetTitle>
+      <SheetDescription className="text-sm text-gray-500">
+        Complete details of the selected file
+      </SheetDescription>
+    </SheetHeader>
 
-          <div className="h-full flex flex-col">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="font-medium text-blue-900">
-                      File Title
-                    </Label>
-                    <p className="text-gray-900">{currentFile.title}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium text-blue-900">
-                      Control Number
-                    </Label>
-                    <p className="text-gray-900">{currentFile.control_num}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium text-blue-900">
-                      Complainant
-                    </Label>
-                    <p className="text-gray-900">{currentFile.complainant}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium text-blue-900">
-                      Assisted By
-                    </Label>
-                    <p className="text-gray-900">{currentFile.assisted_by}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium text-blue-900">
-                      Accompanied By
-                    </Label>
-                    <p className="text-gray-900">
-                      {currentFile.accompanied_by}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium text-blue-900">
-                      Witnesses
-                    </Label>
-                    <p className="text-gray-900">{currentFile.witnesses}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium text-blue-900">
-                      Respondent
-                    </Label>
-                    <p className="text-gray-900">{currentFile.respondent}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium text-blue-900">
-                      Investigator
-                    </Label>
-                    <p className="text-gray-900">{currentFile.investigator}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium text-blue-900">
-                      Contact Number
-                    </Label>
-                    <p className="text-gray-900">{currentFile.contact_num}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium text-blue-900">
-                      Facebook Account
-                    </Label>
-                    <p className="text-gray-900">{currentFile.fb_account}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium text-blue-900">
-                      Station/Unit
-                    </Label>
-                    <p className="text-gray-900">{currentFile.station_unit}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium text-blue-900">
-                      Date of Release
-                    </Label>
-                    <p className="text-gray-900">{currentFile.date_release}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-medium text-blue-900">
-                      Signatories
-                    </Label>
-                    <p className="text-gray-900">{currentFile.signatories}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-medium text-blue-900">
-                    Incident Summary
-                  </Label>
-                  <div className="p-3 bg-gray-50 rounded-md border border-gray-200 min-h-[8rem] whitespace-pre-wrap">
-                    {currentFile.incident_summary}
-                  </div>
-                </div>
+    <div className="overflow-y-auto pr-0">
+            {/* File Details Section */}
+            <div className="space-y-4 py-4">
+              <div className="space-y-4 p-4 mr-6 rounded-lg bg-slate-50">
+              <h3 className="text-lg font-semibold">
+              Basic Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label className="font-medium text-gray-700">File Title</Label>
+                <p className="text-gray-900">{currentFile.title || "N/A"}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-gray-700">Control Number</Label>
+                <p className="text-gray-900">{currentFile.control_num || "N/A"}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-gray-700">Station/Unit</Label>
+                <p className="text-gray-900">{currentFile.station_unit || "N/A"}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-gray-700">Date of Release</Label>
+                <p className="text-gray-900">
+                  {currentFile.date_release ? new Date(currentFile.date_release).toLocaleDateString() : "N/A"}
+                </p>
+              </div>
+            </div>
+          </div>
 
-                {/* File History Section */}
-                <div className="space-y-4 p-4 rounded-lg bg-slate-50 mr-6 font-poppins">
-                  <p className="text-lg font-semibold">File History</p>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle className="w-4 h-4" />
-                        <Label className="font-normal">Created</Label>
-                        <p className="text-gray-600">
-                          {new Date(currentFile.created_at).toLocaleString()} by{" "}
-                          <span className="text-blue-900">
-                            {currentFile.created_by}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center space-x-2">
-                        <Edit className="w-4 h-4" />
-                        <Label className="font-normal">Last Updated</Label>
-                        <p className="text-gray-600">
-                          {currentFile.updated_at ? (
-                            <span>
-                              {new Date(
-                                currentFile.updated_at
-                              ).toLocaleString()}{" "}
-                              by{" "}
-                              <span className="text-blue-900">
-                                {currentFile.updated_by}
-                              </span>
-                            </span>
-                          ) : (
-                            "Never"
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center space-x-2">
-                        <Eye className="w-4 h-4" />
-                        <Label className="font-normal">Last Viewed</Label>
-                        <p className="text-gray-600">
-                          {currentFile.viewed_at ? (
-                            <span>
-                              {new Date(currentFile.viewed_at).toLocaleString()}{" "}
-                              by{" "}
-                              <span className="text-blue-900">
-                                {currentFile.viewed_by}
-                              </span>
-                            </span>
-                          ) : (
-                            "Never"
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center space-x-2">
-                        <Download className="w-4 h-4" />
-                        <Label className="font-normal">Last Downloaded</Label>
-                        <p className="text-gray-600">
-                          {currentFile.downloaded_at ? (
-                            <span>
-                              {new Date(
-                                currentFile.downloaded_at
-                              ).toLocaleString()}{" "}
-                              by{" "}
-                              <span className="text-blue-900">
-                                {currentFile.downloaded_by}
-                              </span>
-                            </span>
-                          ) : (
-                            "Never"
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center space-x-2">
-                        <Printer className="w-4 h-4" />
-                        <Label className="font-normal">Last Printed</Label>
-                        <p className="text-gray-600">
-                          {currentFile.printed_at ? (
-                            <span>
-                              {new Date(
-                                currentFile.printed_at
-                              ).toLocaleString()}{" "}
-                              by{" "}
-                              <span className="text-blue-900">
-                                {currentFile.printed_by}
-                              </span>
-                            </span>
-                          ) : (
-                            "Never"
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+          {/* Parties Involved Section */}
+          <div className="space-y-4 bg-gray-50 p-5 rounded-lg mr-6">
+          <h3 className="text-lg font-semibold">
+              Parties Involved
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label className="font-medium text-gray-700">Complainant</Label>
+                <p className="text-gray-900">{currentFile.complainant || "N/A"}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-gray-700">Respondent</Label>
+                <p className="text-gray-900">{currentFile.respondent || "N/A"}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-gray-700">Witnesses</Label>
+                <p className="text-gray-900">{currentFile.witnesses || "N/A"}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-gray-700">Investigator</Label>
+                <p className="text-gray-900">{currentFile.investigator || "N/A"}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Supporting Personnel Section */}
+          <div className="space-y-4 bg-gray-50 p-5 rounded-lg mr-6">
+          <h3 className="text-lg font-semibold">
+              Supporting Personnel
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label className="font-medium text-gray-700">Assisted By</Label>
+                <p className="text-gray-900">{currentFile.assisted_by || "N/A"}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-gray-700">Accompanied By</Label>
+                <p className="text-gray-900">{currentFile.accompanied_by || "N/A"}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-gray-700">Signatories</Label>
+                <p className="text-gray-900">{currentFile.signatories || "N/A"}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Information Section */}
+          <div className="space-y-4 bg-gray-50 p-5 rounded-lg mr-6">
+          <h3 className="text-lg font-semibold">
+              Contact Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label className="font-medium text-gray-700">Contact Number</Label>
+                <p className="text-gray-900">{currentFile.contact_num || "N/A"}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-medium text-gray-700">Facebook Account</Label>
+                <p className="text-gray-900">{currentFile.fb_account || "N/A"}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Incident Details Section */}
+          <div className="space-y-4 bg-gray-50 p-5 rounded-lg mr-6">
+          <h3 className="text-lg font-semibold">
+              Incident Details
+            </h3>
+            <div className="space-y-2">
+              <Label className="font-medium text-gray-700">Incident Summary</Label>
+              <div className="p-4 rounded-md border border-gray-200 min-h-[8rem] whitespace-pre-wrap">
+                {currentFile.incident_summary || "No summary available"}
+              </div>
+            </div>
+          </div>
+
+          {/* File History Section (Unchanged) */}
+          <div className="space-y-4 p-4 rounded-lg bg-slate-50 mr-6 font-poppins">
+            <p className="text-lg font-semibold">File History</p>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4" />
+                  <Label className="font-normal">Created</Label>
+                  <p className="text-gray-600">
+                    {new Date(currentFile.created_at).toLocaleString()} by{" "}
+                    <span className="text-blue-900">
+                      {currentFile.created_by}
+                    </span>
+                  </p>
                 </div>
               </div>
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-2">
+                  <Edit className="w-4 h-4" />
+                  <Label className="font-normal">Last Updated</Label>
+                  <p className="text-gray-600">
+                    {currentFile.updated_at ? (
+                      <span>
+                        {new Date(
+                          currentFile.updated_at
+                        ).toLocaleString()}{" "}
+                        by{" "}
+                        <span className="text-blue-900">
+                          {currentFile.updated_by}
+                        </span>
+                      </span>
+                    ) : (
+                      "Never"
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-2">
+                  <Eye className="w-4 h-4" />
+                  <Label className="font-normal">Last Viewed</Label>
+                  <p className="text-gray-600">
+                    {currentFile.viewed_at ? (
+                      <span>
+                        {new Date(currentFile.viewed_at).toLocaleString()}{" "}
+                        by{" "}
+                        <span className="text-blue-900">
+                          {currentFile.viewed_by}
+                        </span>
+                      </span>
+                    ) : (
+                      "Never"
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-2">
+                  <Download className="w-4 h-4" />
+                  <Label className="font-normal">Last Downloaded</Label>
+                  <p className="text-gray-600">
+                    {currentFile.downloaded_at ? (
+                      <span>
+                        {new Date(
+                          currentFile.downloaded_at
+                        ).toLocaleString()}{" "}
+                        by{" "}
+                        <span className="text-blue-900">
+                          {currentFile.downloaded_by}
+                        </span>
+                      </span>
+                    ) : (
+                      "Never"
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-2">
+                  <Printer className="w-4 h-4" />
+                  <Label className="font-normal">Last Printed</Label>
+                  <p className="text-gray-600">
+                    {currentFile.printed_at ? (
+                      <span>
+                        {new Date(
+                          currentFile.printed_at
+                        ).toLocaleString()}{" "}
+                        by{" "}
+                        <span className="text-blue-900">
+                          {currentFile.printed_by}
+                        </span>
+                      </span>
+                    ) : (
+                      "Never"
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Card Preview */}
-      <div className="mt-2 relative">{renderCardPreview()}</div>
-
-      {/* Download and Print buttons */}
-      <div className="flex gap-2 justify-center">
-        <Button
-          variant="ghost"
-          className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-          onClick={handleFileDownload}
-        >
-          <Download size={16} />
-          Download
-        </Button>
-        <Button
-          variant="ghost"
-          className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-          onClick={handleFilePrint}
-        >
-          <Printer size={16} />
-          Print
-        </Button>
+        </div>
       </div>
+  </SheetContent>
+</Sheet>
+
+      {/* Render card preview in both list and grid view */}
+      {!isListView && renderCardPreview()}
+
+      {/* Download and Print buttons - only show when not in list view */}
+      {!isListView && (
+        <div className="flex gap-2 justify-center">
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+            onClick={handleFileDownload}
+          >
+            <Download size={16} />
+            Download
+          </Button>
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+            onClick={handleFilePrint}
+          >
+            <Printer size={16} />
+            Print
+          </Button>
+        </div>
+      )}
     </>
   );
 }

@@ -14,7 +14,7 @@ import {
   Bar,
   XAxis,
   YAxis,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -23,6 +23,7 @@ import {
   Area,
   Treemap,
   Legend,
+  CartesianGrid,
 } from "recharts";
 import {
   Pagination,
@@ -42,11 +43,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar } from "@/components/ui/avatar";
-import { Users, Archive, Files, FileTextIcon, FileCheck, Calendar } from "lucide-react";
+import { Users, Archive, Files, FileTextIcon, FileCheck, Calendar, Loader2, FileSearch, File, FileText, Upload, User } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Sample data for different file types
 const regularFilesData = [
@@ -202,7 +209,7 @@ interface RecentExtraction {
 const styles = {
   container: `p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 font-poppins max-w-screen-xl mx-auto`,
   cardGrid: `col-span-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2`,
-  card: `border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center`,
+  card: `border border-gray-300 rounded-lg bg-white p-1 h-24 flex flex-col justify-center shadow-sm `,
   cardHeader: `flex flex-row items-center justify-between text-gray-900 font-medium pb-2`,
   cardContent: `text-4xl font-bold text-gray-900 text-center`,
   cardTitle: `text-sm font-medium text-gray-700`,
@@ -224,7 +231,7 @@ interface CategoryOption {
 }
 
 export default function Dashboard() {
-  const [selectedData, setSelectedData] = useState("Incident Report");
+  const [selectedData, setSelectedData] = useState("incidentReport");
   const [currentPage, setCurrentPage] = useState(0);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [regularFilesData, setRegularFilesData] = useState(
@@ -272,6 +279,8 @@ export default function Dashboard() {
   });
   const [recentEblotters, setRecentEblotters] = useState<RecentEblotter[]>([]);
   const [recentExtractions, setRecentExtractions] = useState<RecentExtraction[]>([]);
+  const [currentEblotterPage, setCurrentEblotterPage] = useState(0);
+  const [currentExtractionPage, setCurrentExtractionPage] = useState(0);
   const navigate = useNavigate();
 
   // Add new state variables for the category time graph
@@ -716,7 +725,7 @@ export default function Dashboard() {
           const currentCount = officerCounts.get(officerName) || { filesUploaded: 0, public_url: publicUrl };
           officerCounts.set(
             officerName,
-            { 
+            {
               filesUploaded: currentCount.filesUploaded + 1,
               public_url: publicUrl
             }
@@ -725,8 +734,8 @@ export default function Dashboard() {
 
         // Convert to array and sort by number of files
         const sortedOfficers = Array.from(officerCounts.entries())
-          .map(([officer, data]) => ({ 
-            officer, 
+          .map(([officer, data]) => ({
+            officer,
             filesUploaded: data.filesUploaded,
             public_url: data.public_url
           }))
@@ -876,9 +885,10 @@ export default function Dashboard() {
     fetchRecentExtractions();
   }, []);
 
-  const handleDataChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedData(event.target.value);
+  const handleDataChange = (value: string) => {
+    setSelectedData(value);
   };
+
 
   const pageCount = Math.ceil(recentFiles.length / itemsPerPage);
 
@@ -1115,7 +1125,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Incident Reports */}
-        <Card className="border border-gray-300 rounded-lg bg-blue-100 p-1 h-24 flex flex-col justify-center">
+        <Card className="border border-gray-300 rounded-lg bg-blue-100 p-1 h-24 flex flex-col justify-center shadow-sm">
           <CardHeader className={styles.cardHeader}>
             <div className="flex items-center gap-2">
               <FileTextIcon className="w-5 h-5 text-blue-600" />
@@ -1130,7 +1140,7 @@ export default function Dashboard() {
         </Card>
 
         {/* E-Blotter */}
-        <Card className="border border-gray-300 rounded-lg bg-green-100 p-1 h-24 flex flex-col justify-center">
+        <Card className="border border-gray-300 rounded-lg bg-green-100 p-1 h-24 flex flex-col justify-center shadow-sm">
           <CardHeader className={styles.cardHeader}>
             <div className="flex items-center gap-2">
               <FileCheck className="w-5 h-5 text-green-600" />
@@ -1145,7 +1155,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Women & Children */}
-        <Card className="border border-gray-300 rounded-lg bg-purple-100 p-1 h-24 flex flex-col justify-center">
+        <Card className="border border-gray-300 rounded-lg bg-purple-100 p-1 h-24 flex flex-col justify-center shadow-sm">
           <CardHeader className={styles.cardHeader}>
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-purple-600" />
@@ -1160,7 +1170,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Extraction */}
-        <Card className="border border-gray-300 rounded-lg bg-orange-100 p-1 h-24 flex flex-col justify-center">
+        <Card className="border border-gray-300 rounded-lg bg-orange-100 p-1 h-24 flex flex-col justify-center shadow-sm">
           <CardHeader className={styles.cardHeader}>
             <div className="flex items-center gap-2">
               <Archive className="w-5 h-5 text-orange-600" />
@@ -1176,14 +1186,14 @@ export default function Dashboard() {
       </div>
 
       {/* File Statistics Card */}
-      <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white flex flex-col">
-        <CardHeader className="p-2">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-lg font-semibold text-gray-900">
+      <Card className="p-4 shadow-sm col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white flex flex-col">
+        <CardHeader className="p-0">
+          <div className="flex justify-between items-start">
+            <CardTitle className="text-base sm:text-lg font-semibold text-gray-900">
               Daily Files Statistics
             </CardTitle>
-            <span className="text-muted-foreground text-sm">
-              {selectedData === "Incident Report"
+            <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+              {selectedData === "incidentReport"
                 ? "Incident Report"
                 : selectedData === "eblotterFiles"
                   ? "E-Blotter Files"
@@ -1191,207 +1201,296 @@ export default function Dashboard() {
                     ? "Women & Children Files"
                     : "Extraction Files"}
             </span>
+
           </div>
+
           <div className="flex items-center justify-between mt-3">
             <label
               htmlFor="data-select"
-              className="mr-2 text-xs font-medium text-gray-700"
+              className="text-xs sm:text-sm font-medium text-gray-700"
             >
-              Select File Type:
+              File Type:
             </label>
-            <select
-              id="data-select"
+            <Select
               value={selectedData}
-              onChange={handleDataChange}
-              className="p-1 font-poppins border rounded-lg text-xs"
+              onValueChange={(value: string) => handleDataChange(value)}
             >
-              <option value="Incident Report">Incident Report</option>
-              <option value="eblotterFiles">E-Blotter Files</option>
-              <option value="womenChildrenFiles">Women & Children Files</option>
-              <option value="extractionFiles">Extraction Files</option>
-            </select>
+              <SelectTrigger className="w-[160px] h-8 text-xs sm:text-sm">
+                <SelectValue placeholder="Select file type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="incidentReport" className="text-xs sm:text-sm">
+                  Incident Report
+                </SelectItem>
+                <SelectItem value="eblotterFiles" className="text-xs sm:text-sm">
+                  E-Blotter Files
+                </SelectItem>
+                <SelectItem value="womenChildrenFiles" className="text-xs sm:text-sm">
+                  Women & Children Files
+                </SelectItem>
+                <SelectItem value="extractionFiles" className="text-xs sm:text-sm">
+                  Extraction Files
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
           </div>
         </CardHeader>
 
-        <CardContent className="h-36 p-2 flex items-center justify-center flex-grow">
+        <CardContent className="flex-grow p-0 mt-3">
           {isLoading || !getSelectedData().data.length ? (
-            <div className={styles.responsiveContainer}>
-              <Skeleton className="h-full w-full" />
+            <div className="h-full w-full flex items-center justify-center">
+              {isLoading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                  <p className="text-xs text-gray-500">Loading data...</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <FileSearch className="h-6 w-6 text-gray-300" />
+                  <p className="text-xs text-gray-500">No data available</p>
+                </div>
+              )}
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%" aspect={3.5}>
+            <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 data={getSelectedData().data}
                 margin={{
                   top: 10,
-                  right: 50,
+                  right: 10,
                   left: 0,
                   bottom: 0,
                 }}
-                key={JSON.stringify(getSelectedData().data)}
               >
-                {/* X-Axis for days */}
+                <defs>
+                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                 <XAxis
                   dataKey="day"
-                  stroke="#2563eb"
-                  tickFormatter={(tick) => tick}
-                  className="text-sm"
+                  stroke="#64748b"
+                  tick={{ fontSize: 10 }}
+                  tickMargin={8}
                 />
-
-                {/* Y-Axis with whole number values */}
                 <YAxis
-                  stroke="#2563eb"
+                  stroke="#64748b"
+                  tick={{ fontSize: 10 }}
                   tickFormatter={(tick) => `${Math.floor(tick)}`}
-                  domain={["auto", "auto"]}
                   allowDecimals={false}
-                  className="text-sm"
                 />
-
-                <Tooltip />
-
-                {/* Area chart with updated color for a more cohesive look */}
+                <RechartsTooltip
+                  contentStyle={{
+                    borderRadius: "6px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    border: "none",
+                    fontSize: "12px"
+                  }}
+                  formatter={(value) => [`${value} files`, "Count"]}
+                  labelFormatter={(label) => `Day: ${label}`}
+                />
                 <Area
                   type="monotone"
                   dataKey="total"
-                  stroke="#1d4ed8" // Updated line color to a darker blue
-                  fill="#2563eb" // Updated fill color to a lighter blue
-                  fillOpacity={0.3} // Make the fill semi-transparent
-                  animationDuration={1500} // Set animation duration
-                  animationEasing="ease-in-out" // Set animation easing to smoothen transition
+                  stroke="#2563eb"
+                  strokeWidth={2}
+                  fill="url(#colorTotal)"
+                  fillOpacity={1}
+                  animationDuration={1000}
                 />
               </AreaChart>
             </ResponsiveContainer>
           )}
         </CardContent>
 
-        <CardFooter className={styles.cardFooter}>
+        <CardFooter className="p-0 pt-3 text-xs sm:text-sm border-t border-gray-100 mt-auto">
           {isLoading ? (
-            <Skeleton className="h-5 w-32 mx-auto" />
+            <div className="h-4 w-full bg-gray-100 rounded animate-pulse"></div>
           ) : getSelectedData().data.length === 0 ? (
-            <span>No data to display</span>
+            <span className="text-gray-500">No data to display</span>
           ) : (
-            <span>
-              Total this week: {" "}
-              {selectedData === "officerUploads"
-                ? getSelectedData().data.reduce(
-                  (sum, item) =>
-                    sum + (item as { filesUploaded: number }).filesUploaded,
-                  0
-                )
-                : getSelectedData().data.reduce(
-                  (sum, item) => sum + (item as { total: number }).total,
-                  0
-                )}
-            </span>
+            <div className="flex items-center justify-between w-full">
+              <span className="text-gray-600">
+                Weekly Total:{" "}
+                <span className="font-medium text-gray-800">
+                  {(() => {
+                    const data = getSelectedData().data;
+                    if (selectedData === "officerUploads") {
+                      return data.reduce((sum, item) => {
+                        if ("filesUploaded" in item) {
+                          return sum + item.filesUploaded;
+                        }
+                        return sum;
+                      }, 0);
+                    } else {
+                      return data.reduce((sum, item) => {
+                        if ("total" in item) {
+                          return sum + item.total;
+                        }
+                        return sum;
+                      }, 0);
+                    }
+                  })()}
+
+                </span>
+              </span>
+              <span className="text-gray-600">
+                Peak Day:{" "}
+                <span className="font-medium text-gray-800">
+                  {(() => {
+                    const data = getSelectedData().data;
+                    if (selectedData === "officerUploads") return "-";
+
+                    const peak = data.reduce(
+                      (max, item) => {
+                        if ("total" in item && item.total > max.total) return item;
+                        return max;
+                      },
+                      { day: "", total: 0 }
+                    );
+                    return peak.day || "-";
+                  })()}
+
+                </span>
+              </span>
+            </div>
           )}
         </CardFooter>
       </Card>
 
       {/* Category Distribution Card */}
-      <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white flex flex-col">
-        <CardHeader className="p-2">
-          <CardTitle className="text-lg font-semibold text-gray-900">
-            Crime Category Distribution
-          </CardTitle>
-          <div className="flex items-center mt-3 justify-between w-full">
-            <label className="text-xs font-medium text-gray-700 mr-2">
-              Select Month:
-            </label>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-[180px] h-7 text-xs m-1">
-                <SelectValue placeholder="Select month">
-                  {formatSelectedMonth(selectedMonth)}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {getMonthOptions().map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <Card className="p-4 shadow-sm col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white flex flex-col">
+        <CardHeader className="p-0 pb-2">
+          <div className="flex flex-col gap-1">
+            <CardTitle className="text-base sm:text-lg font-semibold text-gray-900">
+              Crime Category Distribution
+            </CardTitle>
+            <div className="flex items-center justify-between w-full mt-2">
+              <label className="text-xs sm:text-sm font-medium text-gray-700">
+                Select Month:
+              </label>
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="w-[150px] sm:w-[180px] h-8 text-xs sm:text-sm">
+                  <SelectValue placeholder="Select month">
+                    {formatSelectedMonth(selectedMonth)}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {getMonthOptions().map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className="text-xs sm:text-sm"
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
 
-        <CardContent className="h-44 overflow-hidden flex flex-row">
+        <CardContent className="flex-grow p-0">
           {categoryData.length > 0 ? (
-            <div className="flex flex-row w-full">
-              {/* Treemap Chart */}
-              <ResponsiveContainer width="75%" height={180}>
-                <Treemap
-                  data={categoryData}
-                  dataKey="value"
-                  nameKey="name"
-                  aspectRatio={4 / 3}
-                  stroke="#fff"
-                  fill="#3b82f6"
-                >
-                  <Tooltip
-                    formatter={(value: number, name: string) => [
-                      `${value}`,
-                      `${name}`,
-                    ]}
-                  />
-                </Treemap>
-              </ResponsiveContainer>
-
-              {/* Legend */}
-              <div className="flex flex-col items-start w-1/4 p-2 text-xs">
-                {categoryData.map((entry, index) => (
-                  <div
-                    key={entry.name}
-                    className="flex items-center text-gray-600 gap-1.5 leading-none mb-1"
+            <div className="flex h-full">
+              {/* Treemap Chart - 70% width */}
+              <div className="w-[70%] h-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <Treemap
+                    data={categoryData}
+                    dataKey="value"
+                    nameKey="name"
+                    aspectRatio={4 / 3}
+                    stroke="#fff"
+                    fill="#3b82f6"
                   >
-                    <div
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{
-                        backgroundColor:
-                          index % 2 === 0 ? "#3b82f6" : "#2563eb",
+                    <RechartsTooltip
+                      formatter={(value: number, name: string) => [
+                        `${value}`,
+                        `${name}`,
+                      ]}
+                      contentStyle={{
+                        borderRadius: "6px",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                        fontSize: "12px"
                       }}
                     />
-                    <span className="text-[11px]">{entry.name}</span>
-                    <span className="text-[11px] font-medium">
-                      ({entry.value})
-                    </span>
-                  </div>
-                ))}
+                  </Treemap>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Legend - 30% width with scroll */}
+              <div className="w-[30%] h-full overflow-y-auto p-2">
+                <div className="flex flex-col gap-1.5">
+                  {categoryData.map((entry, index) => (
+                    <div
+                      key={`${entry.name}-${index}`}
+                      className="flex items-center text-gray-700"
+                    >
+                      <div
+                        className="w-3 h-3 rounded-sm mr-2 flex-shrink-0"
+                        style={{
+                          backgroundColor: index % 2 === 0 ? "#3b82f6" : "#2563eb",
+                        }}
+                      />
+                      <span className="text-xs truncate">{entry.name}</span>
+                      <span className="text-xs font-medium ml-auto pl-2">
+                        {entry.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           ) : (
-            <div className={styles.responsiveContainer}>
-              <Skeleton className="h-full w-full" />
+            <div className="h-full w-full flex items-center justify-center">
+              <Skeleton className="h-full w-full rounded-lg" />
             </div>
           )}
         </CardContent>
 
-        <CardFooter className={styles.cardFooter}>
+        <CardFooter className="p-0 pt-2 text-xs border-t border-gray-100 mt-auto">
           {categoryData.length > 0 ? (
-            <div className="flex items-center text-xs">
-              Most used category: {" "}
-              <span className="mr-1 ml-2">{categoryData[0]?.name}</span>
-              <span>({categoryData[0]?.value} folders)</span>
+            <div className="flex items-center w-full justify-between">
+              <div className="text-gray-600">
+                Most frequent category:{" "}
+                <span className="font-medium text-gray-800">
+                  {categoryData[0]?.name}
+                </span>
+              </div>
+              <div className="text-gray-600">
+                Count:{" "}
+                <span className="font-medium text-gray-800">
+                  {categoryData[0]?.value}
+                </span>
+              </div>
             </div>
           ) : (
-            <span className="text-sm">No data to display</span>
+            <div className="text-gray-500 italic">No data available</div>
           )}
         </CardFooter>
       </Card>
 
       {/* Category Time Analysis Card */}
-      <Card className="p-4 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 h-150 rounded-2xl bg-white flex flex-col">
-        <CardHeader className="p-4">
-          <CardTitle className="text-xl font-semibold text-gray-900">
-            Incident Time Analysis by Category
-          </CardTitle>
-          <CardDescription className="text-sm text-gray-600">
-            Number of incidents by time of day when they occurred for selected category
-          </CardDescription>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+      <Card className="col-span-4 p-6 shadow-md rounded-xl bg-white flex flex-col h-full p-4 shadow-sm col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 h-150 rounded-2xl bg-white flex flex-col">
+        <CardHeader className="p-0">
+          <div className="flex flex-col gap-1">
+            <CardTitle className="text-lg font-semibold text-gray-900">
+              Incident Time Analysis by Category
+            </CardTitle>
+            <CardDescription className="text-sm text-gray-500">
+              Number of incidents by time of day when they occurred for selected category
+            </CardDescription>
+          </div>
 
-            <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-gray-700">
-                Category:
+                Category
               </label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger className="h-9 text-sm border rounded-lg shadow-sm w-full">
@@ -1411,9 +1510,9 @@ export default function Dashboard() {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-gray-700">
-                Date Range:
+                Date Range
               </label>
               <div className="flex items-center gap-2">
                 <Input
@@ -1422,7 +1521,7 @@ export default function Dashboard() {
                   onChange={(e) => handleStartDateChange(new Date(e.target.value))}
                   className="h-9 text-sm w-full"
                 />
-                <span className="text-xs">to</span>
+                <span className="text-xs text-gray-500">to</span>
                 <Input
                   type="date"
                   value={endDate?.toISOString().split("T")[0]}
@@ -1432,46 +1531,64 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={fetchCategoryTimeData}
-              className="h-9 text-sm mt-6 w-full"
-            >
-              Refresh Data
-            </Button>
+            <div className="flex items-end">
+              <Button
+                size="sm"
+                onClick={fetchCategoryTimeData}
+                className="h-9 text-sm w-full bg-blue-900 hover:bg-blue-800"
+                disabled={!selectedCategory}
+              >
+                {isLoadingCategoryData ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading...
+                  </div>
+                ) : (
+                  "Refresh Data"
+                )}
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
-        <CardContent className="h-80 p-4 flex items-center justify-center flex-grow">
+        <CardContent className="p-0 flex-grow min-h-[300px] mt-6">
           {isLoadingCategoryData ? (
             <div className="w-full h-full flex items-center justify-center">
-              <Skeleton className="h-full w-full" />
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                <p className="text-sm text-gray-500">Loading data...</p>
+              </div>
             </div>
           ) : categoryTimeData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%" aspect={3.5}>
+            <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={categoryTimeData}
                 margin={{
-                  top: 10,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
+                  top: 16,
+                  right: 24,
+                  left: 16,
+                  bottom: 16,
                 }}
               >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis
                   dataKey="time"
-                  stroke="#2563eb"
-                  className="text-sm"
+                  stroke="#64748b"
+                  tick={{ fontSize: 12 }}
                 />
                 <YAxis
-                  stroke="#2563eb"
+                  stroke="#64748b"
                   allowDecimals={false}
-                  className="text-sm"
+                  tick={{ fontSize: 12 }}
                 />
-                <Tooltip
+                <RechartsTooltip
+                  contentStyle={{
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                    border: "none"
+                  }}
                   formatter={(value) => [`${value} incidents`, "Count"]}
-                  labelFormatter={(label) => `Time of Incident: ${label}`}
+                  labelFormatter={(label) => `Time: ${label}`}
                 />
                 <Legend />
                 <Line
@@ -1486,69 +1603,89 @@ export default function Dashboard() {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full">
-              <Calendar className="h-12 w-12 text-gray-300 mb-2" />
-              <p className="text-gray-500 text-center">
+            <div className="flex flex-col items-center justify-center h-full gap-2 p-4">
+              <Calendar className="h-10 w-10 text-gray-300" />
+              <p className="text-gray-500 text-center text-sm">
                 {selectedCategory
                   ? "No data available for the selected filters"
-                  : "Select a category and date range to view data"}
+                  : "Please select a category to view data"}
               </p>
+              {!selectedCategory && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 text-blue-600"
+                  onClick={() => document.getElementById('category-select')?.focus()}
+                >
+                  Select a category
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
 
-        <CardFooter className="text-xs text-gray-600 p-3 text-center mt-auto">
+        <CardFooter className="p-0 pt-6 text-xs text-gray-500">
           {isLoadingCategoryData ? (
-            <Skeleton className="h-5 w-32 mx-auto" />
+            <div className="h-4 w-full bg-gray-100 rounded animate-pulse"></div>
           ) : categoryTimeData.length > 0 ? (
-            <span>
-              Total Incidents: {categoryTimeData.reduce((sum, item) => sum + item.count, 0)}
-              {" | "}
-              Peak Incident Time: {
-                categoryTimeData.reduce(
-                  (peak, item) => item.count > peak.count ? item : peak,
-                  { time: "N/A", count: 0, category: "" }
-                ).time
-              }
-            </span>
+            <div className="flex flex-wrap justify-center gap-2">
+              <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded">
+                Total Incidents: {categoryTimeData.reduce((sum, item) => sum + item.count, 0)}
+              </span>
+              <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded">
+                Peak Time: {
+                  categoryTimeData.reduce(
+                    (peak, item) => item.count > peak.count ? item : peak,
+                    { time: "N/A", count: 0, category: "" }
+                  ).time
+                }
+              </span>
+              <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded">
+                Average per hour: {Math.round(categoryTimeData.reduce((sum, item) => sum + item.count, 0) / categoryTimeData.length)}
+              </span>
+            </div>
           ) : (
-            <span>Select filters and refresh to view data</span>
+            <span>Select filters and refresh to view analytics</span>
           )}
         </CardFooter>
       </Card>
 
       {/* Officer Upload Stats Card */}
-      <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white flex flex-col">
-        <CardHeader className="p-2">
-          <CardTitle className="text-lg font-semibold text-gray-900">
-            Officer Upload Statistics
-          </CardTitle>
-          <CardDescription className="text-sm text-gray-600">
-            Files uploaded by officers
-          </CardDescription>
-          <div className="flex items-center mt-3">
-            <label className="text-xs font-medium text-gray-700 mr-2 w-[500px]">
+      <Card className="p-4 shadow-sm col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-xl bg-white flex flex-col">
+        <CardHeader className="p-0">
+          <div className="flex flex-col gap-1">
+            <CardTitle className="text-base sm:text-lg font-semibold text-gray-900">
+              Officer Upload Statistics
+            </CardTitle>
+          </div>
+
+          <div className="flex items-center justify-between mt-3">
+            <label className="text-xs sm:text-sm font-medium text-gray-700">
               Select Month:
             </label>
             <Select
               value={selectedOfficerMonth}
               onValueChange={setSelectedOfficerMonth}
+              disabled={isLoading}
             >
-              <SelectTrigger className="h-7 text-xs border m-1 rounded-lg shadow-none">
-                <SelectValue placeholder="Select month">
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-32" />
-                  ) : (
-                    formatSelectedMonth(selectedOfficerMonth)
-                  )}
-                </SelectValue>
+              <SelectTrigger className="w-[180px] h-8 text-xs sm:text-sm">
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Loading...</span>
+                  </div>
+                ) : (
+                  <SelectValue placeholder="Select month">
+                    {formatSelectedMonth(selectedOfficerMonth)}
+                  </SelectValue>
+                )}
               </SelectTrigger>
               <SelectContent>
                 {getMonthOptions().map((option) => (
                   <SelectItem
                     key={option.value}
                     value={option.value}
-                    className="text-xs"
+                    className="text-xs sm:text-sm"
                   >
                     {option.label}
                   </SelectItem>
@@ -1558,41 +1695,54 @@ export default function Dashboard() {
           </div>
         </CardHeader>
 
-        <CardContent className="flex-grow overflow-y-auto">
+        <CardContent className="flex-grow p-0 mt-3 overflow-y-auto">
           {isLoading ? (
-            <div className={styles.responsiveContainer}>
-              <Skeleton className="h-full w-full" />
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-3">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))}
+            </div>
+          ) : officerData.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center gap-2">
+              <Upload className="h-8 w-8 text-gray-300" />
+              <p className="text-sm text-gray-500">No uploads this month</p>
             </div>
           ) : (
             <div className="space-y-2">
               {officerData.map((officer) => (
                 <div
                   key={officer.officer}
-                  className="flex items-center justify-between p-2 border-b border-gray-200"
+                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors"
                 >
-                  <div className="flex items-center">
-                    {officer.public_url ? (
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
                       <img
-                        src={officer.public_url}
+                        src={officer.public_url || "/assets/RACU.png"}
                         alt={officer.officer}
-                        className="h-9 w-9 rounded-full mr-4 object-cover border border-gray-300 "
+                        className="h-10 w-10 rounded-full object-cover border border-gray-200"
                         onError={(e) => {
                           e.currentTarget.src = "/assets/RACU.png";
                         }}
                       />
-                    ) : (
-                      <img
-                        src="/assets/RACU.png"
-                        alt={officer.officer}
-                        className="h-8 w-8 rounded-full mr-4"
-                      />
-                    )}
-                    <span className="text-sm font-medium text-gray-900">
+                      <div className="absolute -bottom-1 -right-1 bg-blue-100 rounded-full p-1">
+                        <User className="h-3 w-3 text-blue-600" />
+                      </div>
+                    </div>
+                    <span className="text-sm font-medium text-gray-900 truncate max-w-[120px] sm:max-w-[180px]">
                       {officer.officer}
                     </span>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    {officer.filesUploaded} files uploaded
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-900">
+                      {officer.filesUploaded}
+                    </span>
+                    <span className="text-xs text-gray-500">files</span>
                   </div>
                 </div>
               ))}
@@ -1600,251 +1750,426 @@ export default function Dashboard() {
           )}
         </CardContent>
 
-        <CardFooter className={styles.cardFooter}>
+        <CardFooter className="p-0 pt-3 border-t border-gray-100">
           {isLoading ? (
-            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-5 w-full" />
           ) : officerData.length === 0 ? (
-            <span>No data to display</span>
+            <p className="text-xs text-gray-500">No upload data available</p>
           ) : (
-            <span>
-              Total Uploads: {" "}
-              {officerData.reduce((acc, curr) => acc + curr.filesUploaded, 0)}
-            </span>
+            <div className="w-full flex justify-between items-center">
+              <p className="text-xs sm:text-sm text-gray-600">
+                Total uploads:{" "}
+                <span className="font-medium text-gray-900">
+                  {officerData.reduce((acc, curr) => acc + curr.filesUploaded, 0)}
+                </span>
+              </p>
+              <p className="text-xs text-gray-500">
+                {officerData.length} {officerData.length === 1 ? "officer" : "officers"}
+              </p>
+            </div>
           )}
         </CardFooter>
       </Card>
 
       {/* Recent Files Upload Card */}
-      <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white">
-        <CardHeader className="p-2">
-          <CardTitle className="text-lg font-semibold text-gray-900">
-            Recent Files Upload
-          </CardTitle>
+      <Card className="p-4 shadow-sm col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-xl bg-white flex flex-col">
+        <CardHeader className="p-0">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-base sm:text-lg font-semibold text-gray-900">
+              Recent Files Upload
+            </CardTitle>
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+              {currentItems.length} files
+            </span>
+          </div>
         </CardHeader>
 
-        <CardContent className="h-52 overflow-auto">
-          <div className="w-full h-full">
-            {isLoading ? (
-              <div className={styles.responsiveContainer}>
-                <Skeleton className="h-full w-full" />
+        <CardContent className="flex-grow p-0 mt-3 overflow-hidden">
+          {isLoading ? (
+            <div className="h-full w-full flex items-center justify-center">
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                <p className="text-xs text-gray-500">Loading files...</p>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse text-xs sm:text-sm">
-                  <thead className="bg-blue-100 text-blue-900">
-                    <tr>
-                      <th className="px-3 py-2 sm:px-6 sm:py-3 text-left border-b">File</th>
-                      <th className="px-3 py-2 sm:px-6 sm:py-3 text-left border-b hidden sm:table-cell">
-                        Uploaded By
-                      </th>
-                      <th className="px-3 py-2 sm:px-6 sm:py-3 text-left border-b">Type</th>
-                      <th className="px-3 py-2 sm:px-6 sm:py-3 text-left border-b hidden xs:table-cell">
-                        Upload Time
-                      </th>
+            </div>
+          ) : currentItems.length === 0 ? (
+            <div className="h-full w-full flex flex-col items-center justify-center gap-2">
+              <File className="h-8 w-8 text-gray-300" />
+              <p className="text-sm text-gray-500">No recent files found</p>
+            </div>
+          ) : (
+            <div className="h-full flex flex-col">
+              <div className="overflow-auto flex-grow">
+                <table className="w-full border-collapse">
+                  <thead className="sticky top-0 bg-gray-50 z-10">
+                    <tr className="text-left text-xs sm:text-sm text-gray-600 border-b">
+                      <th className="px-3 py-2 font-medium">File</th>
+                      <th className="px-3 py-2 font-medium hidden sm:table-cell">Uploaded By</th>
+                      <th className="px-3 py-2 font-medium">Type</th>
+                      <th className="px-3 py-2 font-medium hidden xs:table-cell">Date</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-100">
                     {currentItems.map((file) => (
                       <tr
                         key={`${file.file_type}-${file.id}`}
-                        className="hover:bg-blue-50 transition-colors duration-200"
+                        className="hover:bg-gray-50 transition-colors"
                       >
-                        <td className="px-3 py-2 sm:px-6 sm:py-2 border-b truncate max-w-[120px] sm:max-w-none">
-                          {file.title}
+                        <td className="px-3 py-2 text-xs sm:text-sm max-w-[120px] sm:max-w-[180px] truncate">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>{file.title}</span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{file.title}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </td>
-
-                        {/* Uploaded By - Hidden on mobile */}
-                        <td className="px-3 py-2 sm:px-6 sm:py-2 border-b align-middle">
+                        <td className="px-3 py-2 text-xs sm:text-sm hidden sm:table-cell">
                           {file.uploaded_by}
                         </td>
-
-                        <td className="px-3 py-2 sm:px-6 sm:py-2 border-b">
-                          {getFileTypeDisplay(file.file_type)}
+                        <td className="px-3 py-2 text-xs sm:text-sm">
+                          <span className={`px-2 py-1 rounded-full text-xs ${file.file_type === 'Incident report'
+                            ? 'bg-blue-100 text-blue-800'
+                            : file.file_type === 'eblotter'
+                              ? 'bg-green-100 text-green-800'
+                              : file.file_type === 'womenchildren'
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-orange-100 text-orange-800'
+                            }`}>
+                            {getFileTypeDisplay(file.file_type)}
+                          </span>
                         </td>
-
-                        {/* Upload Time - Simplified on mobile */}
-                        <td className="px-3 py-2 sm:px-6 sm:py-2 border-b hidden xs:table-cell">
-                          <div className="whitespace-nowrap">
-                            {new Date(file.created_at).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
+                        <td className="px-3 py-2 text-xs sm:text-sm hidden xs:table-cell whitespace-nowrap">
+                          {new Date(file.created_at).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                          <span className="hidden sm:inline">
+                            {', ' + new Date(file.created_at).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
                             })}
-                          </div>
-                          <div className="text-xs text-gray-500 sm:hidden">
-                            {new Date(file.created_at).toLocaleTimeString("en-US", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hour12: true,
-                            })}
-                          </div>
+                          </span>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
 
-        <CardFooter className="p-2">
-          <Pagination>
-            <PaginationContent className="flex items-center justify-center sm:justify-start space-x-1 sm:space-x-2">
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setCurrentPage((prev) => Math.max(0, prev - 1))}
-                  className="h-8 w-8 sm:h-9 sm:w-9 text-xs"
-                  disabled={currentPage === 0}
-                />
-              </PaginationItem>
+        <CardFooter className="p-0 pt-3 border-t border-gray-100">
+          <div className="w-full flex justify-between items-center">
+            <p className="text-xs text-gray-500">
+              Showing {Math.min(currentPage * itemsPerPage + 1, currentItems.length)}-
+              {Math.min((currentPage + 1) * itemsPerPage, currentItems.length)} of {currentItems.length}
+            </p>
+            <Pagination className="m-0">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setCurrentPage((prev) => Math.max(0, prev - 1))}
+                    className="h-8 w-8 text-xs hover-none mr-5"
+                    disabled={currentPage === 0}
+                  />
+                </PaginationItem>
 
-              <div className="flex items-center gap-1 sm:gap-2">
-                {Array.from({ length: pageCount }, (_, i) => (
-                  <PaginationItem key={i}>
-                    <PaginationLink
-                      onClick={() => setCurrentPage(i)}
-                      isActive={currentPage === i}
-                      className="h-8 w-8 sm:h-9 sm:w-9 text-xs"
-                    >
-                      {i + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-              </div>
+                {Array.from({ length: Math.min(5, pageCount) }).map((_, index) => {
+                  const pageNum = currentPage < 3
+                    ? index
+                    : currentPage > pageCount - 4
+                      ? pageCount - 5 + index
+                      : currentPage - 2 + index;
+                  if (pageNum >= 0 && pageNum < pageCount) {
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(pageNum)}
+                          isActive={currentPage === pageNum}
+                          className="h-8 w-8 text-xs"
+                        >
+                          {pageNum + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  }
+                  return null;
+                })}
 
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setCurrentPage((prev) => Math.min(pageCount - 1, prev + 1))}
-                  className="h-8 w-8 sm:h-9 sm:w-9 text-xs"
-                  disabled={currentPage === pageCount - 1}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentPage((prev) => Math.min(pageCount - 1, prev + 1))}
+                    className="h-8 w-8 text-xs ml-3"
+                    disabled={currentPage === pageCount - 1}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         </CardFooter>
       </Card>
 
       {/* Recent E-Blotter Entries */}
-      <Card
-        className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white"
-      >
-        <CardHeader className="p-2">
-          <CardTitle className="text-lg font-semibold text-gray-900">
-            Recent Blotter Entries
-          </CardTitle>
+      <Card className="p-4 shadow-sm col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-xl bg-white flex flex-col">
+        <CardHeader className="p-0">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-base sm:text-lg font-semibold text-gray-900">
+              Recent Blotter Entries
+            </CardTitle>
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+              {recentEblotters.length} entries
+            </span>
+          </div>
         </CardHeader>
 
-        <CardContent className="h-52 overflow-x-auto">
+        <CardContent className="flex-grow p-0 mt-3 overflow-hidden">
           {recentEblotters.length === 0 ? (
-            <div className="text-center py-4">
-              <p className="text-gray-500">No recent e-blotter entries found</p>
+            <div className="h-full flex flex-col items-center justify-center gap-2">
+              <FileText className="h-6 w-6 text-gray-300" />
+              <p className="text-sm text-gray-500">No recent e-blotter entries found</p>
             </div>
           ) : (
-            <table className="min-w-full border-collapse table-auto text-xs">
-              <thead className="bg-blue-100 text-blue-900">
-                <tr>
-                  <th className="px-6 py-3 text-left border-b">Entry Number</th>
-                  <th className="px-6 py-3 text-left border-b">Title</th>
-                  <th className="px-6 py-3 text-left border-b">Created By</th>
-                  <th className="px-6 py-3 text-left border-b">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentEblotters.map((eblotter) => (
-                  <tr
-                    key={eblotter.file_id}
-                    className="hover:bg-blue-50 transition-colors duration-200"
-                  >
-                    <td className="px-6 py-2 border-b">
-                      <span className="font-medium text-blue-900">
-                        {eblotter.blotter_number || "N/A"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-2 border-b">{eblotter.title}</td>
-                    <td className="px-3 py-2 sm:px-6 sm:py-2 border-b align-middle">
-                    {eblotter.creator?.name || "Unknown"}
-                        </td>
-                    <td className="px-6 py-2 border-b">
-                      {new Date(eblotter.created_at).toLocaleDateString("en-US", {
-                        month: "long",
-                        day: "numeric",
-                        year: "numeric",
-                      })} {" "}
-                      - {" "}
-                      {new Date(eblotter.created_at).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                        timeZone: "Asia/Taipei",
-                      })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="h-full flex flex-col">
+              <div className="overflow-auto flex-grow">
+                <table className="w-full border-collapse">
+                  <thead className="sticky top-0 bg-gray-50 z-10">
+                    <tr className="text-left text-xs sm:text-sm text-gray-600 border-b">
+                      <th className="px-4 py-2 font-medium">Entry #</th>
+                      <th className="px-4 py-2 font-medium">Title</th>
+                      <th className="px-4 py-2 font-medium hidden sm:table-cell">Created By</th>
+                      <th className="px-4 py-2 font-medium">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {recentEblotters
+                      .slice(currentEblotterPage * itemsPerPage, (currentEblotterPage + 1) * itemsPerPage)
+                      .map((eblotter) => (
+                        <tr
+                          key={eblotter.file_id}
+                          className="hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="px-4 py-2 text-xs sm:text-sm font-medium text-blue-800">
+                            {eblotter.blotter_number || "N/A"}
+                          </td>
+                          <td className="px-4 py-2 text-xs sm:text-sm max-w-[120px] truncate">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger className="text-left truncate">
+                                  {eblotter.title}
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[300px] break-words">
+                                  <p>{eblotter.title}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </td>
+                          <td className="px-4 py-2 text-xs sm:text-sm hidden sm:table-cell">
+                            {eblotter.creator?.name || "Unknown"}
+                          </td>
+                          <td className="px-4 py-2 text-xs sm:text-sm whitespace-nowrap">
+                            {new Date(eblotter.created_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                            <span className="hidden sm:inline">
+                              {', ' + new Date(eblotter.created_at).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </CardContent>
+
+        <CardFooter className="p-0 pt-3 border-t border-gray-100">
+          <div className="w-full flex justify-between items-center">
+            <p className="text-xs text-gray-500">
+              Showing {Math.min(currentEblotterPage * itemsPerPage + 1, recentEblotters.length)}-
+              {Math.min((currentEblotterPage + 1) * itemsPerPage, recentEblotters.length)} of {recentEblotters.length}
+            </p>
+            <Pagination className="m-0">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setCurrentEblotterPage((prev) => Math.max(0, prev - 1))}
+                    className="h-8 w-8 text-xs mr-5"
+                    disabled={currentEblotterPage === 0}
+                  />
+                </PaginationItem>
+
+                {Array.from({ length: Math.min(5, Math.ceil(recentEblotters.length / itemsPerPage)) }).map((_, index) => {
+                  const pageNum = currentEblotterPage < 3
+                    ? index
+                    : currentEblotterPage > Math.ceil(recentEblotters.length / itemsPerPage) - 4
+                      ? Math.ceil(recentEblotters.length / itemsPerPage) - 5 + index
+                      : currentEblotterPage - 2 + index;
+                  if (pageNum >= 0 && pageNum < Math.ceil(recentEblotters.length / itemsPerPage)) {
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          onClick={() => setCurrentEblotterPage(pageNum)}
+                          isActive={currentEblotterPage === pageNum}
+                          className="h-8 w-8 text-xs"
+                        >
+                          {pageNum + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  }
+                  return null;
+                })}
+
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentEblotterPage((prev) => Math.min(Math.ceil(recentEblotters.length / itemsPerPage) - 1, prev + 1))}
+                    className="h-8 w-8 text-xs ml-5"
+                    disabled={currentEblotterPage === Math.ceil(recentEblotters.length / itemsPerPage) - 1}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        </CardFooter>
       </Card>
 
       {/* Recent Extractions */}
-      <Card className="p-3 shadow-md col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white">
-        <CardHeader className="p-2">
-          <CardTitle className="text-lg font-semibold text-gray-900">
-            Recent Extractions
-          </CardTitle>
+      <Card className="p-4 shadow-sm col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-xl bg-white flex flex-col">
+        <CardHeader className="p-0">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-base sm:text-lg font-semibold text-gray-900">
+              Recent Extractions
+            </CardTitle>
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+              {recentExtractions.length} entries
+            </span>
+          </div>
         </CardHeader>
 
-        <CardContent className="h-52 overflow-auto">
+        <CardContent className="flex-grow p-0 mt-3 overflow-hidden">
           {recentExtractions.length === 0 ? (
-            <div className="text-center py-4">
-              <p className="text-gray-500">No recent extractions found</p>
+            <div className="h-full flex flex-col items-center justify-center gap-2">
+              <FileSearch className="h-6 w-6 text-gray-300" />
+              <p className="text-sm text-gray-500">No recent extractions found</p>
             </div>
           ) : (
-            <table className="min-w-full border-collapse table-auto text-xs">
-              <thead className="bg-blue-100 text-blue-900">
-                <tr>
-                  <th className="px-6 py-3 text-left border-b">Control Number</th>
-                  <th className="px-6 py-3 text-left border-b">Title</th>
-                  <th className="px-6 py-3 text-left border-b">Created By</th>
-                  <th className="px-6 py-3 text-left border-b">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentExtractions.map((extraction) => (
-                  <tr
-                    key={extraction.extraction_id}
-                    className="hover:bg-blue-50 transition-colors duration-200"
-                  >
-                    <td className="px-6 py-2 border-b">
-                      <span className="font-medium text-blue-900">
-                        {extraction.control_num || "N/A"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-2 border-b">{extraction.title}</td>
-               <td className="px-3 py-2 sm:px-6 sm:py-2 border-b align-middle">
-                  {extraction.creator?.name || extraction.created_by}
-                    </td>
-                    <td className="px-6 py-2 border-b">
-                      {new Date(extraction.created_at).toLocaleDateString("en-US", {
-                        month: "long",
-                        day: "numeric",
-                        year: "numeric",
-                      })} {" "}
-                      - {" "}
-                      {new Date(extraction.created_at).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                        timeZone: "Asia/Taipei",
-                      })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="h-full flex flex-col">
+              <div className="overflow-auto flex-grow">
+                <table className="w-full border-collapse">
+                  <thead className="sticky top-0 bg-gray-50 z-10">
+                    <tr className="text-left text-xs sm:text-sm text-gray-600 border-b">
+                      <th className="px-4 py-2 font-medium">Control #</th>
+                      <th className="px-4 py-2 font-medium">Title</th>
+                      <th className="px-4 py-2 font-medium hidden sm:table-cell">Created By</th>
+                      <th className="px-4 py-2 font-medium">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {recentExtractions
+                      .slice(currentExtractionPage * itemsPerPage, (currentExtractionPage + 1) * itemsPerPage)
+                      .map((extraction) => (
+                        <tr
+                          key={extraction.extraction_id}
+                          className="hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="px-4 py-2 text-xs sm:text-sm font-medium text-blue-800">
+                            {extraction.control_num || "N/A"}
+                          </td>
+                          <td className="px-4 py-2 text-xs sm:text-sm max-w-[120px] truncate">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger className="text-left truncate">
+                                  {extraction.title}
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[300px] break-words">
+                                  <p>{extraction.title}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </td>
+                          <td className="px-4 py-2 text-xs sm:text-sm hidden sm:table-cell">
+                            {extraction.creator?.name || extraction.created_by || "Unknown"}
+                          </td>
+                          <td className="px-4 py-2 text-xs sm:text-sm whitespace-nowrap">
+                            {new Date(extraction.created_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                            <span className="hidden sm:inline">
+                              {', ' + new Date(extraction.created_at).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </CardContent>
+
+        <CardFooter className="p-0 pt-3 border-t border-gray-100">
+          <div className="w-full flex justify-between items-center">
+            <p className="text-xs text-gray-500">
+              Showing {Math.min(currentExtractionPage * itemsPerPage + 1, recentExtractions.length)}-
+              {Math.min((currentExtractionPage + 1) * itemsPerPage, recentExtractions.length)} of {recentExtractions.length}
+            </p>
+            <Pagination className="m-0">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setCurrentExtractionPage((prev) => Math.max(0, prev - 1))}
+                    className="h-8 w-8 text-xs mr-5"
+                    disabled={currentExtractionPage === 0}
+                  />
+                </PaginationItem>
+
+                {Array.from({ length: Math.min(5, Math.ceil(recentExtractions.length / itemsPerPage)) }).map((_, index) => {
+                  const pageNum = currentExtractionPage < 3
+                    ? index
+                    : currentExtractionPage > Math.ceil(recentExtractions.length / itemsPerPage) - 4
+                      ? Math.ceil(recentExtractions.length / itemsPerPage) - 5 + index
+                      : currentExtractionPage - 2 + index;
+                  if (pageNum >= 0 && pageNum < Math.ceil(recentExtractions.length / itemsPerPage)) {
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          onClick={() => setCurrentExtractionPage(pageNum)}
+                          isActive={currentExtractionPage === pageNum}
+                          className="h-8 w-8 text-xs"
+                        >
+                          {pageNum + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  }
+                  return null;
+                })}
+
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentExtractionPage((prev) => Math.min(Math.ceil(recentExtractions.length / itemsPerPage) - 1, prev + 1))}
+                    className="h-8 w-8 text-xs ml-3"
+                    disabled={currentExtractionPage === Math.ceil(recentExtractions.length / itemsPerPage) - 1}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        </CardFooter>
       </Card>
     </div>
   );

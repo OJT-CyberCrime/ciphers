@@ -26,7 +26,8 @@ import {
   Printer,
   X,
   CheckCircle,
-  Edit
+  Edit,
+  Loader
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -632,10 +633,13 @@ export default function FileOperations({
     }
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Function to handle file editing
   const handleEditFile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
+      setIsSubmitting(true);
       const fileToEdit = selectedFile || file;
       const formData = new FormData(e.currentTarget);
       const fileTitle = formData.get('title') as string;
@@ -1672,8 +1676,16 @@ export default function FileOperations({
                 }
               }}
               className="bg-blue-900 text-white hover:bg-blue-700"
-            >
-              Save Changes
+              disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader className="animate-spin h-5 w-5 mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
             </Button>
           </SheetFooter>
         </SheetContent>
