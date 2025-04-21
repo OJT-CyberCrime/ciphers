@@ -231,6 +231,20 @@ export default function Certifications() {
     });
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".context-menu")) {
+        setContextMenuVisible({});
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+  
   const handleViewDetails = (folder: Folder) => {
     setSelectedFolder(folder);
     setDialogContent("Folder Details");

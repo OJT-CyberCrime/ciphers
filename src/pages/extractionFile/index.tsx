@@ -164,7 +164,7 @@ export default function extractionFile() {
   const [permissionAction, setPermissionAction] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sortCriteria, setSortCriteria] = useState("created_at");
-  
+
   const userRole = JSON.parse(Cookies.get("user_data") || "{}").role;
 
   const canEditOrArchive = () => {
@@ -192,6 +192,37 @@ export default function extractionFile() {
     setSelectedFile(file);
     setShowFileDialog("archive");
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".context-menu")) {
+        setContextMenuVisible({});
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Function to handle clicks outside the context menu
+  const handleClickOutside = (event: MouseEvent) => {
+    if (
+      contextMenuRef.current &&
+      !contextMenuRef.current.contains(event.target as Node)
+    ) {
+      setShowOptions({}); // Close the context menu
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Handle file upload
   const handleFileUpload = async (e: React.FormEvent) => {
@@ -354,10 +385,10 @@ export default function extractionFile() {
     const matchesSearch =
       file.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       file.incident_summary.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const fileExtension = file.file_path?.split(".").pop()?.toLowerCase() || "";
     let matchesFilter = true;
-    
+
     if (filter !== "all") {
       const documentTypes = ["pdf", "doc", "docx", "txt"];
       const imageTypes = ["jpg", "jpeg", "png", "gif", "bmp"];
@@ -562,9 +593,8 @@ export default function extractionFile() {
             </h1>
             <Badge
               variant="outline"
-              className={`${
-                getStatusBadgeClass(folderDetails?.status || "N/A").class
-              } shadow-none`}
+              className={`${getStatusBadgeClass(folderDetails?.status || "N/A").class
+                } shadow-none`}
             >
               {getStatusBadgeClass(folderDetails?.status || "N/A").label}
             </Badge>
@@ -572,21 +602,17 @@ export default function extractionFile() {
           <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
             <Button
               onClick={() => handleViewChange(true)}
-              className={`flex items-center justify-center w-10 h-8 rounded-s-full ${
-                isListView ? "bg-blue-200" : "bg-white"
-              } transition-colors hover:${
-                isListView ? "bg-blue-300" : "bg-gray-100"
-              }`}
+              className={`flex items-center justify-center w-10 h-8 rounded-s-full ${isListView ? "bg-blue-200" : "bg-white"
+                } transition-colors hover:${isListView ? "bg-blue-300" : "bg-gray-100"
+                }`}
             >
               <List size={16} color="black" />
             </Button>
             <Button
               onClick={() => handleViewChange(false)}
-              className={`flex items-center justify-center w-10 h-8 rounded-e-full ${
-                !isListView ? "bg-blue-200" : "bg-white"
-              } transition-colors hover:${
-                !isListView ? "bg-blue-300" : "bg-gray-100"
-              }`}
+              className={`flex items-center justify-center w-10 h-8 rounded-e-full ${!isListView ? "bg-blue-200" : "bg-white"
+                } transition-colors hover:${!isListView ? "bg-blue-300" : "bg-gray-100"
+                }`}
             >
               <Grid size={16} color="black" />
             </Button>
@@ -716,6 +742,34 @@ export default function extractionFile() {
                   ))}
                 </tbody>
               </table>
+            )}
+            {selectedFile && (
+              <FileOperations
+                file={selectedFile}
+                showPreview={previewStates[selectedFile.extraction_id] || false}
+                setShowPreview={(show) => {
+                  setPreviewStates((prev) => ({
+                    ...prev,
+                    [selectedFile.extraction_id]: show,
+                  }));
+                }}
+                showFileDialog={showFileDialog}
+                setShowFileDialog={setShowFileDialog}
+                selectedFile={selectedFile}
+                setSelectedFile={setSelectedFile}
+                onFileUpdate={() => {
+                  // Remove the file from the UI if it was archived
+                  if (showFileDialog === "archive") {
+                    setFiles(
+                      files.filter((f) => f.extraction_id !== selectedFile?.extraction_id)
+                    );
+                  } else {
+                    // Refresh the files list by fetching latest data
+                    fetchFolderAndFiles();
+                  }
+                }}
+                isListView={isListView} // Pass the isListView prop
+              />
             )}
           </div>
         ) : sortedFiles.length > 0 ? (
@@ -870,7 +924,7 @@ export default function extractionFile() {
 
                 {/* Basic Information Section */}
                 <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
-                <h3 className="text-sm font-medium text-gray-500">
+                  <h3 className="text-sm font-medium text-gray-500">
                     Basic Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -937,7 +991,7 @@ export default function extractionFile() {
 
                 {/* Parties Involved Section */}
                 <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
-                <h3 className="text-sm font-medium text-gray-500">
+                  <h3 className="text-sm font-medium text-gray-500">
                     Parties Involved
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -999,7 +1053,7 @@ export default function extractionFile() {
 
                 {/* Supporting Personnel Section */}
                 <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
-                <h3 className="text-sm font-medium text-gray-500">
+                  <h3 className="text-sm font-medium text-gray-500">
                     Supporting Personnel
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1051,7 +1105,7 @@ export default function extractionFile() {
 
                 {/* Contact Information Section */}
                 <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
-                <h3 className="text-sm font-medium text-gray-500">
+                  <h3 className="text-sm font-medium text-gray-500">
                     Contact Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1085,7 +1139,7 @@ export default function extractionFile() {
 
                 {/* Incident Details Section */}
                 <div className="space-y-4 bg-slate-50 p-4 rounded-lg mr-6">
-                <h3 className="text-sm font-medium text-gray-500">
+                  <h3 className="text-sm font-medium text-gray-500">
                     Incident Details
                   </h3>
                   <div className="space-y-2">
@@ -1155,7 +1209,7 @@ export default function extractionFile() {
                     className="bg-blue-900 hover:bg-blue-800"
                     disabled={isSubmitting}
                   >
-                      {isSubmitting ? (
+                    {isSubmitting ? (
                       <>
                         <Loader className="animate-spin h-5 w-5 mr-2" />
                         Uploading...

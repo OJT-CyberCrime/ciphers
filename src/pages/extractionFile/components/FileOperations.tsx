@@ -780,7 +780,7 @@ export default function FileOperations({
         open={showFileDialog === "edit"}
         onOpenChange={() => setShowFileDialog(null)}
       >
-        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar scrollbar-thumb-gray-400 scrollbar-track-gray-100 pr-0">
+        <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100 [&+.fixed]:bg-black/10 pr-0">
           <SheetHeader>
             <SheetTitle className="text-xl">
               Edit Case File
@@ -1050,225 +1050,225 @@ export default function FileOperations({
 
       {/* Vew Details Sheet*/}
       <Sheet open={showFileDialog === "details"} onOpenChange={() => setShowFileDialog(null)}>
-  <SheetContent className="max-w-6xl w-full h-screen flex flex-col bg-white">
-    <SheetHeader>
-      <SheetTitle>
-        File Details
-      </SheetTitle>
-      <SheetDescription className="text-sm text-gray-500">
-        Complete details of the selected file
-      </SheetDescription>
-    </SheetHeader>
+      <SheetContent className="max-w-6xl w-4/5 h-screen flex flex-col bg-white font-poppins scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-gray-100 pr-0 [&+.fixed]:bg-black/10 pr-0">
+          <SheetHeader>
+            <SheetTitle>
+              File Details
+            </SheetTitle>
+            <SheetDescription className="text-sm text-gray-500">
+              Complete details of the selected file
+            </SheetDescription>
+          </SheetHeader>
 
-    <div className="overflow-y-auto pr-0">
+          <div className="overflow-y-auto pr-0">
             {/* File Details Section */}
             <div className="space-y-4 py-4">
               <div className="space-y-4 p-4 mr-6 rounded-lg bg-slate-50">
-              <h3 className="text-lg font-semibold">
-              Basic Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">File Title</Label>
-                <p className="text-gray-900">{currentFile.title || "N/A"}</p>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">Control Number</Label>
-                <p className="text-gray-900">{currentFile.control_num || "N/A"}</p>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">Station/Unit</Label>
-                <p className="text-gray-900">{currentFile.station_unit || "N/A"}</p>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">Date of Release</Label>
-                <p className="text-gray-900">
-                  {currentFile.date_release ? new Date(currentFile.date_release).toLocaleDateString() : "N/A"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Parties Involved Section */}
-          <div className="space-y-4 bg-gray-50 p-5 rounded-lg mr-6">
-          <h3 className="text-lg font-semibold">
-              Parties Involved
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">Complainant</Label>
-                <p className="text-gray-900">{currentFile.complainant || "N/A"}</p>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">Respondent</Label>
-                <p className="text-gray-900">{currentFile.respondent || "N/A"}</p>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">Witnesses</Label>
-                <p className="text-gray-900">{currentFile.witnesses || "N/A"}</p>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">Investigator</Label>
-                <p className="text-gray-900">{currentFile.investigator || "N/A"}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Supporting Personnel Section */}
-          <div className="space-y-4 bg-gray-50 p-5 rounded-lg mr-6">
-          <h3 className="text-lg font-semibold">
-              Supporting Personnel
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">Assisted By</Label>
-                <p className="text-gray-900">{currentFile.assisted_by || "N/A"}</p>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">Accompanied By</Label>
-                <p className="text-gray-900">{currentFile.accompanied_by || "N/A"}</p>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">Signatories</Label>
-                <p className="text-gray-900">{currentFile.signatories || "N/A"}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Contact Information Section */}
-          <div className="space-y-4 bg-gray-50 p-5 rounded-lg mr-6">
-          <h3 className="text-lg font-semibold">
-              Contact Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">Contact Number</Label>
-                <p className="text-gray-900">{currentFile.contact_num || "N/A"}</p>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">Facebook Account</Label>
-                <p className="text-gray-900">{currentFile.fb_account || "N/A"}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Incident Details Section */}
-          <div className="space-y-4 bg-gray-50 p-5 rounded-lg mr-6">
-          <h3 className="text-lg font-semibold">
-              Incident Details
-            </h3>
-            <div className="space-y-2">
-              <Label className="font-medium text-gray-700">Incident Summary</Label>
-              <div className="p-4 rounded-md border border-gray-200 min-h-[8rem] whitespace-pre-wrap">
-                {currentFile.incident_summary || "No summary available"}
-              </div>
-            </div>
-          </div>
-
-          {/* File History Section (Unchanged) */}
-          <div className="space-y-4 p-4 rounded-lg bg-slate-50 mr-6 font-poppins">
-            <p className="text-lg font-semibold">File History</p>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-4 h-4" />
-                  <Label className="font-normal">Created</Label>
-                  <p className="text-gray-600">
-                    {new Date(currentFile.created_at).toLocaleString()} by{" "}
-                    <span className="text-blue-900">
-                      {currentFile.created_by}
-                    </span>
-                  </p>
+                <h3 className="text-lg font-semibold">
+                  Basic Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">File Title</Label>
+                    <p className="text-gray-900">{currentFile.title || "N/A"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">Control Number</Label>
+                    <p className="text-gray-900">{currentFile.control_num || "N/A"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">Station/Unit</Label>
+                    <p className="text-gray-900">{currentFile.station_unit || "N/A"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">Date of Release</Label>
+                    <p className="text-gray-900">
+                      {currentFile.date_release ? new Date(currentFile.date_release).toLocaleDateString() : "N/A"}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center space-x-2">
-                  <Edit className="w-4 h-4" />
-                  <Label className="font-normal">Last Updated</Label>
-                  <p className="text-gray-600">
-                    {currentFile.updated_at ? (
-                      <span>
-                        {new Date(
-                          currentFile.updated_at
-                        ).toLocaleString()}{" "}
-                        by{" "}
+
+              {/* Parties Involved Section */}
+              <div className="space-y-4 bg-gray-50 p-5 rounded-lg mr-6">
+                <h3 className="text-lg font-semibold">
+                  Parties Involved
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">Complainant</Label>
+                    <p className="text-gray-900">{currentFile.complainant || "N/A"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">Respondent</Label>
+                    <p className="text-gray-900">{currentFile.respondent || "N/A"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">Witnesses</Label>
+                    <p className="text-gray-900">{currentFile.witnesses || "N/A"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">Investigator</Label>
+                    <p className="text-gray-900">{currentFile.investigator || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Supporting Personnel Section */}
+              <div className="space-y-4 bg-gray-50 p-5 rounded-lg mr-6">
+                <h3 className="text-lg font-semibold">
+                  Supporting Personnel
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">Assisted By</Label>
+                    <p className="text-gray-900">{currentFile.assisted_by || "N/A"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">Accompanied By</Label>
+                    <p className="text-gray-900">{currentFile.accompanied_by || "N/A"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">Signatories</Label>
+                    <p className="text-gray-900">{currentFile.signatories || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Information Section */}
+              <div className="space-y-4 bg-gray-50 p-5 rounded-lg mr-6">
+                <h3 className="text-lg font-semibold">
+                  Contact Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">Contact Number</Label>
+                    <p className="text-gray-900">{currentFile.contact_num || "N/A"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">Facebook Account</Label>
+                    <p className="text-gray-900">{currentFile.fb_account || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Incident Details Section */}
+              <div className="space-y-4 bg-gray-50 p-5 rounded-lg mr-6">
+                <h3 className="text-lg font-semibold">
+                  Incident Details
+                </h3>
+                <div className="space-y-2">
+                  <Label className="font-medium text-gray-700">Incident Summary</Label>
+                  <div className="p-4 rounded-md border border-gray-200 min-h-[8rem] whitespace-pre-wrap">
+                    {currentFile.incident_summary || "No summary available"}
+                  </div>
+                </div>
+              </div>
+
+              {/* File History Section (Unchanged) */}
+              <div className="space-y-4 p-4 rounded-lg bg-slate-50 mr-6 font-poppins">
+                <p className="text-lg font-semibold">File History</p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4" />
+                      <Label className="font-normal">Created</Label>
+                      <p className="text-gray-600">
+                        {new Date(currentFile.created_at).toLocaleString()} by{" "}
                         <span className="text-blue-900">
-                          {currentFile.updated_by}
+                          {currentFile.created_by}
                         </span>
-                      </span>
-                    ) : (
-                      "Never"
-                    )}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center space-x-2">
-                  <Eye className="w-4 h-4" />
-                  <Label className="font-normal">Last Viewed</Label>
-                  <p className="text-gray-600">
-                    {currentFile.viewed_at ? (
-                      <span>
-                        {new Date(currentFile.viewed_at).toLocaleString()}{" "}
-                        by{" "}
-                        <span className="text-blue-900">
-                          {currentFile.viewed_by}
-                        </span>
-                      </span>
-                    ) : (
-                      "Never"
-                    )}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center space-x-2">
-                  <Download className="w-4 h-4" />
-                  <Label className="font-normal">Last Downloaded</Label>
-                  <p className="text-gray-600">
-                    {currentFile.downloaded_at ? (
-                      <span>
-                        {new Date(
-                          currentFile.downloaded_at
-                        ).toLocaleString()}{" "}
-                        by{" "}
-                        <span className="text-blue-900">
-                          {currentFile.downloaded_by}
-                        </span>
-                      </span>
-                    ) : (
-                      "Never"
-                    )}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center space-x-2">
-                  <Printer className="w-4 h-4" />
-                  <Label className="font-normal">Last Printed</Label>
-                  <p className="text-gray-600">
-                    {currentFile.printed_at ? (
-                      <span>
-                        {new Date(
-                          currentFile.printed_at
-                        ).toLocaleString()}{" "}
-                        by{" "}
-                        <span className="text-blue-900">
-                          {currentFile.printed_by}
-                        </span>
-                      </span>
-                    ) : (
-                      "Never"
-                    )}
-                  </p>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <Edit className="w-4 h-4" />
+                      <Label className="font-normal">Last Updated</Label>
+                      <p className="text-gray-600">
+                        {currentFile.updated_at ? (
+                          <span>
+                            {new Date(
+                              currentFile.updated_at
+                            ).toLocaleString()}{" "}
+                            by{" "}
+                            <span className="text-blue-900">
+                              {currentFile.updated_by}
+                            </span>
+                          </span>
+                        ) : (
+                          "Never"
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <Eye className="w-4 h-4" />
+                      <Label className="font-normal">Last Viewed</Label>
+                      <p className="text-gray-600">
+                        {currentFile.viewed_at ? (
+                          <span>
+                            {new Date(currentFile.viewed_at).toLocaleString()}{" "}
+                            by{" "}
+                            <span className="text-blue-900">
+                              {currentFile.viewed_by}
+                            </span>
+                          </span>
+                        ) : (
+                          "Never"
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <Download className="w-4 h-4" />
+                      <Label className="font-normal">Last Downloaded</Label>
+                      <p className="text-gray-600">
+                        {currentFile.downloaded_at ? (
+                          <span>
+                            {new Date(
+                              currentFile.downloaded_at
+                            ).toLocaleString()}{" "}
+                            by{" "}
+                            <span className="text-blue-900">
+                              {currentFile.downloaded_by}
+                            </span>
+                          </span>
+                        ) : (
+                          "Never"
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <Printer className="w-4 h-4" />
+                      <Label className="font-normal">Last Printed</Label>
+                      <p className="text-gray-600">
+                        {currentFile.printed_at ? (
+                          <span>
+                            {new Date(
+                              currentFile.printed_at
+                            ).toLocaleString()}{" "}
+                            by{" "}
+                            <span className="text-blue-900">
+                              {currentFile.printed_by}
+                            </span>
+                          </span>
+                        ) : (
+                          "Never"
+                        )}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-  </SheetContent>
-</Sheet>
+        </SheetContent>
+      </Sheet>
 
       {/* Render card preview in both list and grid view */}
       {!isListView && renderCardPreview()}
