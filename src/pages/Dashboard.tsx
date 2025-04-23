@@ -1655,7 +1655,7 @@ export default function Dashboard() {
         <CardHeader className="p-0">
           <div className="flex flex-col gap-1">
             <CardTitle className="text-base sm:text-lg font-semibold text-gray-900">
-              Officer Upload Statistics
+              Officer Upload History
             </CardTitle>
           </div>
 
