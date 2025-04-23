@@ -1190,7 +1190,7 @@ export default function Dashboard() {
         <CardHeader className="p-0">
           <div className="flex justify-between items-start">
             <CardTitle className="text-base sm:text-lg font-semibold text-gray-900">
-              Daily Files Statistics
+              Daily File Statistics
             </CardTitle>
             <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
               {selectedData === "incidentReport"
