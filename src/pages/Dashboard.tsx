@@ -1776,7 +1776,7 @@ export default function Dashboard() {
         <CardHeader className="p-0">
           <div className="flex justify-between items-center">
             <CardTitle className="text-base sm:text-lg font-semibold text-gray-900">
-              Recent Files Upload
+              Recent File Uploads
             </CardTitle>
             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
               {currentItems.length} files
