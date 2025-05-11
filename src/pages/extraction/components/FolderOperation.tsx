@@ -748,12 +748,12 @@ export default function CertificationOperations({
                       return (
                         <Badge
                           key={categoryId}
-                          variant="secondary"
-                          className="px-2 py-1 flex items-center gap-1"
+                          variant="outline"
+                          className="bg-blue-100 text-blue-800 flex items-center gap-1"
                         >
                           {category.title}
                           <X
-                            className="w-3 h-3 cursor-pointer"
+                            className="w-3 h-3 cursor-pointer hover:text-red-600"
                             onClick={() =>
                               setEditSelectedCategories(
                                 editSelectedCategories.filter((id) => id !== categoryId)
