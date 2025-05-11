@@ -147,8 +147,8 @@ export default function Users() {
   const editForm = useForm<z.infer<typeof editFormSchema>>({
     resolver: zodResolver(editFormSchema),
     defaultValues: {
-      name: currentUser?.name || "",
-      email: currentUser?.email || "",
+      name: "",
+      email: "",
       password: "",
       role: "",
     },
@@ -343,7 +343,7 @@ export default function Users() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser]);
+  }, []);  // Remove currentUser from dependency array
 
   const isSuperAdmin = () => {
     return currentUser?.role === "superadmin";
@@ -474,46 +474,25 @@ export default function Users() {
   };
 
   const handleEditUser = (user: UserData) => {
-    // Allow superadmin to edit their own information
-    if (isSuperAdmin() && user.uuid === currentUser?.id) {
-      setSelectedUser(user);
-      editForm.reset({
-        name: currentUser?.name || "",
-        email: currentUser?.email || "",
-        password: "",
-        role: currentUser?.role || "",
-      });
-      setIsEditDialogOpen(true);
-      return;
-    }
-
-    // Allow regular users to edit their own information
-    if (isOwnAccount(user)) {
-      setSelectedUser(user);
-      editForm.reset({
-        name: user.name,
-        email: user.email,
-        password: "",
-        role: user.role || "",
-      });
-      setIsEditDialogOpen(true);
-      return;
-    }
-
-    // Check if the user can edit the selected user
-    if (!canEditUser(user)) {
-      showPermissionDenied();
-      return;
-    }
-
     setSelectedUser(user);
+    
+    // Always use the selected user's data for the form
     editForm.reset({
       name: user.name,
       email: user.email,
       password: "",
       role: user.role || "",
     });
+    
     setIsEditDialogOpen(true);
+    
+    // Check permissions after setting up the form
+    if (!canEditUser(user)) {
+      showPermissionDenied();
+      setIsEditDialogOpen(false);
+      setSelectedUser(null);
+      return;
+    }
   };
 
   const handleDeleteUser = (user: UserData) => {
