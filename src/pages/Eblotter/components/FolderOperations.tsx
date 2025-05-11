@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { supabase } from "@/utils/supa";
 import Cookies from "js-cookie";
 import { useState, useEffect, useRef } from "react";
-import { ClockIcon, Loader, Plus, RefreshCwIcon } from "lucide-react";
+import { ClockIcon, Loader, Plus, RefreshCwIcon, Check, X } from "lucide-react";
 
 interface Category {
   category_id: number;
@@ -120,6 +120,10 @@ export default function FolderOperations({
   const [filteredAddCategories, setFilteredAddCategories] = useState<Category[]>([]);
   const addCategorySearchInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editCategorySearchQuery, setEditCategorySearchQuery] = useState("");
+  const [isEditCategoryOpen, setIsEditCategoryOpen] = useState(false);
+  const [filteredEditCategories, setFilteredEditCategories] = useState<Category[]>([]);
+  const editCategorySearchInputRef = useRef<HTMLInputElement>(null);
 
   // Filter categories based on search query
   useEffect(() => {
@@ -137,6 +141,14 @@ export default function FolderOperations({
     );
     setFilteredAddCategories(filtered);
   }, [addCategorySearchQuery, availableCategories]);
+
+  // Filter categories based on search query for the edit category dropdown
+  useEffect(() => {
+    const filtered = availableCategories.filter(category =>
+      category.title.toLowerCase().includes(editCategorySearchQuery.toLowerCase())
+    );
+    setFilteredEditCategories(filtered);
+  }, [editCategorySearchQuery, availableCategories]);
 
   // Initialize edit form when selectedFolder changes
   useEffect(() => {
@@ -699,62 +711,91 @@ export default function FolderOperations({
               </div>
               <div className="space-y-2">
                 <Label>Categories</Label>
-                <Select
-                  key={categorySelectKey}
-                  onValueChange={(value) => {
-                    if (!editSelectedCategories.includes(value)) {
-                      setEditSelectedCategories([
-                        ...editSelectedCategories,
-                        value,
-                      ]);
-                      // Reset the select component
-                      setCategorySelectKey((prev) => prev + 1);
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableCategories.map((category) => (
-                      <SelectItem
-                        key={category.category_id}
-                        value={category.category_id.toString()}
-                      >
-                        {category.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {editSelectedCategories.map((categoryId) => {
-                    const category = availableCategories.find(
-                      (c) => c.category_id.toString() === categoryId
-                    );
-                    return category ? (
-                      <Badge
-                        key={categoryId}
-                        variant="outline"
-                        className="bg-blue-100 text-blue-800"
-                      >
-                        {category.title}
-                        <button
-                          type="button"
-                          className="ml-2 hover:text-red-600"
-                          onClick={() =>
-                            setEditSelectedCategories(
-                              editSelectedCategories.filter(
-                                (id) => id !== categoryId
-                              )
-                            )
-                          }
-                        >
-                          ×
-                        </button>
-                      </Badge>
-                    ) : null;
-                  })}
+                <div className="relative w-full">
+                  <button
+                    type="button"
+                    className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white flex items-center gap-2 text-sm"
+                    onClick={() => setIsEditCategoryOpen(!isEditCategoryOpen)}
+                  >
+                    <div className="flex-1 text-left truncate">
+                      <span className="text-gray-600">
+                        {editSelectedCategories.length > 0
+                          ? `${editSelectedCategories.length} selected`
+                          : "Select categories"}
+                      </span>
+                    </div>
+                    <svg
+                      className={`h-4 w-4 shrink-0 transition-transform text-gray-500 ${isEditCategoryOpen ? 'rotate-180' : ''}`}
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isEditCategoryOpen && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg overflow-hidden">
+                      <div className="p-2 border-b">
+                        <input
+                          ref={editCategorySearchInputRef}
+                          type="text"
+                          className="w-full h-8 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Search categories..."
+                          value={editCategorySearchQuery}
+                          onChange={(e) => setEditCategorySearchQuery(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      <div className="max-h-48 overflow-y-auto">
+                        {filteredEditCategories.map((category) => (
+                          <div
+                            key={category.category_id}
+                            className="flex items-center px-2 py-1 hover:bg-gray-100 cursor-pointer"
+                            onClick={() => {
+                              const categoryId = category.category_id.toString();
+                              if (!editSelectedCategories.includes(categoryId)) {
+                                setEditSelectedCategories([...editSelectedCategories, categoryId]);
+                              }
+                            }}
+                          >
+                            <span className="flex-1">{category.title}</span>
+                            {editSelectedCategories.includes(category.category_id.toString()) && (
+                              <Check className="w-4 h-4 text-blue-500" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
+                {editSelectedCategories.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {editSelectedCategories.map((categoryId) => {
+                      const category = availableCategories.find(
+                        (c) => c.category_id.toString() === categoryId
+                      );
+                      if (!category) return null;
+                      return (
+                        <Badge
+                          key={categoryId}
+                          variant="secondary"
+                          className="px-2 py-1 flex items-center gap-1"
+                        >
+                          {category.title}
+                          <X
+                            className="w-3 h-3 cursor-pointer"
+                            onClick={() =>
+                              setEditSelectedCategories(
+                                editSelectedCategories.filter((id) => id !== categoryId)
+                              )
+                            }
+                          />
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-status">Status</Label>
