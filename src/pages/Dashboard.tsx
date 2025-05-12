@@ -24,6 +24,7 @@ import {
   Treemap,
   Legend,
   CartesianGrid,
+  SunburstChart,
 } from "recharts";
 import {
   Pagination,
@@ -1362,15 +1363,21 @@ export default function Dashboard() {
       </Card>
 
       {/* Category Distribution Card */}
-      <Card className="p-4 shadow-sm col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white flex flex-col">
-        <CardHeader className="p-0 pb-2">
+      <Card className="p-4 shadow-sm col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2 h-80 rounded-lg bg-white flex flex-col border border-gray-100">
+        <CardHeader className="p-0 pb-3">
           <div className="flex flex-col gap-1">
-            <CardTitle className="text-base sm:text-lg font-semibold text-gray-900">
-              Crime Category Distribution
-            </CardTitle>
-            <div className="flex items-center justify-between w-full mt-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base sm:text-lg font-semibold text-gray-900 flex items-center gap-2">
+                Crime Category Distribution
+              </CardTitle>
+              <div className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">
+                {categoryData.length} {categoryData.length === 1 ? 'category' : 'categories'}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between w-full mt-1">
               <label className="text-xs sm:text-sm font-medium text-gray-700">
-                Select Month:
+                Filter by month:
               </label>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                 <SelectTrigger className="w-[150px] sm:w-[180px] h-8 text-xs sm:text-sm">
@@ -1394,83 +1401,95 @@ export default function Dashboard() {
           </div>
         </CardHeader>
 
-        <CardContent className="flex-grow p-0">
+        <CardContent className="flex-grow p-0 mt-1">
           {categoryData.length > 0 ? (
-            <div className="flex h-full">
-              {/* Treemap Chart - 70% width */}
-              <div className="w-[70%] h-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <Treemap
-                    data={categoryData}
-                    dataKey="value"
-                    nameKey="name"
-                    aspectRatio={4 / 3}
-                    stroke="#fff"
-                    fill="#3b82f6"
-                  >
-                    <RechartsTooltip
-                      formatter={(value: number, name: string) => [
-                        `${value}`,
-                        `${name}`,
-                      ]}
-                      contentStyle={{
-                        borderRadius: "6px",
-                        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                        fontSize: "12px"
-                      }}
-                    />
-                  </Treemap>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Legend - 30% width with scroll */}
-              <div className="w-[30%] h-full overflow-y-auto p-2">
-                <div className="flex flex-col gap-1.5">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={categoryData.slice(0, 15)}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                className="text-xs"
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  horizontal={true}
+                  vertical={false}
+                  stroke="#f0f0f0"
+                />
+                <XAxis
+                  type="number"
+                  tick={{ fill: '#6b7280' }}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={90}
+                  tick={{ fontSize: 10, fill: '#4b5563' }}
+                  tickLine={false}
+                  tickFormatter={(value) => value.length > 15 ? `${value.substring(0, 12)}...` : value}
+                />
+                <RechartsTooltip
+                  formatter={(value, name) => [
+                    `${value} (${((value as number / categoryData.reduce((acc, curr) => acc + curr.value, 0)) * 100).toFixed(1)}%)`,
+                    name
+                  ]}
+                  contentStyle={{
+                    borderRadius: "8px",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    fontSize: "12px",
+                    border: "1px solid #e5e7eb",
+                    background: "#ffffff"
+                  }}
+                />
+                <Bar
+                  dataKey="value"
+                  name="Incidents"
+                  radius={[0, 4, 4, 0]}
+                  animationDuration={1500}
+                >
                   {categoryData.map((entry, index) => (
-                    <div
-                      key={`${entry.name}-${index}`}
-                      className="flex items-center text-gray-700"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-sm mr-2 flex-shrink-0"
-                        style={{
-                          backgroundColor: index % 2 === 0 ? "#3b82f6" : "#2563eb",
-                        }}
-                      />
-                      <span className="text-xs truncate">{entry.name}</span>
-                      <span className="text-xs font-medium ml-auto pl-2">
-                        {entry.value}
-                      </span>
-                    </div>
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={`hsl(213, 80%, ${70 - (index * 3)}%)`}
+                    />
                   ))}
-                </div>
-              </div>
-            </div>
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           ) : (
-            <div className="h-full w-full flex items-center justify-center">
-              <Skeleton className="h-full w-full rounded-lg" />
+            <div className="h-full w-full flex flex-col items-center justify-center gap-2 bg-gray-50 rounded-lg">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-gray-500">No data available</p>
             </div>
           )}
         </CardContent>
 
-        <CardFooter className="p-0 pt-2 text-xs border-t border-gray-100 mt-auto">
+        <CardFooter className="p-0 pt-3 text-xs border-t border-gray-100 mt-auto">
           {categoryData.length > 0 ? (
-            <div className="flex items-center w-full justify-between">
-              <div className="text-gray-600">
-                Most frequent category:{" "}
-                <span className="font-medium text-gray-800">
+            <div className="grid grid-cols-3 gap-2 w-full">
+              <div className="flex flex-col items-center p-2 bg-blue-50 rounded">
+                <span className="text-gray-600">Total</span>
+                <span className="font-bold text-blue-700">
+                  {categoryData.reduce((acc, curr) => acc + curr.value, 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex flex-col items-center p-2 bg-blue-50 rounded">
+                <span className="text-gray-600">Top Category</span>
+                <span className="font-bold text-blue-700 truncate max-w-full">
                   {categoryData[0]?.name}
                 </span>
               </div>
-              <div className="text-gray-600">
-                Count:{" "}
-                <span className="font-medium text-gray-800">
-                  {categoryData[0]?.value}
+              <div className="flex flex-col items-center p-2 bg-blue-50 rounded">
+                <span className="text-gray-600">Top Count</span>
+                <span className="font-bold text-blue-700">
+                  {categoryData[0]?.value.toLocaleString()}
                 </span>
               </div>
             </div>
           ) : (
-            <div className="text-gray-500 italic">No data available</div>
+            <div className="text-center text-gray-500 italic py-2">Select a month to view data</div>
           )}
         </CardFooter>
       </Card>

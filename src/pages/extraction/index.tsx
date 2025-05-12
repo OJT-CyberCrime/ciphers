@@ -244,7 +244,7 @@ export default function Certifications() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-  
+
   const handleViewDetails = (folder: Folder) => {
     setSelectedFolder(folder);
     setDialogContent("Folder Details");
@@ -376,8 +376,8 @@ export default function Certifications() {
           >
             <div className="flex-1 text-left truncate">
               <span className="text-gray-600">
-                {filter === "all" 
-                  ? "All Categories" 
+                {filter === "all"
+                  ? "All Categories"
                   : availableCategories.find(c => c.category_id.toString() === filter)?.title || "Filter by category"}
               </span>
             </div>
@@ -494,21 +494,17 @@ export default function Certifications() {
         <div className="flex items-center bg-gray-200 rounded-full overflow-hidden border border-gray-300">
           <Button
             onClick={() => handleViewChange(true)}
-            className={`flex items-center justify-center w-10 h-8 rounded-s-full ${
-              isListView ? "bg-blue-200" : "bg-white"
-            } transition-colors hover:${
-              isListView ? "bg-blue-300" : "bg-gray-100"
-            }`}
+            className={`flex items-center justify-center w-10 h-8 rounded-s-full ${isListView ? "bg-blue-200" : "bg-white"
+              } transition-colors hover:${isListView ? "bg-blue-300" : "bg-gray-100"
+              }`}
           >
             <List size={16} color="black" />
           </Button>
           <Button
             onClick={() => handleViewChange(false)}
-            className={`flex items-center justify-center w-10 h-8 rounded-e-full ${
-              !isListView ? "bg-blue-200" : "bg-white"
-            } transition-colors hover:${
-              !isListView ? "bg-blue-300" : "bg-gray-100"
-            }`}
+            className={`flex items-center justify-center w-10 h-8 rounded-e-full ${!isListView ? "bg-blue-200" : "bg-white"
+              } transition-colors hover:${!isListView ? "bg-blue-300" : "bg-gray-100"
+              }`}
           >
             <Grid size={16} color="black" />
           </Button>
@@ -578,52 +574,60 @@ export default function Certifications() {
                     <td className="px-4 py-2 border-b">
                       <Badge
                         variant="outline"
-                        className={`rounded-full text-xs font-poppins px-3 py-1 ${
-                          getStatusBadgeClass(folder.status).class
-                        }`}
+                        className={`rounded-full text-xs font-poppins px-3 py-1 ${getStatusBadgeClass(folder.status).class
+                          }`}
                       >
                         {getStatusBadgeClass(folder.status).label}
                       </Badge>
                     </td>
-                    <td className="px-4 py-2 border-b">
-                      {folder.categories && folder.categories.length > 0 ? (
-                        folder.categories.slice(0, 3).map((category) => (
-                          <Badge
-                            key={category.category_id}
-                            variant="outline"
-                            className="bg-gray-200 text-black mr-2 font-medium"
-                          >
-                            {category.title}
+                    <td className="px-4 py-2 border-b min-w-[200px]">
+                      <div className="flex flex-wrap items-center gap-2 max-w-full">
+                        {folder.categories && folder.categories.length > 0 ? (
+                          <>
+                            {folder.categories.slice(0, 3).map((category) => (
+                              <TooltipProvider key={category.category_id}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-gray-200 text-black max-w-[100px] truncate font-medium inline-block"
+                                    >
+                                      {category.title}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {category.title}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ))}
+                            {folder.categories.length > 3 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-gray-200 cursor-pointer"
+                                    >
+                                      +{folder.categories.length - 3}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {folder.categories
+                                      .slice(3)
+                                      .map((cat) => cat.title)
+                                      .join(", ")}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </>
+                        ) : (
+                          <Badge variant="outline" className="bg-gray-200 text-black">
+                            No categories
                           </Badge>
-                        ))
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="bg-gray-200 text-black"
-                        >
-                          No categories
-                        </Badge>
-                      )}
-                      {folder.categories.length > 3 && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Badge
-                                variant="outline"
-                                className="bg-gray-200 cursor-pointer"
-                              >
-                                +{folder.categories.length - 3}
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {folder.categories
-                                .slice(3)
-                                .map((cat) => cat.title)
-                                .join(", ")}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-2 border-b">
                       <Button
@@ -717,55 +721,67 @@ export default function Certifications() {
                     className="text-gray-600"
                     fill="#4b5563"
                   />
-                  <span className="flex-1 font-poppins font-medium text-gray-900 text-left overflow-hidden whitespace-nowrap text-ellipsis pr-4">
-                    {folder.title}
-                  </span>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="flex-1 font-poppins font-medium text-gray-900 text-left overflow-hidden whitespace-nowrap text-ellipsis pr-4 min-w-0">
+                          {folder.title}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {folder.title}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
                   <Badge
                     variant="outline"
-                    className={`rounded-full mr-5 text-xs font-poppins ${
-                      getStatusBadgeClass(folder.status).class
-                    }`}
+                    className={`rounded-full mr-5 text-xs font-poppins ${getStatusBadgeClass(folder.status).class}`}
                   >
                     {getStatusBadgeClass(folder.status).label}
                   </Badge>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-2 overflow-hidden">
-                  {folder.categories && folder.categories.length > 0 ? (
-                    folder.categories.slice(0, 3).map((category) => (
-                      <Badge
-                        key={category.category_id}
-                        variant="outline"
-                        className="bg-gray-200 text-black"
-                      >
-                        {category.title}
+                <TooltipProvider>
+                  <div className="min-w-0 flex flex-wrap gap-2">
+                    {folder.categories && folder.categories.length > 0 ? (
+                      <>
+                        {folder.categories.slice(0, 3).map((category) => (
+                          <Tooltip key={category.category_id}>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                variant="outline"
+                                className="bg-gray-200 text-black max-w-[90px] truncate inline-block"
+                              >
+                                {category.title}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>{category.title}</TooltipContent>
+                          </Tooltip>
+                        ))}
+                        {folder.categories.length > 3 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                variant="outline"
+                                className="bg-gray-200 cursor-pointer"
+                              >
+                                +{folder.categories.length - 3}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {folder.categories.slice(3).map((cat) => cat.title).join(", ")}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </>
+                    ) : (
+                      <Badge variant="outline" className="bg-gray-200 text-black">
+                        No categories
                       </Badge>
-                    ))
-                  ) : (
-                    <Badge variant="outline" className="bg-gray-200 text-black">
-                      No categories
-                    </Badge>
-                  )}
-                  {folder.categories.length > 3 && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Badge
-                            variant="outline"
-                            className="bg-gray-200 cursor-pointer"
-                          >
-                            +{folder.categories.length - 3}
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {folder.categories
-                            .slice(3)
-                            .map((cat) => cat.title)
-                            .join(", ")}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </div>
+                    )}
+                  </div>
+                </TooltipProvider>
 
                 {/* Kebab menu button */}
                 <div className="absolute top-4 right-2">
